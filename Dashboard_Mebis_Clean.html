@@ -1,0 +1,1356 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mebis Checklisten Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@2.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 800px;
+            color: #333;
+            font-size: 14px;
+        }
+        
+        .config-section {
+            background: linear-gradient(145deg, #ffffff, #f8f9fa);
+            padding: 12px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1), 0 1px 4px rgba(0,0,0,0.2);
+            margin-bottom: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        .api-btn {
+            background: linear-gradient(145deg, #007bff, #0056b3);
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            margin: 8px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 123, 255, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .api-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 123, 255, 0.4);
+            background: linear-gradient(145deg, #0056b3, #003d82);
+        }
+        
+        .api-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+        
+        .api-btn:hover::before {
+            left: 100%;
+        }
+        
+        .status-message {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        
+        .status-success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status-error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #007bff;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .dashboard-container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+        
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+        
+        .stat-card {
+            background: linear-gradient(145deg, #ffffff, #f8f9fa);
+            padding: 8px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            transition: transform 0.3s ease;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .stat-number {
+            font-size: 1.4rem;
+            font-weight: bold;
+            margin-bottom: 2px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .stat-label {
+            color: #666;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .chart-container {
+            background: linear-gradient(145deg, #ffffff, #f8f9fa);
+            padding: 12px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+            border: 1px solid rgba(255,255,255,0.2);
+            position: relative;
+            overflow: hidden;
+            height: 200px;
+        }
+        
+        .chart-container canvas {
+            max-height: 160px !important;
+        }
+        
+        .chart-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+        }
+        
+        .chart-container:hover {
+            transform: translateY(-3px);
+        }
+        
+        .chart-container h2 {
+            margin-top: 0;
+            color: #333;
+            font-size: 0.95rem;
+            margin-bottom: 10px;
+        }
+        
+        .info-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+        }
+        
+        .info-table th, .info-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        
+        .info-table th {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            letter-spacing: 0.5px;
+        }
+        
+        .info-table tbody tr:hover {
+            background-color: rgba(102, 126, 234, 0.1);
+            transform: scale(1.01);
+            transition: all 0.2s ease;
+        }
+        
+        .progress-indicator {
+            display: inline-block;
+            width: 60px;
+            height: 8px;
+            background-color: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-left: 10px;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #28a745, #20c997);
+            transition: width 0.3s ease;
+        }
+        
+        h1 {
+            text-align: center;
+            color: white;
+            font-size: 1.8rem;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            font-weight: 300;
+            letter-spacing: 1px;
+        }
+        
+        .insights-text {
+            font-style: italic;
+            color: #666;
+            margin-top: 15px;
+            padding: 10px;
+            background: rgba(102, 126, 234, 0.05);
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .filter-section {
+            background: linear-gradient(145deg, #ffffff, #f8f9fa);
+            padding: 12px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            margin-bottom: 15px;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        .filter-controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+            font-size: 0.85rem;
+        }
+        
+        .filter-controls label {
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .filter-controls select, .filter-controls input {
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 2px solid #e9ecef;
+            background: white;
+            transition: border-color 0.3s ease;
+        }
+        
+        .filter-controls select:focus, .filter-controls input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .export-btn {
+            background: linear-gradient(145deg, #28a745, #20c997);
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+        }
+        
+        .export-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(40, 167, 69, 0.4);
+        }
+        
+        @media (max-width: 768px) {
+            .dashboard-container {
+                grid-template-columns: 1fr;
+            }
+            .stats-row {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            h1 {
+                font-size: 1.8rem;
+            }
+            .filter-controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            body {
+                padding: 10px;
+            }
+            .stats-row {
+                grid-template-columns: 1fr;
+            }
+            .stat-number {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div style="position: relative;">
+        <div id="testModeIndicator" style="position: absolute; top: 0; left: 0; background: rgba(255,255,255,0.2); color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.7rem; display: none;">TESTMODUS</div>
+        
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
+            <h1 style="margin: 0; font-size: 1.5rem; color: white; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); margin-left: 80px;">📊 Mebis Analytics Dashboard</h1>
+            
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <button class="api-btn" id="tabChecklists" onclick="showTab('checklists')" style="padding: 6px 12px; font-size: 0.9rem;">Checklisten</button>
+                <button class="api-btn" id="tabPflicht" onclick="showTab('pflicht')" style="padding: 6px 12px; font-size: 0.9rem;">Pflichtaufgaben</button>
+                <button class="api-btn" id="refreshBtn" title="Aktualisieren" style="padding: 6px 12px; font-size: 1rem;">🔄</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Checklisten Tab -->
+    <div id="checklistsTab">
+        <div class="stats-row" id="statsRow" style="display: none;">
+            <div class="stat-card">
+                <div class="stat-number" id="totalChecklists">0</div>
+                <div class="stat-label">Checklisten</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="completedTasks">0</div>
+                <div class="stat-label">Abgeschlossen</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="pendingTasks">0</div>
+                <div class="stat-label">Ausstehend</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="avgCompletion">0%</div>
+                <div class="stat-label">Durchschnitt Pflicht</div>
+            </div>
+        </div>
+        
+        <div class="loading" id="loadingIndicator" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1000; background: rgba(255,255,255,0.9); padding: 20px; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
+            <div class="spinner"></div>
+            <p>Analysiere Daten...</p>
+        </div>
+        
+        <div class="dashboard-container" id="dashboardContainer" style="display: none;">
+            <div class="chart-container">
+                <h2>📊 Durchschnittlicher Pflicht-Fortschritt</h2>
+                <canvas id="overviewPflichtChart"></canvas>
+                <div id="pflichtInsights" class="insights-text"></div>
+            </div>
+            
+            <div class="chart-container">
+                <h2>📈 Durchschnittlicher Gesamt-Fortschritt</h2>
+                <canvas id="overviewGesamtChart"></canvas>
+                <div id="gesamtInsights" class="insights-text"></div>
+            </div>
+            
+        </div>
+        
+        <div class="filter-section" id="filterSection" style="display: none;">
+            <h3>🔍 Filter & Optionen</h3>
+            <div class="filter-controls">
+                <label>Ansicht:</label>
+                <select id="viewFilter" onchange="applyFilters()">
+                    <option value="all">Alle anzeigen</option>
+                    <option value="completed">Nur abgeschlossene</option>
+                    <option value="pending">Nur ausstehende</option>
+                    <option value="high">Hoher Fortschritt (>75%)</option>
+                </select>
+                
+                <label>Sortierung:</label>
+                <select id="sortFilter" onchange="applyFilters()">
+                    <option value="name">Nach Name</option>
+                    <option value="pflicht-desc">Pflicht % absteigend</option>
+                    <option value="pflicht-asc">Pflicht % aufsteigend</option>
+                    <option value="gesamt-desc">Gesamt % absteigend</option>
+                    <option value="gesamt-asc">Gesamt % aufsteigend</option>
+                </select>
+                
+                <label>Mindest-Fortschritt:</label>
+                <input type="range" id="progressFilter" min="0" max="100" value="0" onchange="applyFilters()">
+                <span id="progressValue">0%</span>
+            </div>
+        </div>
+        
+        <div class="chart-container" style="grid-column: 1 / -1;">
+            <h2>📋 Pflicht-Fortschritt pro Checklist</h2>
+            <canvas id="detailPflichtChart"></canvas>
+        </div>
+        
+        <div class="chart-container" style="grid-column: 1 / -1;">
+            <h2>✅ Gesamt-Fortschritt pro Checklist</h2>
+            <canvas id="detailGesamtChart"></canvas>
+        </div>
+        
+        
+        <div class="config-section">
+            <div id="sessionInfo"></div>
+        </div>
+    </div>
+
+    <!-- Pflichtaufgaben Tab -->
+    <div id="pflichtTab" style="display:none;">
+        <div class="dashboard-container" id="pflichtDashboardContainer" style="display:none;">
+            <div class="chart-container">
+                <h2>📊 Pflichtaufgaben Abschlussstatus</h2>
+                <canvas id="pflichtStatusChart"></canvas>
+            </div>
+            <div class="chart-container">
+                <h2>🏅 Notenübersicht Pflichtaufgaben</h2>
+                <canvas id="pflichtGradeChart"></canvas>
+            </div>
+        </div>
+        <div class="config-section">
+            <div id="pflichtSessionInfo"></div>
+        </div>
+    </div>
+
+    <script>
+        // Globale Variablen
+        let overviewPflichtChart, overviewGesamtChart, detailPflichtChart, detailGesamtChart, trendChart, rankingChart;
+        let checklistData = [];
+        let historicalData = [];
+        
+        // Testmodus aktivieren (auf false setzen für echte API-Calls)
+        const TEST_MODE = true;
+        
+        // Testdaten
+        const TEST_CHECKLIST_DATA = [
+            { name: "Grundlagen der Programmierung", url: "#", pflichtProgress: 95, gesamtProgress: 87 },
+            { name: "Datenstrukturen und Algorithmen", url: "#", pflichtProgress: 78, gesamtProgress: 82 },
+            { name: "Objektorientierte Programmierung", url: "#", pflichtProgress: 100, gesamtProgress: 100 },
+            { name: "Webentwicklung Basics", url: "#", pflichtProgress: 65, gesamtProgress: 73 },
+            { name: "JavaScript Fundamentals", url: "#", pflichtProgress: 89, gesamtProgress: 91 },
+            { name: "Database Management", url: "#", pflichtProgress: 45, gesamtProgress: 52 },
+            { name: "Version Control mit Git", url: "#", pflichtProgress: 100, gesamtProgress: 98 },
+            { name: "Softwaretests", url: "#", pflichtProgress: 33, gesamtProgress: 41 }
+        ];
+        
+        const TEST_PFLICHT_DATA = [
+            { name: "Pflicht: JavaScript Quiz 1", url: "#", type: "Quiz", completionStatus: "Erledigt", submissionStatus: "-", grade: "2,3" },
+            { name: "Pflicht: HTML/CSS Projekt", url: "#", type: "Aufgabe", completionStatus: "Erledigt", submissionStatus: "Eingereicht", grade: "1,7" },
+            { name: "Pflicht: Algorithmus-Aufgabe", url: "#", type: "Aufgabe", completionStatus: "Zu erledigen", submissionStatus: "Nicht eingereicht", grade: "-" },
+            { name: "Pflicht: Datenbank Design", url: "#", type: "Aufgabe", completionStatus: "Erledigt", submissionStatus: "Eingereicht", grade: "2,0" },
+            { name: "Pflicht: Git Workshop Quiz", url: "#", type: "Quiz", completionStatus: "Erledigt", submissionStatus: "-", grade: "1,3" },
+            { name: "Pflicht: Testing Praktikum", url: "#", type: "Aufgabe", completionStatus: "Zu erledigen", submissionStatus: "Entwurf gespeichert", grade: "-" }
+        ];
+        
+        // Farbpalette für bessere Visualisierung
+        const colorPalette = {
+            primary: ['#667eea', '#764ba2'],
+            success: ['#28a745', '#20c997'],
+            warning: ['#ffc107', '#fd7e14'],
+            danger: ['#dc3545', '#e83e8c'],
+            info: ['#17a2b8', '#6f42c1'],
+            gradients: [
+                'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                'linear-gradient(135deg, #28a745 0%, #20c997 100%)',
+                'linear-gradient(135deg, #ffc107 0%, #fd7e14 100%)',
+                'linear-gradient(135deg, #dc3545 0%, #e83e8c 100%)',
+                'linear-gradient(135deg, #17a2b8 0%, #6f42c1 100%)'
+            ]
+        };
+        
+        // Utility-Funktionen
+        function showLoading(show) {
+            document.getElementById('loadingIndicator').style.display = show ? 'block' : 'none';
+        }
+        
+        // Hauptfunktion: Aufgaben-Übersicht laden
+        async function extractPflichtOverview() {
+            showLoading(true);
+
+            const courseId = '2036416';
+            const assignmentOverviewUrl = `https://lernplattform.mebis.bycs.de/course/overview.php?id=${courseId}&expand[]=assign#assign_overview_collapsible`;
+            const quizOverviewUrl = `https://lernplattform.mebis.bycs.de/course/overview.php?id=${courseId}&expand[]=quiz#quiz_overview_collapsible`;
+
+            try {
+                // Beide Seiten parallel laden
+                const [assignRes, quizRes] = await Promise.all([
+                    fetch(assignmentOverviewUrl, { credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } }),
+                    fetch(quizOverviewUrl, { credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                ]);
+
+                if (!assignRes.ok || !quizRes.ok) {
+                    throw new Error('Fehler beim Laden der Daten');
+                }
+
+                const [assignHtml, quizHtml] = await Promise.all([assignRes.text(), quizRes.text()]);
+                const parser = new DOMParser();
+
+                // Pflicht-Assignments extrahieren
+                const assignDoc = parser.parseFromString(assignHtml, 'text/html');
+                const assignmentTable = assignDoc.querySelector('#assign_overview .course-overview-table tbody');
+                const assignmentRows = assignmentTable ? Array.from(assignmentTable.querySelectorAll('tr')).filter(row => {
+                    const nameCell = row.querySelector('[data-mdl-overview-item="name"]');
+                    if (nameCell) {
+                        const link = nameCell.querySelector('a.activityname');
+                        const visibleText = link ? link.textContent : nameCell.textContent;
+                        return visibleText && visibleText.includes('Pflicht');
+                    }
+                    return false;
+                }) : [];
+
+                const assignmentData = assignmentRows.map(row => {
+                    const nameCell = row.querySelector('[data-mdl-overview-item="name"]');
+                    const completionCell = row.querySelector('[data-mdl-overview-item="completion"]');
+                    const submissionCell = row.querySelector('[data-mdl-overview-item="submissionstatus"]');
+                    const gradeCell = row.querySelector('[data-mdl-overview-item="Bewertung"]');
+                    const link = nameCell ? nameCell.querySelector('a.activityname') : null;
+                    const name = link ? link.textContent.trim() : (nameCell ? nameCell.textContent.trim() : 'Unbekannt');
+                    const url = link ? link.href : '';
+                    let completionStatus = 'Zu erledigen';
+                    if (completionCell) {
+                        const completionValue = completionCell.getAttribute('data-mdl-overview-value');
+                        if (completionValue === '1' || completionCell.textContent.includes('Erledigt')) {
+                            completionStatus = 'Erledigt';
+                        }
+                    }
+                    const submissionStatus = submissionCell ?
+                        submissionCell.getAttribute('data-mdl-overview-value') || submissionCell.textContent.trim() :
+                        'Unbekannt';
+                    const grade = gradeCell ?
+                        gradeCell.getAttribute('data-mdl-overview-value') || gradeCell.textContent.trim() :
+                        '-';
+                    return {
+                        name,
+                        url,
+                        type: 'Aufgabe',
+                        completionStatus,
+                        submissionStatus,
+                        grade
+                    };
+                });
+
+                // Pflicht-Quizzes extrahieren
+                const quizDoc = parser.parseFromString(quizHtml, 'text/html');
+                const quizTable = quizDoc.querySelector('#quiz_overview .course-overview-table tbody');
+                const quizRows = quizTable ? Array.from(quizTable.querySelectorAll('tr')).filter(row => {
+                    const nameCell = row.querySelector('[data-mdl-overview-item="name"]');
+                    if (nameCell) {
+                        const link = nameCell.querySelector('a.activityname');
+                        const visibleText = link ? link.textContent : nameCell.textContent;
+                        return visibleText && visibleText.includes('Pflicht');
+                    }
+                    return false;
+                }) : [];
+
+                const quizData = quizRows.map(row => {
+                    const nameCell = row.querySelector('[data-mdl-overview-item="name"]');
+                    const completionCell = row.querySelector('[data-mdl-overview-item="completion"]');
+                    const gradeCell = row.querySelector('[data-mdl-overview-item="Bewertung"]');
+                    const link = nameCell ? nameCell.querySelector('a.activityname') : null;
+                    const name = link ? link.textContent.trim() : (nameCell ? nameCell.textContent.trim() : 'Unbekannt');
+                    const url = link ? link.href : '';
+                    let completionStatus = 'Zu erledigen';
+                    if (completionCell) {
+                        const completionValue = completionCell.getAttribute('data-mdl-overview-value');
+                        if (completionValue === '1' || completionCell.textContent.includes('Erledigt')) {
+                            completionStatus = 'Erledigt';
+                        }
+                    }
+                    // Quizzes haben meist keinen Abgabestatus
+                    const submissionStatus = '-';
+                    const grade = gradeCell ?
+                        gradeCell.getAttribute('data-mdl-overview-value') || gradeCell.textContent.trim() :
+                        '-';
+                    return {
+                        name,
+                        url,
+                        type: 'Quiz',
+                        completionStatus,
+                        submissionStatus,
+                        grade
+                    };
+                });
+
+                // Zusammenführen und sortieren
+                const allData = [...assignmentData, ...quizData].sort((a, b) => a.name.localeCompare(b.name, 'de'));
+
+                if (allData.length > 0) {
+                    
+                    // Status nach 3 Sekunden ausblenden
+                    setTimeout(() => {
+                                }, 3000);
+                    let html = '<h4>📚 Alle Pflichtaufgaben-Übersicht:</h4>';
+                    html += '<table class="info-table">';
+                    html += '<tr><th>Name</th><th>Typ</th><th>Abschlussstatus</th><th>Abgabestatus</th><th>Bewertung</th></tr>';
+                    allData.forEach(item => {
+                        const statusColor = item.completionStatus === 'Erledigt' ? 'color: green;' : 'color: orange;';
+                        html += `<tr>
+                            <td><a href="${item.url}" target="_blank">${item.name}</a></td>
+                            <td>${item.type}</td>
+                            <td><span style="${statusColor}">${item.completionStatus}</span></td>
+                            <td>${item.submissionStatus}</td>
+                            <td><strong>${item.grade}</strong></td>
+                        </tr>`;
+                    });
+                    html += '</table>';
+                    document.getElementById('pflichtSessionInfo').innerHTML = html;
+                    createPflichtCharts(allData);
+                } else {
+                }
+
+            } catch (error) {
+            }
+
+            showLoading(false);
+        }
+        
+        // Hauptfunktion: Checklisten-Index laden
+        async function extractFromChecklistIndex() {
+            showLoading(true);
+            
+            if (TEST_MODE) {
+                // Testdaten verwenden
+                setTimeout(() => {
+                    createCharts(TEST_CHECKLIST_DATA);
+                    
+                    // Tabelle erstellen
+                    let html = '<h4>📊 Checklist-Übersicht:</h4>';
+                    html += '<table class="info-table">';
+                    html += '<tr><th>Name</th><th>Pflicht %</th><th>Gesamt %</th></tr>';
+                    
+                    TEST_CHECKLIST_DATA.forEach(item => {
+                        html += `<tr>
+                            <td><a href="${item.url}" target="_blank">${item.name}</a></td>
+                            <td><strong>${item.pflichtProgress}%</strong></td>
+                            <td><strong>${item.gesamtProgress}%</strong></td>
+                        </tr>`;
+                    });
+                    
+                    html += '</table>';
+                    document.getElementById('sessionInfo').innerHTML = html;
+                    showLoading(false);
+                }, 1000); // Simuliere Ladezeit
+                return;
+            }
+            
+            const courseId = '2036416';
+            const checklistIndexUrl = `https://lernplattform.mebis.bycs.de/mod/checklist/index.php?id=${courseId}`;
+            
+            try {
+                const response = await fetch(checklistIndexUrl, {
+                    credentials: 'same-origin',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const html = await response.text();
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                
+                // Nur echte Checklist-Links (relative "view.php?id=...")
+                const allLinks = doc.querySelectorAll('a[href*="view.php?id="]');
+                const checklistLinks = Array.from(allLinks).filter(link => {
+                    const href = link.getAttribute('href');
+                    return href && href.startsWith('view.php?id=');
+                });
+                
+                if (checklistLinks.length === 0) {
+                    showLoading(false);
+                    return;
+                }
+                
+                const extractedData = [];
+                
+                // Jede Checklist laden und analysieren
+                for (let i = 0; i < checklistLinks.length; i++) {
+                    const link = checklistLinks[i];
+                    const name = link.textContent.trim();
+                    
+                    // Korrekte URL konstruieren
+                    const href = link.getAttribute('href');
+                    const url = href.startsWith('view.php?id=') 
+                        ? `https://lernplattform.mebis.bycs.de/mod/checklist/${href}`
+                        : link.href;
+                    
+                    try {
+                        const checklistData = await loadSingleChecklist(url);
+                        extractedData.push({
+                            name: name,
+                            url: url,
+                            ...checklistData
+                        });
+                    } catch (error) {
+                        extractedData.push({
+                            name: name + ' (Fehler)',
+                            url: url,
+                            pflichtProgress: 0,
+                            gesamtProgress: 0,
+                            error: error.message
+                        });
+                    }
+                }
+                
+                if (extractedData.length > 0) {
+                    createCharts(extractedData);
+                    const successCount = extractedData.filter(item => !item.error).length;
+                    
+                    // Status nach 3 Sekunden ausblenden
+                    setTimeout(() => {
+                        document.getElementById('statusMessage').style.display = 'none';
+                    }, 3000);
+                    
+                    // Tabelle erstellen
+                    let html = '<h4>📊 Checklist-Übersicht:</h4>';
+                    html += '<table class="info-table">';
+                    html += '<tr><th>Name</th><th>Pflicht %</th><th>Gesamt %</th></tr>';
+                    
+                    extractedData.forEach(item => {
+                        const pflichtPercent = item.pflichtProgress !== undefined ? `${item.pflichtProgress}%` : 'n/a';
+                        const gesamtPercent = item.gesamtProgress !== undefined ? `${item.gesamtProgress}%` : 'n/a';
+                        
+                        html += `<tr>
+                            <td><a href="${item.url}" target="_blank">${item.name}</a></td>
+                            <td><strong>${pflichtPercent}</strong></td>
+                            <td><strong>${gesamtPercent}</strong></td>
+                        </tr>`;
+                    });
+                    
+                    html += '</table>';
+                    document.getElementById('sessionInfo').innerHTML = html;
+                } else {
+                }
+                
+            } catch (error) {
+            }
+            
+            showLoading(false);
+        }
+        
+        // Einzelne Checklist laden und Fortschritt extrahieren
+        async function loadSingleChecklist(url) {
+            const response = await fetch(url, { credentials: 'same-origin' });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            const html = await response.text();
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            
+            // Fortschrittsbalken extrahieren
+            const progressBars = doc.querySelectorAll('.checklist_progress_inner');
+            let pflichtProgress = 0;
+            let gesamtProgress = 0;
+            
+            if (progressBars.length >= 2) {
+                // Erste Progress-Bar = Pflichtelemente
+                const pflichtBar = progressBars[0];
+                const pflichtStyle = pflichtBar.getAttribute('style') || '';
+                const pflichtMatch = pflichtStyle.match(/width:\s*(\d+(?:\.\d+)?)%/);
+                pflichtProgress = pflichtMatch ? parseFloat(pflichtMatch[1]) : 0;
+                
+                // Zweite Progress-Bar = Alle Elemente  
+                const gesamtBar = progressBars[1];
+                const gesamtStyle = gesamtBar.getAttribute('style') || '';
+                const gesamtMatch = gesamtStyle.match(/width:\s*(\d+(?:\.\d+)?)%/);
+                gesamtProgress = gesamtMatch ? parseFloat(gesamtMatch[1]) : 0;
+            }
+            
+            return {
+                pflichtProgress: pflichtProgress,
+                gesamtProgress: gesamtProgress
+            };
+        }
+        
+        // Charts erstellen
+        function createCharts(data) {
+            checklistData = data;
+            
+            if (!overviewPflichtChart) {
+                initCharts();
+            }
+            
+            updateCharts();
+            updateStatistics();
+            generateInsights();
+            document.getElementById('dashboardContainer').style.display = 'grid';
+            document.getElementById('statsRow').style.display = 'grid';
+        }
+        
+        // Statistiken aktualisieren
+        function updateStatistics() {
+            const validChecklists = checklistData.filter(item => !item.error);
+            
+            const totalChecklists = validChecklists.length;
+            const avgPflicht = validChecklists.reduce((sum, item) => sum + (item.pflichtProgress || 0), 0) / totalChecklists;
+            const completed = validChecklists.filter(item => item.pflichtProgress >= 100).length;
+            const pending = totalChecklists - completed;
+            
+            // Animierte Zahlenupdate
+            animateNumber('totalChecklists', totalChecklists);
+            animateNumber('avgCompletion', Math.round(avgPflicht), '%');
+            animateNumber('completedTasks', completed);
+            animateNumber('pendingTasks', pending);
+        }
+        
+        // Zahlen animieren
+        function animateNumber(elementId, targetValue, suffix = '') {
+            const element = document.getElementById(elementId);
+            const currentValue = parseInt(element.textContent) || 0;
+            const increment = (targetValue - currentValue) / 30;
+            
+            let current = currentValue;
+            const timer = setInterval(() => {
+                current += increment;
+                if ((increment > 0 && current >= targetValue) || (increment < 0 && current <= targetValue)) {
+                    current = targetValue;
+                    clearInterval(timer);
+                }
+                element.textContent = Math.round(current) + suffix;
+            }, 50);
+        }
+        
+        // Insights generieren
+        function generateInsights() {
+            const validChecklists = checklistData.filter(item => !item.error);
+            
+            if (validChecklists.length === 0) return;
+            
+            const avgPflicht = validChecklists.reduce((sum, item) => sum + (item.pflichtProgress || 0), 0) / validChecklists.length;
+            const avgGesamt = validChecklists.reduce((sum, item) => sum + (item.gesamtProgress || 0), 0) / validChecklists.length;
+            
+            // Pflicht-Insights
+            let pflichtInsight = '';
+            if (avgPflicht >= 80) {
+                pflichtInsight = '✅ Ausgezeichneter Fortschritt! Die meisten Pflichtaufgaben sind erfüllt.';
+            } else if (avgPflicht >= 50) {
+                pflichtInsight = '🟡 Guter Fortschritt, aber es gibt noch Verbesserungspotential.';
+            } else {
+                pflichtInsight = '🟠 Mehr Fokus auf Pflichtaufgaben empfohlen.';
+            }
+            
+            // Gesamt-Insights
+            let gesamtInsight = '';
+            if (avgGesamt >= 80) {
+                gesamtInsight = '🎆 Hervorragender Gesamtfortschritt!';
+            } else if (avgGesamt >= 50) {
+                gesamtInsight = '📈 Solider Fortschritt in allen Bereichen.';
+            } else {
+                gesamtInsight = '🎯 Konzentration auf mehr Aufgaben erforderlich.';
+            }
+            
+            document.getElementById('pflichtInsights').innerHTML = `<p class="insights-text">${pflichtInsight}</p>`;
+            document.getElementById('gesamtInsights').innerHTML = `<p class="insights-text">${gesamtInsight}</p>`;
+            
+            // Filter anzeigen
+            document.getElementById('filterSection').style.display = 'block';
+        }
+        
+        // Filter anwenden
+        function applyFilters() {
+            const viewFilter = document.getElementById('viewFilter').value;
+            const sortFilter = document.getElementById('sortFilter').value;
+            const progressFilter = document.getElementById('progressFilter').value;
+            
+            // Progress-Wert anzeigen
+            document.getElementById('progressValue').textContent = progressFilter + '%';
+            
+            let filteredData = checklistData.filter(item => !item.error);
+            
+            // View-Filter anwenden
+            switch(viewFilter) {
+                case 'completed':
+                    filteredData = filteredData.filter(item => item.pflichtProgress >= 100);
+                    break;
+                case 'pending':
+                    filteredData = filteredData.filter(item => item.pflichtProgress < 100);
+                    break;
+                case 'high':
+                    filteredData = filteredData.filter(item => item.pflichtProgress > 75);
+                    break;
+            }
+            
+            // Progress-Filter anwenden
+            filteredData = filteredData.filter(item => item.pflichtProgress >= progressFilter);
+            
+            // Sortierung anwenden
+            switch(sortFilter) {
+                case 'pflicht-desc':
+                    filteredData.sort((a, b) => (b.pflichtProgress || 0) - (a.pflichtProgress || 0));
+                    break;
+                case 'pflicht-asc':
+                    filteredData.sort((a, b) => (a.pflichtProgress || 0) - (b.pflichtProgress || 0));
+                    break;
+                case 'gesamt-desc':
+                    filteredData.sort((a, b) => (b.gesamtProgress || 0) - (a.gesamtProgress || 0));
+                    break;
+                case 'gesamt-asc':
+                    filteredData.sort((a, b) => (a.gesamtProgress || 0) - (b.gesamtProgress || 0));
+                    break;
+                default:
+                    filteredData.sort((a, b) => a.name.localeCompare(b.name));
+            }
+            
+            // Charts mit gefilterten Daten aktualisieren
+            updateChartsWithFilteredData(filteredData);
+        }
+        
+        // Funktion zur Farbbestimmung basierend auf Fortschritt
+        function getProgressColor(progress) {
+            if (progress >= 80) return '#28a745'; // Grün
+            if (progress >= 60) return '#6cc04a'; // Hellgrün
+            if (progress >= 40) return '#ffc107'; // Gelb
+            if (progress >= 20) return '#fd7e14'; // Orange
+            return '#dc3545'; // Rot
+        }
+
+        // Charts mit gefilterten Daten aktualisieren
+        function updateChartsWithFilteredData(filteredData) {
+            const shortNames = filteredData.map(item => {
+                return item.name.length > 20 ? item.name.substring(0, 20) + '...' : item.name;
+            });
+            
+            const pflichtColors = filteredData.map(item => getProgressColor(item.pflichtProgress || 0));
+            const gesamtColors = filteredData.map(item => getProgressColor(item.gesamtProgress || 0));
+            
+            detailPflichtChart.data.labels = shortNames;
+            detailPflichtChart.data.datasets[0].data = filteredData.map(item => item.pflichtProgress || 0);
+            detailPflichtChart.data.datasets[0].backgroundColor = pflichtColors;
+            detailPflichtChart.update();
+            
+            detailGesamtChart.data.labels = shortNames;
+            detailGesamtChart.data.datasets[0].data = filteredData.map(item => item.gesamtProgress || 0);
+            detailGesamtChart.data.datasets[0].backgroundColor = gesamtColors;
+            detailGesamtChart.update();
+        }
+        
+        
+        // Charts initialisieren
+        function initCharts() {
+            // 1. Durchschnittlicher Pflicht-Fortschritt
+            const overviewPflichtCtx = document.getElementById('overviewPflichtChart').getContext('2d');
+            
+            overviewPflichtChart = new Chart(overviewPflichtCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Abgeschlossen', 'Offen'],
+                    datasets: [{
+                        data: [0, 0],
+                        backgroundColor: ['#28a745', '#e9ecef'],
+                        borderWidth: 0,
+                        hoverOffset: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    cutout: '70%',
+                    plugins: {
+                        legend: { position: 'bottom', labels: { usePointStyle: true, padding: 20 } }
+                    }
+                }
+            });
+            
+            // 2. Durchschnittlicher Gesamt-Fortschritt
+            const overviewGesamtCtx = document.getElementById('overviewGesamtChart').getContext('2d');
+            
+            overviewGesamtChart = new Chart(overviewGesamtCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Abgeschlossen', 'Offen'],
+                    datasets: [{
+                        data: [0, 0],
+                        backgroundColor: ['#28a745', '#e9ecef'],
+                        borderWidth: 0,
+                        hoverOffset: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    cutout: '70%',
+                    plugins: {
+                        legend: { position: 'bottom', labels: { usePointStyle: true, padding: 20 } }
+                    }
+                }
+            });
+            
+            // 3. Pflicht-Fortschritt pro Checklist
+            const detailPflichtCtx = document.getElementById('detailPflichtChart').getContext('2d');
+            detailPflichtChart = new Chart(detailPflichtCtx, {
+                type: 'bar',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Pflicht %',
+                        data: [],
+                        backgroundColor: '#28a745'
+                    }]
+                },
+                options: { 
+                    responsive: true,
+                    scales: { y: { beginAtZero: true, max: 100 }},
+                    plugins: { legend: { display: false }}
+                }
+            });
+            
+            // 4. Gesamt-Fortschritt pro Checklist
+            const detailGesamtCtx = document.getElementById('detailGesamtChart').getContext('2d');
+            detailGesamtChart = new Chart(detailGesamtCtx, {
+                type: 'bar',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Gesamt %',
+                        data: [],
+                        backgroundColor: '#007bff'
+                    }]
+                },
+                options: { 
+                    responsive: true,
+                    scales: { y: { beginAtZero: true, max: 100 }},
+                    plugins: { legend: { display: false }}
+                }
+            });
+        }
+        
+        // Charts aktualisieren
+        function updateCharts() {
+            if (!checklistData.length) return;
+            
+            const validChecklists = checklistData.filter(item => !item.error);
+            
+            // Durchschnittswerte berechnen
+            let totalPflichtProgress = 0, totalGesamtProgress = 0;
+            let validItems = 0;
+            
+            validChecklists.forEach(item => {
+                if (item.pflichtProgress !== undefined && item.gesamtProgress !== undefined) {
+                    totalPflichtProgress += item.pflichtProgress;
+                    totalGesamtProgress += item.gesamtProgress;
+                    validItems++;
+                }
+            });
+            
+            const avgPflichtProgress = validItems > 0 ? totalPflichtProgress / validItems : 0;
+            const avgGesamtProgress = validItems > 0 ? totalGesamtProgress / validItems : 0;
+            
+            // Charts aktualisieren mit dynamischen Farben
+            const pflichtColor = getProgressColor(avgPflichtProgress);
+            const gesamtColor = getProgressColor(avgGesamtProgress);
+            
+            overviewPflichtChart.data.datasets[0].data = [avgPflichtProgress, 100 - avgPflichtProgress];
+            overviewPflichtChart.data.datasets[0].backgroundColor = [pflichtColor, '#e9ecef'];
+            overviewPflichtChart.update();
+            
+            overviewGesamtChart.data.datasets[0].data = [avgGesamtProgress, 100 - avgGesamtProgress];
+            overviewGesamtChart.data.datasets[0].backgroundColor = [gesamtColor, '#e9ecef'];
+            overviewGesamtChart.update();
+            
+            // Namen kürzen für Übersichtlichkeit
+            const shortNames = validChecklists.map(item => {
+                return item.name.length > 15 ? item.name.substring(0, 15) + '...' : item.name;
+            });
+            
+            const pflichtColors = validChecklists.map(item => getProgressColor(item.pflichtProgress || 0));
+            const gesamtColors = validChecklists.map(item => getProgressColor(item.gesamtProgress || 0));
+            
+            detailPflichtChart.data.labels = shortNames;
+            detailPflichtChart.data.datasets[0].data = validChecklists.map(item => item.pflichtProgress || 0);
+            detailPflichtChart.data.datasets[0].backgroundColor = pflichtColors;
+            detailPflichtChart.update();
+            
+            detailGesamtChart.data.labels = shortNames;
+            detailGesamtChart.data.datasets[0].data = validChecklists.map(item => item.gesamtProgress || 0);
+            detailGesamtChart.data.datasets[0].backgroundColor = gesamtColors;
+            detailGesamtChart.update();
+        }
+
+        // Tabs Umschalten
+        function showTab(tab) {
+            document.getElementById('checklistsTab').style.display = tab === 'checklists' ? 'block' : 'none';
+            document.getElementById('pflichtTab').style.display = tab === 'pflicht' ? 'block' : 'none';
+            // Button-Highlight
+            document.getElementById('tabChecklists').style.opacity = tab === 'checklists' ? '1' : '0.6';
+            document.getElementById('tabPflicht').style.opacity = tab === 'pflicht' ? '1' : '0.6';
+        }
+
+        // Pflichtaufgaben Charts
+        let pflichtStatusChart, pflichtGradeChart;
+        function createPflichtCharts(data) {
+            // Status Chart
+            const statusCounts = { 'Erledigt': 0, 'Zu erledigen': 0 };
+            const grades = [];
+            data.forEach(item => {
+                statusCounts[item.completionStatus] = (statusCounts[item.completionStatus] || 0) + 1;
+                if (item.grade && item.grade !== '-' && !isNaN(parseFloat(item.grade.replace(',', '.')))) {
+                    grades.push(parseFloat(item.grade.replace(',', '.')));
+                }
+            });
+
+            // Status Pie
+            const ctxStatus = document.getElementById('pflichtStatusChart').getContext('2d');
+            if (pflichtStatusChart) pflichtStatusChart.destroy();
+            pflichtStatusChart = new Chart(ctxStatus, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(statusCounts),
+                    datasets: [{
+                        data: Object.values(statusCounts),
+                        backgroundColor: ['#28a745', '#ffc107']
+                    }]
+                },
+                options: { responsive: true }
+            });
+
+            // Grade Bar
+            const ctxGrade = document.getElementById('pflichtGradeChart').getContext('2d');
+            if (pflichtGradeChart) pflichtGradeChart.destroy();
+            pflichtGradeChart = new Chart(ctxGrade, {
+                type: 'bar',
+                data: {
+                    labels: grades.map((_, i) => `Aufgabe ${i+1}`),
+                    datasets: [{
+                        label: 'Bewertung',
+                        data: grades,
+                        backgroundColor: '#007bff'
+                    }]
+                },
+                options: { responsive: true, scales: { y: { beginAtZero: true } } }
+            });
+
+            document.getElementById('pflichtDashboardContainer').style.display = 'grid';
+        }
+
+        // Pflichtaufgaben laden überschreiben
+        async function extractPflichtOverview() {
+            showLoading(true);
+
+            if (TEST_MODE) {
+                // Testdaten verwenden
+                setTimeout(() => {
+                    let html = '<h4>📚 Alle Pflichtaufgaben-Übersicht (Testdaten):</h4>';
+                    html += '<table class="info-table">';
+                    html += '<tr><th>Name</th><th>Typ</th><th>Abschlussstatus</th><th>Abgabestatus</th><th>Bewertung</th></tr>';
+                    TEST_PFLICHT_DATA.forEach(item => {
+                        const statusColor = item.completionStatus === 'Erledigt' ? 'color: green;' : 'color: orange;';
+                        html += `<tr>
+                            <td><a href="${item.url}" target="_blank">${item.name}</a></td>
+                            <td>${item.type}</td>
+                            <td><span style="${statusColor}">${item.completionStatus}</span></td>
+                            <td>${item.submissionStatus}</td>
+                            <td><strong>${item.grade}</strong></td>
+                        </tr>`;
+                    });
+                    html += '</table>';
+                    document.getElementById('pflichtSessionInfo').innerHTML = html;
+                    createPflichtCharts(TEST_PFLICHT_DATA);
+                    showLoading(false);
+                }, 1200); // Simuliere Ladezeit
+                return;
+            }
+
+            const courseId = '2036416';
+            const assignmentOverviewUrl = `https://lernplattform.mebis.bycs.de/course/overview.php?id=${courseId}&expand[]=assign#assign_overview_collapsible`;
+            const quizOverviewUrl = `https://lernplattform.mebis.bycs.de/course/overview.php?id=${courseId}&expand[]=quiz#quiz_overview_collapsible`;
+
+            try {
+                // Beide Seiten parallel laden
+                const [assignRes, quizRes] = await Promise.all([
+                    fetch(assignmentOverviewUrl, { credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } }),
+                    fetch(quizOverviewUrl, { credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                ]);
+
+                if (!assignRes.ok || !quizRes.ok) {
+                    throw new Error('Fehler beim Laden der Daten');
+                }
+
+                const [assignHtml, quizHtml] = await Promise.all([assignRes.text(), quizRes.text()]);
+                const parser = new DOMParser();
+
+                // Pflicht-Assignments extrahieren
+                const assignDoc = parser.parseFromString(assignHtml, 'text/html');
+                const assignmentTable = assignDoc.querySelector('#assign_overview .course-overview-table tbody');
+                const assignmentRows = assignmentTable ? Array.from(assignmentTable.querySelectorAll('tr')).filter(row => {
+                    const nameCell = row.querySelector('[data-mdl-overview-item="name"]');
+                    if (nameCell) {
+                        const link = nameCell.querySelector('a.activityname');
+                        const visibleText = link ? link.textContent : nameCell.textContent;
+                        return visibleText && visibleText.includes('Pflicht');
+                    }
+                    return false;
+                }) : [];
+
+                const assignmentData = assignmentRows.map(row => {
+                    const nameCell = row.querySelector('[data-mdl-overview-item="name"]');
+                    const completionCell = row.querySelector('[data-mdl-overview-item="completion"]');
+                    const submissionCell = row.querySelector('[data-mdl-overview-item="submissionstatus"]');
+                    const gradeCell = row.querySelector('[data-mdl-overview-item="Bewertung"]');
+                    const link = nameCell ? nameCell.querySelector('a.activityname') : null;
+                    const name = link ? link.textContent.trim() : (nameCell ? nameCell.textContent.trim() : 'Unbekannt');
+                    const url = link ? link.href : '';
+                    let completionStatus = 'Zu erledigen';
+                    if (completionCell) {
+                        const completionValue = completionCell.getAttribute('data-mdl-overview-value');
+                        if (completionValue === '1' || completionCell.textContent.includes('Erledigt')) {
+                            completionStatus = 'Erledigt';
+                        }
+                    }
+                    const submissionStatus = submissionCell ?
+                        submissionCell.getAttribute('data-mdl-overview-value') || submissionCell.textContent.trim() :
+                        'Unbekannt';
+                    const grade = gradeCell ?
+                        gradeCell.getAttribute('data-mdl-overview-value') || gradeCell.textContent.trim() :
+                        '-';
+                    return {
+                        name,
+                        url,
+                        type: 'Aufgabe',
+                        completionStatus,
+                        submissionStatus,
+                        grade
+                    };
+                });
+
+                // Pflicht-Quizzes extrahieren
+                const quizDoc = parser.parseFromString(quizHtml, 'text/html');
+                const quizTable = quizDoc.querySelector('#quiz_overview .course-overview-table tbody');
+                const quizRows = quizTable ? Array.from(quizTable.querySelectorAll('tr')).filter(row => {
+                    const nameCell = row.querySelector('[data-mdl-overview-item="name"]');
+                    if (nameCell) {
+                        const link = nameCell.querySelector('a.activityname');
+                        const visibleText = link ? link.textContent : nameCell.textContent;
+                        return visibleText && visibleText.includes('Pflicht');
+                    }
+                    return false;
+                }) : [];
+
+                const quizData = quizRows.map(row => {
+                    const nameCell = row.querySelector('[data-mdl-overview-item="name"]');
+                    const completionCell = row.querySelector('[data-mdl-overview-item="completion"]');
+                    const gradeCell = row.querySelector('[data-mdl-overview-item="Bewertung"]');
+                    const link = nameCell ? nameCell.querySelector('a.activityname') : null;
+                    const name = link ? link.textContent.trim() : (nameCell ? nameCell.textContent.trim() : 'Unbekannt');
+                    const url = link ? link.href : '';
+                    let completionStatus = 'Zu erledigen';
+                    if (completionCell) {
+                        const completionValue = completionCell.getAttribute('data-mdl-overview-value');
+                        if (completionValue === '1' || completionCell.textContent.includes('Erledigt')) {
+                            completionStatus = 'Erledigt';
+                        }
+                    }
+                    // Quizzes haben meist keinen Abgabestatus
+                    const submissionStatus = '-';
+                    const grade = gradeCell ?
+                        gradeCell.getAttribute('data-mdl-overview-value') || gradeCell.textContent.trim() :
+                        '-';
+                    return {
+                        name,
+                        url,
+                        type: 'Quiz',
+                        completionStatus,
+                        submissionStatus,
+                        grade
+                    };
+                });
+
+                // Zusammenführen und sortieren
+                const allData = [...assignmentData, ...quizData].sort((a, b) => a.name.localeCompare(b.name, 'de'));
+
+                if (allData.length > 0) {
+                    
+                    // Status nach 3 Sekunden ausblenden
+                    setTimeout(() => {
+                                }, 3000);
+                    let html = '<h4>📚 Alle Pflichtaufgaben-Übersicht:</h4>';
+                    html += '<table class="info-table">';
+                    html += '<tr><th>Name</th><th>Typ</th><th>Abschlussstatus</th><th>Abgabestatus</th><th>Bewertung</th></tr>';
+                    allData.forEach(item => {
+                        const statusColor = item.completionStatus === 'Erledigt' ? 'color: green;' : 'color: orange;';
+                        html += `<tr>
+                            <td><a href="${item.url}" target="_blank">${item.name}</a></td>
+                            <td>${item.type}</td>
+                            <td><span style="${statusColor}">${item.completionStatus}</span></td>
+                            <td>${item.submissionStatus}</td>
+                            <td><strong>${item.grade}</strong></td>
+                        </tr>`;
+                    });
+                    html += '</table>';
+                    document.getElementById('pflichtSessionInfo').innerHTML = html;
+                    createPflichtCharts(allData);
+                } else {
+                }
+
+            } catch (error) {
+            }
+
+            showLoading(false);
+        }
+
+        // Automatisches Laden beim Start
+        window.addEventListener('DOMContentLoaded', () => {
+            showTab('checklists');
+            
+            // Testmodus-Indikator anzeigen
+            if (TEST_MODE) {
+                document.getElementById('testModeIndicator').style.display = 'block';
+            }
+            
+            extractFromChecklistIndex();
+            extractPflichtOverview();
+        });
+
+        // Refresh-Button
+        document.getElementById('refreshBtn').onclick = () => {
+            const activeTab = document.getElementById('checklistsTab').style.display !== 'none' ? 'checklists' : 'pflicht';
+            if (activeTab === 'checklists') extractFromChecklistIndex();
+            else extractPflichtOverview();
+        };
+
+        // Tab-Wechsel: Bei Wechsel zu Pflicht Tab automatisch laden
+        document.getElementById('tabPflicht').onclick = () => {
+            showTab('pflicht');
+            extractPflichtOverview();
+        };
+        document.getElementById('tabChecklists').onclick = () => {
+            showTab('checklists');
+            extractFromChecklistIndex();
+        };
+    </script>
+</body>
+</html>
