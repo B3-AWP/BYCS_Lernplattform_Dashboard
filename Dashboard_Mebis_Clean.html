@@ -781,6 +781,36 @@
 
     <!-- Pflichtaufgaben Tab -->
     <div id="pflichtTab" style="display:none;">
+        <div class="stats-row" id="pflichtStatsRow" style="display: none;">
+            <div class="stat-card combined-stats-card">
+                <div class="combined-stats-content">
+                    <div class="completion-overview">
+                        <div class="completion-main">
+                            <span class="completion-count" id="pflichtCompletedCount">0</span>
+                            <span class="completion-separator">von</span>
+                            <span class="completion-total" id="pflichtTotalCount">0</span>
+                        </div>
+                        <div class="completion-label">Pflichtaufgaben abgeschlossen</div>
+                    </div>
+                    <div class="completion-visual">
+                        <div class="completion-progress-ring">
+                            <svg width="60" height="60" viewBox="0 0 60 60">
+                                <circle cx="30" cy="30" r="25" stroke="#e9ecef" stroke-width="4" fill="none"/>
+                                <circle id="pflichtCompletionRing" cx="30" cy="30" r="25" stroke="#28a745" stroke-width="4" 
+                                        fill="none" stroke-dasharray="157" stroke-dashoffset="157" 
+                                        style="transition: stroke-dashoffset 0.8s ease-in-out;"/>
+                            </svg>
+                            <div class="completion-percentage" id="pflichtCompletionPercentage">0%</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="pflichtAverageGrade">-</div>
+                <div class="stat-label">Durchschnittsnote</div>
+            </div>
+        </div>
+        
         <div class="dashboard-container" id="pflichtDashboardContainer" style="display:none;">
             <div class="chart-container">
                 <h2>📊 Pflichtaufgaben Abschlussstatus</h2>
@@ -1004,6 +1034,7 @@
                     
                     updatePflichtTable(allData);
                     createPflichtCharts(allData);
+                    updatePflichtStats();
                     
                     // Show filter section
                     document.getElementById('pflichtFilterSection').style.display = 'block';
@@ -1015,6 +1046,7 @@
                     
                     updatePflichtTable(TEST_PFLICHT_DATA);
                     createPflichtCharts(TEST_PFLICHT_DATA);
+                    updatePflichtStats();
                     
                     // Show filter section
                     document.getElementById('pflichtFilterSection').style.display = 'block';
@@ -1029,6 +1061,7 @@
                 
                 updatePflichtTable(TEST_PFLICHT_DATA);
                 createPflichtCharts(TEST_PFLICHT_DATA);
+                updatePflichtStats();
                 
                 // Show filter section
                 document.getElementById('pflichtFilterSection').style.display = 'block';
@@ -1298,6 +1331,178 @@
             // Zahlen animieren
             animateNumber('completedCount', completed);
             animateNumber('totalCount', total);
+            
+            // Prozentwert berechnen
+            const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
+            
+            // Ring-Animation
+            const circumference = 2 * Math.PI * 25; // r = 25
+            const offset = circumference - (percentage / 100) * circumference;
+            
+            // Animation für Ring und Prozent
+            setTimeout(() => {
+                ringElement.style.strokeDashoffset = offset;
+                percentageElement.textContent = percentage + '%';
+                
+                // Dynamische Farbe für Ring und Prozent
+                const color = getProgressColor(percentage);
+                ringElement.style.stroke = color;
+                percentageElement.style.color = color;
+            }, 300); // Kleine Verzögerung für bessere Optik
+        }
+        
+        // Pflichtaufgaben Stats aktualisieren
+        function updatePflichtStats() {
+            console.log('updatePflichtStats called with data:', window.pflichtData);
+            
+            if (!window.pflichtData || window.pflichtData.length === 0) {
+                console.log('No pflichtData available');
+                // Auch bei leeren Daten die Stats-Row verstecken
+                const pflichtStatsRow = document.getElementById('pflichtStatsRow');
+                if (pflichtStatsRow) {
+                    pflichtStatsRow.style.display = 'none';
+                }
+                return;
+            }
+            
+            // Debug: Datenstruktur analysieren
+            console.log('Sample pflichtData item:', window.pflichtData[0]);
+            console.log('All completion statuses:', window.pflichtData.map(item => item.completionStatus));
+            console.log('All grades:', window.pflichtData.map(item => item.grade));
+            
+            const totalPflicht = window.pflichtData.length;
+            
+            // Versuche verschiedene Filterbedingungen
+            const completedPflicht1 = window.pflichtData.filter(item => 
+                item.completionStatus === 'Erledigt'
+            ).length;
+            
+            const completedPflicht2 = window.pflichtData.filter(item => 
+                item.completionStatus && item.completionStatus.includes('Erledigt')
+            ).length;
+            
+            const completedPflicht3 = window.pflichtData.filter(item => 
+                item.completionStatus === 'Abgegeben' || item.completionStatus === 'Bewertet' || item.completionStatus === 'Erledigt'
+            ).length;
+            
+            console.log('Completion attempts:', {
+                'Exact Erledigt': completedPflicht1,
+                'Contains Erledigt': completedPflicht2, 
+                'Multiple statuses': completedPflicht3
+            });
+            
+            // Verwende die beste Variante
+            const completedPflicht = Math.max(completedPflicht1, completedPflicht2, completedPflicht3);
+            
+            console.log('Final pflicht stats:', { totalPflicht, completedPflicht });
+            
+            // Durchschnittsnote berechnen - Debug Version
+            console.log('Grade calculation debug:');
+            
+            // Alle verschiedenen Ansätze probieren
+            const gradedItems1 = window.pflichtData.filter(item => {
+                const hasGrade = item.grade && item.grade !== '-' && item.grade !== 'Unbekannt';
+                if (hasGrade) {
+                    const numGrade = parseFloat(item.grade.replace(',', '.'));
+                    console.log(`Item "${item.name}": grade="${item.grade}", parsed=${numGrade}, valid=${!isNaN(numGrade)}`);
+                    return !isNaN(numGrade);
+                }
+                return false;
+            });
+            
+            const gradedItems2 = window.pflichtData.filter(item => {
+                if (!item.grade || item.grade.trim() === '') return false;
+                const gradeStr = item.grade.toString().trim();
+                if (gradeStr === '-' || gradeStr === 'Unbekannt' || gradeStr === 'null' || gradeStr === 'undefined') return false;
+                const numGrade = parseFloat(gradeStr.replace(',', '.'));
+                return !isNaN(numGrade) && numGrade > 0 && numGrade <= 6; // Deutsche Noten 1-6
+            });
+            
+            console.log('Graded items attempts:', {
+                'Original filter': gradedItems1.length,
+                'Improved filter': gradedItems2.length,
+                'gradedItems1 details': gradedItems1.map(item => ({ name: item.name, grade: item.grade })),
+                'gradedItems2 details': gradedItems2.map(item => ({ name: item.name, grade: item.grade }))
+            });
+            
+            const gradedItems = gradedItems2.length > 0 ? gradedItems2 : gradedItems1;
+            
+            let averageGrade = '-';
+            if (gradedItems.length > 0) {
+                const totalGrade = gradedItems.reduce((sum, item) => {
+                    const numGrade = parseFloat(item.grade.replace(',', '.'));
+                    console.log(`Adding grade: ${item.grade} -> ${numGrade}`);
+                    return sum + numGrade;
+                }, 0);
+                averageGrade = (totalGrade / gradedItems.length).toFixed(1).replace('.', ',');
+                console.log(`Average calculation: ${totalGrade} / ${gradedItems.length} = ${averageGrade}`);
+            } else {
+                console.log('No valid grades found for average calculation');
+            }
+            
+            // Fallback: Falls alle Versuche 0 ergeben, versuche alternative Ansätze
+            if (completedPflicht === 0 && totalPflicht > 0) {
+                console.log('Trying fallback completion detection...');
+                
+                // Alternativer Ansatz: Schaue nach Noten > 0 als "erledigt"
+                const gradedAsCompleted = window.pflichtData.filter(item => {
+                    if (!item.grade) return false;
+                    const gradeStr = item.grade.toString().trim();
+                    if (gradeStr === '-' || gradeStr === 'Unbekannt') return false;
+                    const numGrade = parseFloat(gradeStr.replace(',', '.'));
+                    return !isNaN(numGrade) && numGrade > 0;
+                }).length;
+                
+                console.log('Graded items as completion indicator:', gradedAsCompleted);
+                
+                // Verwende die bessere Schätzung
+                const finalCompleted = Math.max(completedPflicht, gradedAsCompleted);
+                updatePflichtCombinedStats(finalCompleted, totalPflicht);
+            } else {
+                // Stats Card aktualisieren
+                updatePflichtCombinedStats(completedPflicht, totalPflicht);
+            }
+            
+            // Durchschnittsnote aktualisieren
+            const averageGradeElement = document.getElementById('pflichtAverageGrade');
+            if (averageGradeElement) {
+                averageGradeElement.textContent = averageGrade;
+                
+                // Farbe basierend auf Note
+                if (averageGrade !== '-') {
+                    const numGrade = parseFloat(averageGrade.replace(',', '.'));
+                    const color = getGradeColor(averageGrade);
+                    averageGradeElement.style.color = color.replace('color: ', '').replace(';', '');
+                }
+            }
+            
+            // Stats Row anzeigen
+            const pflichtStatsRow = document.getElementById('pflichtStatsRow');
+            console.log('pflichtStatsRow element:', pflichtStatsRow);
+            
+            if (pflichtStatsRow) {
+                pflichtStatsRow.style.display = 'grid';
+                pflichtStatsRow.style.setProperty('display', 'grid', 'important');
+                console.log('pflichtStatsRow display set to grid with !important');
+            } else {
+                console.error('pflichtStatsRow element not found!');
+            }
+            
+            console.log('updatePflichtStats completed');
+        }
+        
+        // Pflichtaufgaben Kombinierte Stats Card aktualisieren
+        function updatePflichtCombinedStats(completed, total) {
+            const completedElement = document.getElementById('pflichtCompletedCount');
+            const totalElement = document.getElementById('pflichtTotalCount');
+            const percentageElement = document.getElementById('pflichtCompletionPercentage');
+            const ringElement = document.getElementById('pflichtCompletionRing');
+            
+            if (!completedElement || !totalElement || !percentageElement || !ringElement) return;
+            
+            // Zahlen animieren
+            animateNumber('pflichtCompletedCount', completed);
+            animateNumber('pflichtTotalCount', total);
             
             // Prozentwert berechnen
             const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
@@ -1707,6 +1912,21 @@
         function showTab(tab) {
             document.getElementById('checklistsTab').style.display = tab === 'checklists' ? 'block' : 'none';
             document.getElementById('pflichtTab').style.display = tab === 'pflicht' ? 'block' : 'none';
+            
+            // Stats-Rows anzeigen wenn Daten verfügbar sind
+            if (tab === 'pflicht') {
+                const pflichtStatsRow = document.getElementById('pflichtStatsRow');
+                if (pflichtStatsRow && window.pflichtData && window.pflichtData.length > 0) {
+                    pflichtStatsRow.style.display = 'grid';
+                    console.log('Showing pflichtStatsRow via showTab');
+                }
+            } else if (tab === 'checklists') {
+                const statsRow = document.getElementById('statsRow');
+                if (statsRow) {
+                    // Stats-Row für Checklisten ist bereits korrekt implementiert
+                }
+            }
+            
             // Button-Highlight
             document.getElementById('tabChecklists').style.opacity = tab === 'checklists' ? '1' : '0.6';
             document.getElementById('tabPflicht').style.opacity = tab === 'pflicht' ? '1' : '0.6';
@@ -1757,6 +1977,12 @@
             });
 
             document.getElementById('pflichtDashboardContainer').style.display = 'grid';
+            
+            // Auch Stats-Row anzeigen falls vorhanden
+            const pflichtStatsRow = document.getElementById('pflichtStatsRow');
+            if (pflichtStatsRow && window.pflichtData && window.pflichtData.length > 0) {
+                pflichtStatsRow.style.display = 'grid';
+            }
         }
 
         // Pflichtaufgaben laden überschreiben
@@ -1876,6 +2102,7 @@
                     
                     updatePflichtTable(allData);
                     createPflichtCharts(allData);
+                    updatePflichtStats();
                     
                     // Show filter section
                     document.getElementById('pflichtFilterSection').style.display = 'block';
@@ -1887,6 +2114,7 @@
                     
                     updatePflichtTable(TEST_PFLICHT_DATA);
                     createPflichtCharts(TEST_PFLICHT_DATA);
+                    updatePflichtStats();
                     
                     // Show filter section
                     document.getElementById('pflichtFilterSection').style.display = 'block';
@@ -1901,6 +2129,7 @@
                 
                 updatePflichtTable(TEST_PFLICHT_DATA);
                 createPflichtCharts(TEST_PFLICHT_DATA);
+                updatePflichtStats();
                 
                 // Show filter section
                 document.getElementById('pflichtFilterSection').style.display = 'block';
