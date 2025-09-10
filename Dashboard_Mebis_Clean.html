@@ -13,41 +13,40 @@
             max-width: 1000px;
             margin: 0 auto;
             padding: 15px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #F8F9FA;
             min-height: 800px;
             color: #333;
             font-size: 14px;
         }
         
         .config-section {
-            background: linear-gradient(145deg, #ffffff, #f8f9fa);
-            padding: 12px;
+            background: #FFFFFF;
+            padding: 20px;
             border-radius: 8px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1), 0 1px 4px rgba(0,0,0,0.2);
-            margin-bottom: 15px;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255,255,255,0.2);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 24px;
+            border: 1px solid #E9ECEF;
         }
         
         .api-btn {
-            background: linear-gradient(145deg, #007bff, #0056b3);
+            background: #0066CC;
             color: white;
             padding: 12px 24px;
             border: none;
-            border-radius: 25px;
+            border-radius: 8px;
             cursor: pointer;
             margin: 8px;
             font-weight: 600;
             transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(0, 123, 255, 0.3);
+            box-shadow: 0 2px 8px rgba(0, 102, 204, 0.2);
             position: relative;
             overflow: hidden;
         }
         
         .api-btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(0, 123, 255, 0.4);
-            background: linear-gradient(145deg, #0056b3, #003d82);
+            box-shadow: 0 4px 16px rgba(0, 102, 204, 0.3);
+            background: #0056b3;
         }
         
         .api-btn::before {
@@ -65,6 +64,72 @@
             left: 100%;
         }
         
+        .api-btn.active {
+            background: #0066CC;
+            box-shadow: 0 2px 8px rgba(0, 102, 204, 0.4);
+            opacity: 1 !important;
+        }
+        
+        .api-btn.inactive {
+            background: #6C757D;
+            opacity: 0.7;
+        }
+        
+        /* Information Boxes */
+        .info-box {
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .info-box.orange {
+            background: #FFF3E0;
+            border-left: 4px solid #FF6B35;
+            color: #E65100;
+        }
+        
+        .info-box.green {
+            background: #E8F5E8;
+            border-left: 4px solid #28A745;
+            color: #1B5E20;
+        }
+        
+        .info-box.blue {
+            background: #E3F2FD;
+            border-left: 4px solid #0066CC;
+            color: #0D47A1;
+        }
+        
+        .info-box .icon {
+            font-size: 1.2rem;
+            margin-top: 2px;
+        }
+        
+        .info-box .content {
+            flex: 1;
+        }
+        
+        .info-box .title {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        
+        .info-box .description {
+            line-height: 1.5;
+        }
+        
+        .info-box .action-link {
+            color: inherit;
+            text-decoration: underline;
+            font-weight: 500;
+            margin-top: 8px;
+            display: inline-block;
+        }
+        
         .status-message {
             padding: 10px;
             border-radius: 4px;
@@ -72,15 +137,15 @@
         }
         
         .status-success {
-            background-color: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
+            background-color: #E8F5E8;
+            color: #1B5E20;
+            border: 1px solid #28A745;
         }
         
         .status-error {
-            background-color: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
+            background-color: #FFF3E0;
+            color: #E65100;
+            border: 1px solid #FF6B35;
         }
         
         .loading {
@@ -91,7 +156,7 @@
         
         .spinner {
             border: 4px solid #f3f3f3;
-            border-top: 4px solid #007bff;
+            border-top: 4px solid #0066CC;
             border-radius: 50%;
             width: 40px;
             height: 40px;
@@ -119,12 +184,12 @@
         }
         
         .stat-card {
-            background: linear-gradient(145deg, #ffffff, #f8f9fa);
-            padding: 8px;
+            background: #FFFFFF;
+            padding: 16px;
             border-radius: 8px;
             text-align: center;
-            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
-            border: 1px solid rgba(255,255,255,0.2);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border: 1px solid #E9ECEF;
             transition: transform 0.3s ease;
         }
         
@@ -133,29 +198,27 @@
         }
         
         .stat-number {
-            font-size: 1.4rem;
+            font-size: 1.8rem;
             font-weight: bold;
-            margin-bottom: 2px;
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            margin-bottom: 8px;
+            color: #0066CC;
         }
         
         .stat-label {
-            color: #666;
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+            color: #6C757D;
+            font-size: 0.9rem;
+            font-weight: 500;
+            text-transform: none;
+            letter-spacing: 0px;
         }
         
         .chart-container {
-            background: linear-gradient(145deg, #ffffff, #f8f9fa);
-            padding: 12px;
+            background: #FFFFFF;
+            padding: 20px;
             border-radius: 8px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
             transition: transform 0.3s ease;
-            border: 1px solid rgba(255,255,255,0.2);
+            border: 1px solid #E9ECEF;
             position: relative;
             overflow: hidden;
             height: 200px;
@@ -172,7 +235,7 @@
             left: 0;
             right: 0;
             height: 4px;
-            background: linear-gradient(90deg, #667eea, #764ba2);
+            background: #0066CC;
         }
         
         .chart-container:hover {
@@ -182,8 +245,9 @@
         .chart-container h2 {
             margin-top: 0;
             color: #333;
-            font-size: 0.95rem;
-            margin-bottom: 10px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 16px;
         }
         
         .info-table {
@@ -208,7 +272,7 @@
         }
         
         .info-table tbody tr:hover {
-            background-color: rgba(102, 126, 234, 0.1);
+            background-color: #F8F9FA;
             transform: scale(1.01);
             transition: all 0.2s ease;
         }
@@ -634,7 +698,43 @@
             color: #28a745;
         }
         
+        /* Typography */
+        h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 1rem;
+        }
+        
+        h2 {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 0.8rem;
+        }
+        
+        h3 {
+            font-size: 1.1rem;
+            font-weight: 500;
+            color: #333;
+            margin-bottom: 0.6rem;
+        }
+        
+        /* Enhanced responsive design */
         @media (max-width: 768px) {
+            body {
+                padding: 8px;
+                font-size: 13px;
+            }
+            
+            h1 {
+                font-size: 1.4rem;
+            }
+            
+            .dashboard-container {
+                grid-template-columns: 1fr;
+            }
+            
             .stats-row {
                 grid-template-columns: 1fr;
             }
@@ -644,6 +744,57 @@
                 text-align: center;
                 gap: 10px;
             }
+            
+            .chart-container {
+                height: 180px;
+                padding: 12px;
+            }
+            
+            .api-btn {
+                padding: 8px 16px;
+                margin: 4px;
+                font-size: 0.8rem;
+            }
+            
+            .info-box {
+                padding: 12px;
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .info-box .icon {
+                margin-bottom: 8px;
+            }
+            
+            nav {
+                flex-direction: column;
+                gap: 8px;
+                align-items: stretch;
+            }
+            
+            nav .api-btn {
+                width: 100%;
+                text-align: center;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .stat-card {
+                padding: 12px;
+            }
+            
+            .stat-number {
+                font-size: 1.4rem;
+            }
+            
+            .chart-container {
+                height: 160px;
+                padding: 8px;
+            }
+            
+            .config-section {
+                padding: 12px;
+            }
         }
     </style>
 </head>
@@ -651,13 +802,15 @@
     <div style="position: relative;">
         <div id="testModeIndicator" style="position: absolute; top: 0; left: 0; background: rgba(255,255,255,0.2); color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.7rem; display: none;">TESTMODUS</div>
         
-        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
-            <h1 style="margin: 0; font-size: 1.5rem; color: white; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); margin-left: 80px;">📊 Mebis Analytics Dashboard</h1>
-            
-            <div style="display: flex; align-items: center; gap: 10px;">
-                <button class="api-btn" id="tabChecklists" onclick="showTab('checklists')" style="padding: 6px 12px; font-size: 0.9rem;">Checklisten</button>
-                <button class="api-btn" id="tabPflicht" onclick="showTab('pflicht')" style="padding: 6px 12px; font-size: 0.9rem;">Pflichtaufgaben</button>
-                <button class="api-btn" id="refreshBtn" title="Aktualisieren" style="padding: 6px 12px; font-size: 1rem;">🔄</button>
+        <div style="background: #FFFFFF; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 24px; border: 1px solid #E9ECEF;">
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
+                <h1 style="margin: 0; font-size: 1.8rem; color: #333; font-weight: 700;">📊 Mebis Analytics Dashboard</h1>
+                
+                <nav style="display: flex; align-items: center; gap: 4px;">
+                    <button class="api-btn active" id="tabChecklists" onclick="showTab('checklists')" style="padding: 10px 16px; font-size: 0.9rem;">Checklisten</button>
+                    <button class="api-btn inactive" id="tabPflicht" onclick="showTab('pflicht')" style="padding: 10px 16px; font-size: 0.9rem;">Pflichtaufgaben</button>
+                    <button class="api-btn" id="refreshBtn" title="Aktualisieren" style="padding: 10px 16px; font-size: 1rem; margin-left: 12px;">🔄</button>
+                </nav>
             </div>
         </div>
     </div>
@@ -1928,8 +2081,21 @@
             }
             
             // Button-Highlight
-            document.getElementById('tabChecklists').style.opacity = tab === 'checklists' ? '1' : '0.6';
-            document.getElementById('tabPflicht').style.opacity = tab === 'pflicht' ? '1' : '0.6';
+            // Update active/inactive states
+            const checklistBtn = document.getElementById('tabChecklists');
+            const pflichtBtn = document.getElementById('tabPflicht');
+            
+            if (tab === 'checklists') {
+                checklistBtn.classList.add('active');
+                checklistBtn.classList.remove('inactive');
+                pflichtBtn.classList.add('inactive');
+                pflichtBtn.classList.remove('active');
+            } else {
+                pflichtBtn.classList.add('active');
+                pflichtBtn.classList.remove('inactive');
+                checklistBtn.classList.add('inactive');
+                checklistBtn.classList.remove('active');
+            }
         }
 
         // Pflichtaufgaben Charts
