@@ -328,6 +328,154 @@
                 font-size: 2rem;
             }
         }
+        
+        /* Single Slider Styling */
+        .single-slider-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+        
+        .single-range {
+            flex: 1;
+            height: 10px;
+            -webkit-appearance: none;
+            appearance: none;
+            background: #dee2e6;
+            border-radius: 5px;
+            outline: none;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .single-range::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #ffffff;
+            cursor: pointer;
+            border: 3px solid #007bff;
+            box-shadow: 0 4px 12px rgba(0, 123, 255, 0.4);
+            transition: all 0.3s ease;
+        }
+        
+        .single-range::-webkit-slider-thumb:hover {
+            background: #007bff;
+            border-color: #0056b3;
+            transform: scale(1.1);
+            box-shadow: 0 6px 20px rgba(0, 123, 255, 0.6);
+        }
+        
+        .single-range::-webkit-slider-thumb:active {
+            transform: scale(1.05);
+            box-shadow: 0 2px 8px rgba(0, 123, 255, 0.8);
+        }
+        
+        .single-range::-moz-range-thumb {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #ffffff;
+            cursor: pointer;
+            border: 3px solid #007bff;
+            box-shadow: 0 4px 12px rgba(0, 123, 255, 0.4);
+            transition: all 0.3s ease;
+            -moz-appearance: none;
+        }
+        
+        .single-range::-moz-range-thumb:hover {
+            background: #007bff;
+            border-color: #0056b3;
+            transform: scale(1.1);
+            box-shadow: 0 6px 20px rgba(0, 123, 255, 0.6);
+        }
+        
+        .single-range::-moz-range-track {
+            background: #dee2e6;
+            border: none;
+            height: 10px;
+            border-radius: 5px;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .single-range::-webkit-slider-runnable-track {
+            background: #dee2e6;
+            border: none;
+            height: 10px;
+            border-radius: 5px;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        /* Min-Slider Styling (Grün) */
+        #progressFilterMin::-webkit-slider-thumb {
+            border-color: #28a745;
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.4);
+        }
+        
+        #progressFilterMin::-webkit-slider-thumb:hover {
+            background: #28a745;
+            border-color: #1e7e34;
+            box-shadow: 0 6px 20px rgba(40, 167, 69, 0.6);
+        }
+        
+        #progressFilterMin::-moz-range-thumb {
+            border-color: #28a745;
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.4);
+        }
+        
+        #progressFilterMin::-moz-range-thumb:hover {
+            background: #28a745;
+            border-color: #1e7e34;
+            box-shadow: 0 6px 20px rgba(40, 167, 69, 0.6);
+        }
+        
+        /* Max-Slider Styling (Blau) */
+        #progressFilterMax::-webkit-slider-thumb {
+            border-color: #007bff;
+            box-shadow: 0 4px 12px rgba(0, 123, 255, 0.4);
+        }
+        
+        #progressFilterMax::-webkit-slider-thumb:hover {
+            background: #007bff;
+            border-color: #0056b3;
+            box-shadow: 0 6px 20px rgba(0, 123, 255, 0.6);
+        }
+        
+        #progressFilterMax::-moz-range-thumb {
+            border-color: #007bff;
+            box-shadow: 0 4px 12px rgba(0, 123, 255, 0.4);
+        }
+        
+        #progressFilterMax::-moz-range-thumb:hover {
+            background: #007bff;
+            border-color: #0056b3;
+            box-shadow: 0 6px 20px rgba(0, 123, 255, 0.6);
+        }
+        
+        /* Slider Value Display */
+        .slider-value {
+            font-weight: 700;
+            font-size: 0.95rem;
+            padding: 4px 8px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.9);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+            min-width: 45px;
+            text-align: center;
+        }
+        
+        .min-value {
+            color: #28a745;
+            border: 1px solid rgba(40, 167, 69, 0.3);
+        }
+        
+        .max-value {
+            color: #007bff;
+            border: 1px solid rgba(0, 123, 255, 0.3);
+        }
     </style>
 </head>
 <body>
@@ -406,9 +554,17 @@
                     <option value="gesamt-asc">Gesamt % aufsteigend</option>
                 </select>
                 
-                <label>Mindest-Fortschritt:</label>
-                <input type="range" id="progressFilter" min="0" max="100" value="0" onchange="applyFilters()">
-                <span id="progressValue">0%</span>
+                <label>Min-Fortschritt:</label>
+                <div class="single-slider-container">
+                    <input type="range" id="progressFilterMin" class="single-range" min="0" max="100" value="0" oninput="validateSliders('min')">
+                    <span id="minProgressValue" class="slider-value min-value">0%</span>
+                </div>
+                
+                <label>Max-Fortschritt:</label>
+                <div class="single-slider-container">
+                    <input type="range" id="progressFilterMax" class="single-range" min="0" max="100" value="100" oninput="validateSliders('max')">
+                    <span id="maxProgressValue" class="slider-value max-value">100%</span>
+                </div>
             </div>
         </div>
         
@@ -440,6 +596,46 @@
                 <canvas id="pflichtGradeChart"></canvas>
             </div>
         </div>
+        
+        <div class="filter-section" id="pflichtFilterSection" style="display: none;">
+            <h3>🔍 Filter & Optionen - Pflichtaufgaben</h3>
+            <div class="filter-controls">
+                <label>Status:</label>
+                <select id="pflichtStatusFilter" onchange="applyPflichtFilters()">
+                    <option value="all">Alle anzeigen</option>
+                    <option value="completed">Nur erledigte</option>
+                    <option value="pending">Nur zu erledigende</option>
+                </select>
+                
+                <label>Typ:</label>
+                <select id="pflichtTypeFilter" onchange="applyPflichtFilters()">
+                    <option value="all">Alle Typen</option>
+                    <option value="Aufgabe">Nur Aufgaben</option>
+                    <option value="Quiz">Nur Quizzes</option>
+                </select>
+                
+                <label>Bewertung:</label>
+                <select id="pflichtGradeFilter" onchange="applyPflichtFilters()">
+                    <option value="all">Alle Bewertungen</option>
+                    <option value="graded">Nur bewertete</option>
+                    <option value="ungraded">Nur unbewertete</option>
+                    <option value="excellent">Sehr gut (≤1,5)</option>
+                    <option value="good">Gut (≤2,5)</option>
+                    <option value="satisfactory">Befriedigend (≤3,5)</option>
+                </select>
+                
+                <label>Sortierung:</label>
+                <select id="pflichtSortFilter" onchange="applyPflichtFilters()">
+                    <option value="name">Nach Name</option>
+                    <option value="type">Nach Typ</option>
+                    <option value="status-completed">Erledigte zuerst</option>
+                    <option value="status-pending">Ausstehende zuerst</option>
+                    <option value="grade-best">Beste Noten zuerst</option>
+                    <option value="grade-worst">Schlechteste Noten zuerst</option>
+                </select>
+            </div>
+        </div>
+        
         <div class="config-section">
             <div id="pflichtSessionInfo"></div>
         </div>
@@ -451,8 +647,8 @@
         let checklistData = [];
         let historicalData = [];
         
-        // Testmodus aktivieren (auf false setzen für echte API-Calls)
-        const TEST_MODE = true;
+        // Testmodus wird automatisch aktiviert, wenn keine echten Daten gefunden werden
+        let TEST_MODE = false;
         
         // Testdaten
         const TEST_CHECKLIST_DATA = [
@@ -608,63 +804,54 @@
                 const allData = [...assignmentData, ...quizData].sort((a, b) => a.name.localeCompare(b.name, 'de'));
 
                 if (allData.length > 0) {
+                    // Store data globally for filtering
+                    window.pflichtData = allData;
                     
-                    // Status nach 3 Sekunden ausblenden
-                    setTimeout(() => {
-                                }, 3000);
-                    let html = '<h4>📚 Alle Pflichtaufgaben-Übersicht:</h4>';
-                    html += '<table class="info-table">';
-                    html += '<tr><th>Name</th><th>Typ</th><th>Abschlussstatus</th><th>Abgabestatus</th><th>Bewertung</th></tr>';
-                    allData.forEach(item => {
-                        const statusColor = item.completionStatus === 'Erledigt' ? 'color: green;' : 'color: orange;';
-                        html += `<tr>
-                            <td><a href="${item.url}" target="_blank">${item.name}</a></td>
-                            <td>${item.type}</td>
-                            <td><span style="${statusColor}">${item.completionStatus}</span></td>
-                            <td>${item.submissionStatus}</td>
-                            <td><strong>${item.grade}</strong></td>
-                        </tr>`;
-                    });
-                    html += '</table>';
-                    document.getElementById('pflichtSessionInfo').innerHTML = html;
+                    updatePflichtTable(allData);
                     createPflichtCharts(allData);
+                    
+                    // Show filter section
+                    document.getElementById('pflichtFilterSection').style.display = 'block';
                 } else {
+                    // Keine Pflichtaufgaben gefunden - Testmodus aktivieren
+                    activateTestMode();
+                    // Store test data globally for filtering
+                    window.pflichtData = TEST_PFLICHT_DATA;
+                    
+                    updatePflichtTable(TEST_PFLICHT_DATA);
+                    createPflichtCharts(TEST_PFLICHT_DATA);
+                    
+                    // Show filter section
+                    document.getElementById('pflichtFilterSection').style.display = 'block';
                 }
 
             } catch (error) {
+                // Fehler beim Laden der Pflichtaufgaben - Testmodus aktivieren
+                console.error('Fehler beim Laden der Pflichtaufgaben-Daten:', error);
+                activateTestMode();
+                // Store test data globally for filtering
+                window.pflichtData = TEST_PFLICHT_DATA;
+                
+                updatePflichtTable(TEST_PFLICHT_DATA);
+                createPflichtCharts(TEST_PFLICHT_DATA);
+                
+                // Show filter section
+                document.getElementById('pflichtFilterSection').style.display = 'block';
             }
 
             showLoading(false);
         }
         
+        // Testmodus aktivieren
+        function activateTestMode() {
+            TEST_MODE = true;
+            document.getElementById('testModeIndicator').style.display = 'block';
+            console.log('Testmodus aktiviert: Keine echten Daten verfügbar');
+        }
+        
         // Hauptfunktion: Checklisten-Index laden
         async function extractFromChecklistIndex() {
             showLoading(true);
-            
-            if (TEST_MODE) {
-                // Testdaten verwenden
-                setTimeout(() => {
-                    createCharts(TEST_CHECKLIST_DATA);
-                    
-                    // Tabelle erstellen
-                    let html = '<h4>📊 Checklist-Übersicht:</h4>';
-                    html += '<table class="info-table">';
-                    html += '<tr><th>Name</th><th>Pflicht %</th><th>Gesamt %</th></tr>';
-                    
-                    TEST_CHECKLIST_DATA.forEach(item => {
-                        html += `<tr>
-                            <td><a href="${item.url}" target="_blank">${item.name}</a></td>
-                            <td><strong>${item.pflichtProgress}%</strong></td>
-                            <td><strong>${item.gesamtProgress}%</strong></td>
-                        </tr>`;
-                    });
-                    
-                    html += '</table>';
-                    document.getElementById('sessionInfo').innerHTML = html;
-                    showLoading(false);
-                }, 1000); // Simuliere Ladezeit
-                return;
-            }
             
             const courseId = '2036416';
             const checklistIndexUrl = `https://lernplattform.mebis.bycs.de/mod/checklist/index.php?id=${courseId}`;
@@ -691,7 +878,13 @@
                 });
                 
                 if (checklistLinks.length === 0) {
-                    showLoading(false);
+                    // Keine echten Daten gefunden - Testmodus aktivieren
+                    activateTestMode();
+                    setTimeout(() => {
+                        createCharts(TEST_CHECKLIST_DATA);
+                        updateChecklistTable(TEST_CHECKLIST_DATA);
+                        showLoading(false);
+                    }, 1000);
                     return;
                 }
                 
@@ -727,36 +920,29 @@
                 }
                 
                 if (extractedData.length > 0) {
-                    createCharts(extractedData);
-                    const successCount = extractedData.filter(item => !item.error).length;
-                    
-                    // Status nach 3 Sekunden ausblenden
-                    setTimeout(() => {
-                        document.getElementById('statusMessage').style.display = 'none';
-                    }, 3000);
-                    
-                    // Tabelle erstellen
-                    let html = '<h4>📊 Checklist-Übersicht:</h4>';
-                    html += '<table class="info-table">';
-                    html += '<tr><th>Name</th><th>Pflicht %</th><th>Gesamt %</th></tr>';
-                    
-                    extractedData.forEach(item => {
-                        const pflichtPercent = item.pflichtProgress !== undefined ? `${item.pflichtProgress}%` : 'n/a';
-                        const gesamtPercent = item.gesamtProgress !== undefined ? `${item.gesamtProgress}%` : 'n/a';
-                        
-                        html += `<tr>
-                            <td><a href="${item.url}" target="_blank">${item.name}</a></td>
-                            <td><strong>${pflichtPercent}</strong></td>
-                            <td><strong>${gesamtPercent}</strong></td>
-                        </tr>`;
-                    });
-                    
-                    html += '</table>';
-                    document.getElementById('sessionInfo').innerHTML = html;
+                    const validData = extractedData.filter(item => !item.error);
+                    if (validData.length === 0) {
+                        // Keine gültigen Daten gefunden - Testmodus aktivieren
+                        activateTestMode();
+                        createCharts(TEST_CHECKLIST_DATA);
+                        updateChecklistTable(TEST_CHECKLIST_DATA);
+                    } else {
+                        createCharts(extractedData);
+                        updateChecklistTable(extractedData);
+                    }
                 } else {
+                    // Keine Daten gefunden - Testmodus aktivieren
+                    activateTestMode();
+                    createCharts(TEST_CHECKLIST_DATA);
+                    updateChecklistTable(TEST_CHECKLIST_DATA);
                 }
                 
             } catch (error) {
+                // Fehler beim Laden der echten Daten - Testmodus aktivieren
+                console.error('Fehler beim Laden der Checklisten-Daten:', error);
+                activateTestMode();
+                createCharts(TEST_CHECKLIST_DATA);
+                updateChecklistTable(TEST_CHECKLIST_DATA);
             }
             
             showLoading(false);
@@ -883,14 +1069,58 @@
             document.getElementById('filterSection').style.display = 'block';
         }
         
+        // Slider Validation Function - Mit Mitziehen
+        function validateSliders(changedSlider) {
+            const minSlider = document.getElementById('progressFilterMin');
+            const maxSlider = document.getElementById('progressFilterMax');
+            const minValueDisplay = document.getElementById('minProgressValue');
+            const maxValueDisplay = document.getElementById('maxProgressValue');
+            
+            if (!minSlider || !maxSlider) return;
+            
+            let minValue = parseInt(minSlider.value);
+            let maxValue = parseInt(maxSlider.value);
+            
+            // Slider mitziehen: Wenn Min größer als Max wird, Max mitziehen
+            if (changedSlider === 'min' && minValue > maxValue) {
+                maxValue = minValue;
+                maxSlider.value = maxValue;
+            } 
+            // Slider mitziehen: Wenn Max kleiner als Min wird, Min mitziehen
+            else if (changedSlider === 'max' && maxValue < minValue) {
+                minValue = maxValue;
+                minSlider.value = minValue;
+            }
+            
+            // Werte-Anzeige aktualisieren
+            minValueDisplay.textContent = minValue + '%';
+            maxValueDisplay.textContent = maxValue + '%';
+            
+            // Filter anwenden
+            applyFilters();
+        }
+        
+        // Initial Slider Setup
+        function initSliders() {
+            const minSlider = document.getElementById('progressFilterMin');
+            const maxSlider = document.getElementById('progressFilterMax');
+            
+            if (!minSlider || !maxSlider) return;
+            
+            // Initiale Werte setzen
+            validateSliders('init');
+        }
+        
         // Filter anwenden
         function applyFilters() {
             const viewFilter = document.getElementById('viewFilter').value;
             const sortFilter = document.getElementById('sortFilter').value;
-            const progressFilter = document.getElementById('progressFilter').value;
+            const progressFilterMinEl = document.getElementById('progressFilterMin');
+            const progressFilterMaxEl = document.getElementById('progressFilterMax');
             
-            // Progress-Wert anzeigen
-            document.getElementById('progressValue').textContent = progressFilter + '%';
+            // Fallback auf alte IDs falls Range-Slider noch nicht geladen
+            const progressFilterMin = progressFilterMinEl ? progressFilterMinEl.value : 0;
+            const progressFilterMax = progressFilterMaxEl ? progressFilterMaxEl.value : 100;
             
             let filteredData = checklistData.filter(item => !item.error);
             
@@ -907,8 +1137,9 @@
                     break;
             }
             
-            // Progress-Filter anwenden
-            filteredData = filteredData.filter(item => item.pflichtProgress >= progressFilter);
+            // Progress-Filter anwenden (Mindest- und Maximalfortschritt)
+            filteredData = filteredData.filter(item => 
+                item.pflichtProgress >= progressFilterMin && item.pflichtProgress <= progressFilterMax);
             
             // Sortierung anwenden
             switch(sortFilter) {
@@ -930,6 +1161,9 @@
             
             // Charts mit gefilterten Daten aktualisieren
             updateChartsWithFilteredData(filteredData);
+            
+            // Checklisten-Übersichtstabelle aktualisieren
+            updateChecklistTable(filteredData);
         }
         
         // Funktion zur Farbbestimmung basierend auf Fortschritt
@@ -959,6 +1193,40 @@
             detailGesamtChart.data.datasets[0].data = filteredData.map(item => item.gesamtProgress || 0);
             detailGesamtChart.data.datasets[0].backgroundColor = gesamtColors;
             detailGesamtChart.update();
+        }
+        
+        // Checklisten-Übersichtstabelle mit gefilterten Daten aktualisieren
+        function updateChecklistTable(filteredData) {
+            let html = '<h4>📊 Checklist-Übersicht</h4>';
+            html += '<table class="info-table" id="checklistTable">';
+            html += '<thead>';
+            html += '<tr>';
+            html += '<th onclick="sortChecklistTableByColumn(0)" class="sortable-header" style="cursor: pointer;">Name <span class="sort-icon">↕️</span></th>';
+            html += '<th onclick="sortChecklistTableByColumn(1)" class="sortable-header" style="cursor: pointer;">Pflicht % <span class="sort-icon">↕️</span></th>';
+            html += '<th onclick="sortChecklistTableByColumn(2)" class="sortable-header" style="cursor: pointer;">Gesamt % <span class="sort-icon">↕️</span></th>';
+            html += '</tr>';
+            html += '</thead>';
+            html += '<tbody id="checklistTableBody">';
+            
+            filteredData.forEach((item, index) => {
+                const pflichtPercent = item.pflichtProgress !== undefined ? item.pflichtProgress : 0;
+                const gesamtPercent = item.gesamtProgress !== undefined ? item.gesamtProgress : 0;
+                const pflichtDisplay = item.pflichtProgress !== undefined ? `${item.pflichtProgress}%` : 'n/a';
+                const gesamtDisplay = item.gesamtProgress !== undefined ? `${item.gesamtProgress}%` : 'n/a';
+                
+                html += `<tr data-name="${item.name.toLowerCase()}" data-pflicht="${pflichtPercent}" data-gesamt="${gesamtPercent}">
+                    <td><a href="${item.url}" target="_blank">${item.name}</a></td>
+                    <td><strong class="progress-cell" data-value="${pflichtPercent}">${pflichtDisplay}</strong></td>
+                    <td><strong class="progress-cell" data-value="${gesamtPercent}">${gesamtDisplay}</strong></td>
+                </tr>`;
+            });
+            
+            html += '</tbody>';
+            html += '</table>';
+            document.getElementById('sessionInfo').innerHTML = html;
+            
+            // Store data for sorting
+            window.currentChecklistTableData = filteredData;
         }
         
         
@@ -1161,30 +1429,6 @@
         async function extractPflichtOverview() {
             showLoading(true);
 
-            if (TEST_MODE) {
-                // Testdaten verwenden
-                setTimeout(() => {
-                    let html = '<h4>📚 Alle Pflichtaufgaben-Übersicht (Testdaten):</h4>';
-                    html += '<table class="info-table">';
-                    html += '<tr><th>Name</th><th>Typ</th><th>Abschlussstatus</th><th>Abgabestatus</th><th>Bewertung</th></tr>';
-                    TEST_PFLICHT_DATA.forEach(item => {
-                        const statusColor = item.completionStatus === 'Erledigt' ? 'color: green;' : 'color: orange;';
-                        html += `<tr>
-                            <td><a href="${item.url}" target="_blank">${item.name}</a></td>
-                            <td>${item.type}</td>
-                            <td><span style="${statusColor}">${item.completionStatus}</span></td>
-                            <td>${item.submissionStatus}</td>
-                            <td><strong>${item.grade}</strong></td>
-                        </tr>`;
-                    });
-                    html += '</table>';
-                    document.getElementById('pflichtSessionInfo').innerHTML = html;
-                    createPflichtCharts(TEST_PFLICHT_DATA);
-                    showLoading(false);
-                }, 1200); // Simuliere Ladezeit
-                return;
-            }
-
             const courseId = '2036416';
             const assignmentOverviewUrl = `https://lernplattform.mebis.bycs.de/course/overview.php?id=${courseId}&expand[]=assign#assign_overview_collapsible`;
             const quizOverviewUrl = `https://lernplattform.mebis.bycs.de/course/overview.php?id=${courseId}&expand[]=quiz#quiz_overview_collapsible`;
@@ -1293,30 +1537,39 @@
                 const allData = [...assignmentData, ...quizData].sort((a, b) => a.name.localeCompare(b.name, 'de'));
 
                 if (allData.length > 0) {
+                    // Store data globally for filtering
+                    window.pflichtData = allData;
                     
-                    // Status nach 3 Sekunden ausblenden
-                    setTimeout(() => {
-                                }, 3000);
-                    let html = '<h4>📚 Alle Pflichtaufgaben-Übersicht:</h4>';
-                    html += '<table class="info-table">';
-                    html += '<tr><th>Name</th><th>Typ</th><th>Abschlussstatus</th><th>Abgabestatus</th><th>Bewertung</th></tr>';
-                    allData.forEach(item => {
-                        const statusColor = item.completionStatus === 'Erledigt' ? 'color: green;' : 'color: orange;';
-                        html += `<tr>
-                            <td><a href="${item.url}" target="_blank">${item.name}</a></td>
-                            <td>${item.type}</td>
-                            <td><span style="${statusColor}">${item.completionStatus}</span></td>
-                            <td>${item.submissionStatus}</td>
-                            <td><strong>${item.grade}</strong></td>
-                        </tr>`;
-                    });
-                    html += '</table>';
-                    document.getElementById('pflichtSessionInfo').innerHTML = html;
+                    updatePflichtTable(allData);
                     createPflichtCharts(allData);
+                    
+                    // Show filter section
+                    document.getElementById('pflichtFilterSection').style.display = 'block';
                 } else {
+                    // Keine Pflichtaufgaben gefunden - Testmodus aktivieren
+                    activateTestMode();
+                    // Store test data globally for filtering
+                    window.pflichtData = TEST_PFLICHT_DATA;
+                    
+                    updatePflichtTable(TEST_PFLICHT_DATA);
+                    createPflichtCharts(TEST_PFLICHT_DATA);
+                    
+                    // Show filter section
+                    document.getElementById('pflichtFilterSection').style.display = 'block';
                 }
 
             } catch (error) {
+                // Fehler beim Laden der Pflichtaufgaben - Testmodus aktivieren
+                console.error('Fehler beim Laden der Pflichtaufgaben-Daten:', error);
+                activateTestMode();
+                // Store test data globally for filtering
+                window.pflichtData = TEST_PFLICHT_DATA;
+                
+                updatePflichtTable(TEST_PFLICHT_DATA);
+                createPflichtCharts(TEST_PFLICHT_DATA);
+                
+                // Show filter section
+                document.getElementById('pflichtFilterSection').style.display = 'block';
             }
 
             showLoading(false);
@@ -1326,10 +1579,12 @@
         window.addEventListener('DOMContentLoaded', () => {
             showTab('checklists');
             
-            // Testmodus-Indikator anzeigen
-            if (TEST_MODE) {
-                document.getElementById('testModeIndicator').style.display = 'block';
-            }
+            // Slider initialisieren nach kurzer Verzögerung
+            setTimeout(() => {
+                initSliders();
+            }, 100);
+            
+            // Testmodus-Indikator wird dynamisch angezeigt wenn TEST_MODE aktiviert wird
             
             extractFromChecklistIndex();
             extractPflichtOverview();
@@ -1351,6 +1606,269 @@
             showTab('checklists');
             extractFromChecklistIndex();
         };
+        
+        // Pflichtaufgaben Filter Functions
+        function applyPflichtFilters() {
+            if (!window.pflichtData) return;
+            
+            const statusFilter = document.getElementById('pflichtStatusFilter').value;
+            const typeFilter = document.getElementById('pflichtTypeFilter').value;
+            const gradeFilter = document.getElementById('pflichtGradeFilter').value;
+            const sortFilter = document.getElementById('pflichtSortFilter').value;
+            
+            let filteredData = [...window.pflichtData];
+            
+            // Status Filter
+            if (statusFilter !== 'all') {
+                if (statusFilter === 'completed') {
+                    filteredData = filteredData.filter(item => item.completionStatus === 'Erledigt');
+                } else if (statusFilter === 'pending') {
+                    filteredData = filteredData.filter(item => item.completionStatus === 'Zu erledigen');
+                }
+            }
+            
+            // Type Filter
+            if (typeFilter !== 'all') {
+                filteredData = filteredData.filter(item => item.type === typeFilter);
+            }
+            
+            // Grade Filter
+            if (gradeFilter !== 'all') {
+                filteredData = filteredData.filter(item => {
+                    const grade = item.grade;
+                    if (gradeFilter === 'graded') {
+                        return grade !== '-' && grade !== 'Unbekannt' && grade.trim() !== '';
+                    } else if (gradeFilter === 'ungraded') {
+                        return grade === '-' || grade === 'Unbekannt' || grade.trim() === '';
+                    } else if (gradeFilter === 'excellent') {
+                        const numGrade = parseFloat(grade.replace(',', '.'));
+                        return !isNaN(numGrade) && numGrade <= 1.5;
+                    } else if (gradeFilter === 'good') {
+                        const numGrade = parseFloat(grade.replace(',', '.'));
+                        return !isNaN(numGrade) && numGrade <= 2.5;
+                    } else if (gradeFilter === 'satisfactory') {
+                        const numGrade = parseFloat(grade.replace(',', '.'));
+                        return !isNaN(numGrade) && numGrade <= 3.5;
+                    }
+                    return true;
+                });
+            }
+            
+            // Sort Filter
+            switch(sortFilter) {
+                case 'name':
+                    filteredData.sort((a, b) => a.name.localeCompare(b.name, 'de'));
+                    break;
+                case 'type':
+                    filteredData.sort((a, b) => a.type.localeCompare(b.type, 'de'));
+                    break;
+                case 'status-completed':
+                    filteredData.sort((a, b) => {
+                        if (a.completionStatus === 'Erledigt' && b.completionStatus !== 'Erledigt') return -1;
+                        if (a.completionStatus !== 'Erledigt' && b.completionStatus === 'Erledigt') return 1;
+                        return a.name.localeCompare(b.name, 'de');
+                    });
+                    break;
+                case 'status-pending':
+                    filteredData.sort((a, b) => {
+                        if (a.completionStatus === 'Zu erledigen' && b.completionStatus !== 'Zu erledigen') return -1;
+                        if (a.completionStatus !== 'Zu erledigen' && b.completionStatus === 'Zu erledigen') return 1;
+                        return a.name.localeCompare(b.name, 'de');
+                    });
+                    break;
+                case 'grade-best':
+                    filteredData.sort((a, b) => {
+                        const gradeA = parseFloat(a.grade.replace(',', '.'));
+                        const gradeB = parseFloat(b.grade.replace(',', '.'));
+                        if (isNaN(gradeA) && isNaN(gradeB)) return 0;
+                        if (isNaN(gradeA)) return 1;
+                        if (isNaN(gradeB)) return -1;
+                        return gradeA - gradeB; // Smaller grade = better
+                    });
+                    break;
+                case 'grade-worst':
+                    filteredData.sort((a, b) => {
+                        const gradeA = parseFloat(a.grade.replace(',', '.'));
+                        const gradeB = parseFloat(b.grade.replace(',', '.'));
+                        if (isNaN(gradeA) && isNaN(gradeB)) return 0;
+                        if (isNaN(gradeA)) return -1;
+                        if (isNaN(gradeB)) return 1;
+                        return gradeB - gradeA; // Larger grade = worse
+                    });
+                    break;
+                default:
+                    filteredData.sort((a, b) => a.name.localeCompare(b.name, 'de'));
+            }
+            
+            updatePflichtTable(filteredData);
+            createPflichtCharts(filteredData);
+        }
+        
+        function updatePflichtTable(data) {
+            let html = '<h4>📚 Pflichtaufgaben-Übersicht</h4>';
+            html += '<table class="info-table" id="pflichtTable">';
+            html += '<thead>';
+            html += '<tr>';
+            html += '<th onclick="sortPflichtTableByColumn(0)" class="sortable-header" style="cursor: pointer;">Name <span class="sort-icon">↕️</span></th>';
+            html += '<th onclick="sortPflichtTableByColumn(1)" class="sortable-header" style="cursor: pointer;">Typ <span class="sort-icon">↕️</span></th>';
+            html += '<th onclick="sortPflichtTableByColumn(2)" class="sortable-header" style="cursor: pointer;">Status <span class="sort-icon">↕️</span></th>';
+            html += '<th onclick="sortPflichtTableByColumn(3)" class="sortable-header" style="cursor: pointer;">Abgabe <span class="sort-icon">↕️</span></th>';
+            html += '<th onclick="sortPflichtTableByColumn(4)" class="sortable-header" style="cursor: pointer;">Note <span class="sort-icon">↕️</span></th>';
+            html += '</tr>';
+            html += '</thead>';
+            html += '<tbody id="pflichtTableBody">';
+            
+            data.forEach((item, index) => {
+                const statusColor = item.completionStatus === 'Erledigt' ? 'color: green;' : 'color: orange;';
+                const gradeColor = getGradeColor(item.grade);
+                
+                html += `<tr data-name="${item.name.toLowerCase()}" data-type="${item.type.toLowerCase()}" data-status="${item.completionStatus.toLowerCase()}" data-grade="${item.grade}">
+                    <td><a href="${item.url}" target="_blank" title="${item.name}">${item.name}</a></td>
+                    <td><span class="type-badge" style="padding: 2px 8px; border-radius: 12px; font-size: 0.8em; background: ${item.type === 'Quiz' ? '#e3f2fd' : '#f3e5f5'}; color: ${item.type === 'Quiz' ? '#1976d2' : '#7b1fa2'};">${item.type}</span></td>
+                    <td><span style="${statusColor}; font-weight: 600;">${item.completionStatus}</span></td>
+                    <td>${item.submissionStatus}</td>
+                    <td><strong style="${gradeColor}">${item.grade}</strong></td>
+                </tr>`;
+            });
+            
+            html += '</tbody>';
+            html += '</table>';
+            document.getElementById('pflichtSessionInfo').innerHTML = html;
+            
+            // Store current data for sorting
+            window.currentPflichtTableData = data;
+        }
+        
+        function getGradeColor(grade) {
+            if (grade === '-' || grade === 'Unbekannt') return 'color: #666;';
+            const numGrade = parseFloat(grade.replace(',', '.'));
+            if (isNaN(numGrade)) return 'color: #666;';
+            if (numGrade <= 1.5) return 'color: #2e7d32;'; // Green for excellent
+            if (numGrade <= 2.5) return 'color: #1976d2;'; // Blue for good
+            if (numGrade <= 3.5) return 'color: #f57c00;'; // Orange for satisfactory
+            return 'color: #d32f2f;'; // Red for poor
+        }
+        
+        
+        function sortPflichtTableByColumn(columnIndex) {
+            if (!window.currentPflichtTableData) return;
+            
+            const sortedData = [...window.currentPflichtTableData];
+            
+            // Toggle sort direction
+            const currentSort = window.pflichtTableSort || { column: -1, ascending: true };
+            const ascending = currentSort.column === columnIndex ? !currentSort.ascending : true;
+            window.pflichtTableSort = { column: columnIndex, ascending: ascending };
+            
+            sortedData.sort((a, b) => {
+                let valueA, valueB;
+                
+                switch(columnIndex) {
+                    case 0: // Name
+                        valueA = a.name.toLowerCase();
+                        valueB = b.name.toLowerCase();
+                        break;
+                    case 1: // Type
+                        valueA = a.type.toLowerCase();
+                        valueB = b.type.toLowerCase();
+                        break;
+                    case 2: // Status
+                        valueA = a.completionStatus.toLowerCase();
+                        valueB = b.completionStatus.toLowerCase();
+                        break;
+                    case 3: // Submission
+                        valueA = a.submissionStatus.toLowerCase();
+                        valueB = b.submissionStatus.toLowerCase();
+                        break;
+                    case 4: // Grade
+                        valueA = parseFloat(a.grade.replace(',', '.'));
+                        valueB = parseFloat(b.grade.replace(',', '.'));
+                        if (isNaN(valueA)) valueA = 999; // Put ungraded at end
+                        if (isNaN(valueB)) valueB = 999;
+                        break;
+                    default:
+                        return 0;
+                }
+                
+                if (valueA < valueB) return ascending ? -1 : 1;
+                if (valueA > valueB) return ascending ? 1 : -1;
+                return 0;
+            });
+            
+            // Update sort icon
+            updatePflichtSortIcons(columnIndex, ascending);
+            
+            updatePflichtTable(sortedData);
+        }
+        
+        function updatePflichtSortIcons(activeColumn, ascending) {
+            // Reset all icons
+            const headers = document.querySelectorAll('#pflichtTable .sortable-header .sort-icon');
+            headers.forEach(icon => icon.textContent = '↕️');
+            
+            // Set active icon
+            const activeIcon = document.querySelector(`#pflichtTable .sortable-header:nth-child(${activeColumn + 1}) .sort-icon`);
+            if (activeIcon) {
+                activeIcon.textContent = ascending ? '↑' : '↓';
+            }
+        }
+        
+        
+        // Checklist Table Sorting Functions
+        function sortChecklistTableByColumn(columnIndex) {
+            if (!window.currentChecklistTableData) return;
+            
+            const sortedData = [...window.currentChecklistTableData];
+            
+            // Toggle sort direction
+            const currentSort = window.checklistTableSort || { column: -1, ascending: true };
+            const ascending = currentSort.column === columnIndex ? !currentSort.ascending : true;
+            window.checklistTableSort = { column: columnIndex, ascending: ascending };
+            
+            sortedData.sort((a, b) => {
+                let valueA, valueB;
+                
+                switch(columnIndex) {
+                    case 0: // Name
+                        valueA = a.name.toLowerCase();
+                        valueB = b.name.toLowerCase();
+                        break;
+                    case 1: // Pflicht %
+                        valueA = a.pflichtProgress !== undefined ? a.pflichtProgress : 0;
+                        valueB = b.pflichtProgress !== undefined ? b.pflichtProgress : 0;
+                        break;
+                    case 2: // Gesamt %
+                        valueA = a.gesamtProgress !== undefined ? a.gesamtProgress : 0;
+                        valueB = b.gesamtProgress !== undefined ? b.gesamtProgress : 0;
+                        break;
+                    default:
+                        return 0;
+                }
+                
+                if (valueA < valueB) return ascending ? -1 : 1;
+                if (valueA > valueB) return ascending ? 1 : -1;
+                return 0;
+            });
+            
+            // Update sort icon
+            updateChecklistSortIcons(columnIndex, ascending);
+            
+            // Update table with sorted data
+            updateChecklistTable(sortedData);
+        }
+        
+        function updateChecklistSortIcons(activeColumn, ascending) {
+            // Reset all icons
+            const headers = document.querySelectorAll('#checklistTable .sortable-header .sort-icon');
+            headers.forEach(icon => icon.textContent = '↕️');
+            
+            // Set active icon
+            const activeIcon = document.querySelector(`#checklistTable .sortable-header:nth-child(${activeColumn + 1}) .sort-icon`);
+            if (activeIcon) {
+                activeIcon.textContent = ascending ? '↑' : '↓';
+            }
+        }
+        
     </script>
 </body>
 </html>
