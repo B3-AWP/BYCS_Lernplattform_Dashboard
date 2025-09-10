@@ -113,7 +113,7 @@
         
         .stats-row {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
+            grid-template-columns: repeat(2, 1fr);
             gap: 12px;
             margin-bottom: 15px;
         }
@@ -306,7 +306,7 @@
                 grid-template-columns: 1fr;
             }
             .stats-row {
-                grid-template-columns: repeat(2, 1fr);
+                grid-template-columns: 1fr;
             }
             h1 {
                 font-size: 1.8rem;
@@ -476,6 +476,175 @@
             color: #007bff;
             border: 1px solid rgba(0, 123, 255, 0.3);
         }
+        
+        /* Progress Bar for Stats */
+        .stat-progress-container {
+            width: 100%;
+            margin-top: 8px;
+        }
+        
+        .stat-progress-bar {
+            width: 100%;
+            height: 12px;
+            background-color: #e9ecef;
+            border-radius: 6px;
+            overflow: hidden;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.2);
+        }
+        
+        .stat-progress-fill {
+            height: 100%;
+            border-radius: 6px;
+            transition: width 0.8s ease-in-out;
+            background: linear-gradient(90deg, #28a745, #20c997);
+            position: relative;
+        }
+        
+        .stat-progress-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            animation: shimmer 2s infinite;
+        }
+        
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+        
+        .stat-progress-text {
+            font-size: 1.4rem;
+            font-weight: bold;
+            margin-bottom: 4px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .progress-toggle {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 6px;
+            font-size: 0.75rem;
+        }
+        
+        .progress-toggle label {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            cursor: pointer;
+            color: #666;
+            transition: color 0.3s ease;
+        }
+        
+        .progress-toggle label:hover {
+            color: #333;
+        }
+        
+        .progress-toggle input[type="radio"] {
+            width: 14px;
+            height: 14px;
+            margin: 0;
+            cursor: pointer;
+            accent-color: #667eea;
+        }
+        
+        .progress-toggle label.active {
+            color: #667eea;
+            font-weight: 600;
+        }
+        
+        /* Combined Stats Card */
+        .combined-stats-card {
+            padding: 12px;
+        }
+        
+        .combined-stats-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 15px;
+        }
+        
+        .completion-overview {
+            flex: 1;
+        }
+        
+        .completion-main {
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            margin-bottom: 4px;
+        }
+        
+        .completion-count {
+            font-size: 2rem;
+            font-weight: bold;
+            background: linear-gradient(135deg, #28a745, #20c997);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .completion-separator {
+            font-size: 1rem;
+            color: #666;
+            font-weight: 500;
+        }
+        
+        .completion-total {
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: #666;
+        }
+        
+        .completion-label {
+            color: #666;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+        }
+        
+        .completion-visual {
+            position: relative;
+        }
+        
+        .completion-progress-ring {
+            position: relative;
+        }
+        
+        .completion-progress-ring svg {
+            transform: rotate(-90deg);
+        }
+        
+        .completion-percentage {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 0.85rem;
+            font-weight: bold;
+            color: #28a745;
+        }
+        
+        @media (max-width: 768px) {
+            .stats-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .combined-stats-content {
+                flex-direction: column;
+                text-align: center;
+                gap: 10px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -496,21 +665,47 @@
     <!-- Checklisten Tab -->
     <div id="checklistsTab">
         <div class="stats-row" id="statsRow" style="display: none;">
-            <div class="stat-card">
-                <div class="stat-number" id="totalChecklists">0</div>
-                <div class="stat-label">Checklisten</div>
+            <div class="stat-card combined-stats-card">
+                <div class="combined-stats-content">
+                    <div class="completion-overview">
+                        <div class="completion-main">
+                            <span class="completion-count" id="completedCount">0</span>
+                            <span class="completion-separator">von</span>
+                            <span class="completion-total" id="totalCount">0</span>
+                        </div>
+                        <div class="completion-label">Checklisten abgeschlossen</div>
+                    </div>
+                    <div class="completion-visual">
+                        <div class="completion-progress-ring">
+                            <svg width="60" height="60" viewBox="0 0 60 60">
+                                <circle cx="30" cy="30" r="25" stroke="#e9ecef" stroke-width="4" fill="none"/>
+                                <circle id="completionRing" cx="30" cy="30" r="25" stroke="#28a745" stroke-width="4" 
+                                        fill="none" stroke-dasharray="157" stroke-dashoffset="157" 
+                                        style="transition: stroke-dashoffset 0.8s ease-in-out;"/>
+                            </svg>
+                            <div class="completion-percentage" id="completionPercentage">0%</div>
+                        </div>
+                    </div>
+                </div>
             </div>
             <div class="stat-card">
-                <div class="stat-number" id="completedTasks">0</div>
-                <div class="stat-label">Abgeschlossen</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-number" id="pendingTasks">0</div>
-                <div class="stat-label">Ausstehend</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-number" id="avgCompletion">0%</div>
-                <div class="stat-label">Durchschnitt Pflicht</div>
+                <div class="stat-progress-text" id="avgCompletionText">0%</div>
+                <div class="progress-toggle">
+                    <label id="pflichtLabel" class="active">
+                        <input type="radio" name="progressType" value="pflicht" checked onchange="toggleProgressType()">
+                        Pflicht
+                    </label>
+                    <label id="gesamtLabel">
+                        <input type="radio" name="progressType" value="gesamt" onchange="toggleProgressType()">
+                        Gesamt
+                    </label>
+                </div>
+                <div class="stat-progress-container">
+                    <div class="stat-progress-bar">
+                        <div class="stat-progress-fill" id="avgCompletionBar" style="width: 0%"></div>
+                    </div>
+                </div>
+                <div class="stat-label" id="progressLabel">Durchschnitt Pflicht</div>
             </div>
         </div>
         
@@ -1005,15 +1200,24 @@
             const validChecklists = checklistData.filter(item => !item.error);
             
             const totalChecklists = validChecklists.length;
-            const avgPflicht = validChecklists.reduce((sum, item) => sum + (item.pflichtProgress || 0), 0) / totalChecklists;
+            
+            // Schutz vor Division durch 0
+            let avgPflicht = 0;
+            let avgGesamt = 0;
+            
+            if (totalChecklists > 0) {
+                avgPflicht = validChecklists.reduce((sum, item) => sum + (item.pflichtProgress || 0), 0) / totalChecklists;
+                avgGesamt = validChecklists.reduce((sum, item) => sum + (item.gesamtProgress || 0), 0) / totalChecklists;
+            }
+            
             const completed = validChecklists.filter(item => item.pflichtProgress >= 100).length;
             const pending = totalChecklists - completed;
             
+            console.log('Statistics Update:', { totalChecklists, avgPflicht, avgGesamt, completed, pending });
+            
             // Animierte Zahlenupdate
-            animateNumber('totalChecklists', totalChecklists);
-            animateNumber('avgCompletion', Math.round(avgPflicht), '%');
-            animateNumber('completedTasks', completed);
-            animateNumber('pendingTasks', pending);
+            updateCombinedStats(completed, totalChecklists);
+            updateProgressDisplay(Math.round(avgPflicht), Math.round(avgGesamt));
         }
         
         // Zahlen animieren
@@ -1031,6 +1235,136 @@
                 }
                 element.textContent = Math.round(current) + suffix;
             }, 50);
+        }
+        
+        // Fortschrittsbalken animieren
+        function animateProgressBar(textElementId, barElementId, targetValue) {
+            const textElement = document.getElementById(textElementId);
+            const barElement = document.getElementById(barElementId);
+            
+            console.log('Animate Progress Bar:', { textElementId, barElementId, targetValue });
+            
+            if (!textElement || !barElement) {
+                console.error('Progress bar elements not found:', { textElement, barElement });
+                return;
+            }
+            
+            // Sicherstellen, dass targetValue eine gültige Zahl ist
+            const safeTargetValue = Math.max(0, Math.min(100, Math.round(targetValue || 0)));
+            
+            const currentText = textElement.textContent.replace('%', '') || '0';
+            const currentValue = parseInt(currentText) || 0;
+            const increment = (safeTargetValue - currentValue) / 40;
+            
+            console.log('Animation values:', { currentValue, safeTargetValue, increment });
+            
+            let current = currentValue;
+            const timer = setInterval(() => {
+                current += increment;
+                if ((increment > 0 && current >= safeTargetValue) || (increment < 0 && current <= safeTargetValue)) {
+                    current = safeTargetValue;
+                    clearInterval(timer);
+                }
+                
+                const roundedValue = Math.round(current);
+                textElement.textContent = roundedValue + '%';
+                barElement.style.width = roundedValue + '%';
+                
+                // Dynamische Farben basierend auf Fortschritt
+                const color = getProgressColor(roundedValue);
+                if (color === '#28a745') { // Grün
+                    barElement.style.background = 'linear-gradient(90deg, #28a745, #20c997)';
+                } else if (color === '#6cc04a') { // Hellgrün
+                    barElement.style.background = 'linear-gradient(90deg, #6cc04a, #28a745)';
+                } else if (color === '#ffc107') { // Gelb
+                    barElement.style.background = 'linear-gradient(90deg, #ffc107, #fd7e14)';
+                } else if (color === '#fd7e14') { // Orange
+                    barElement.style.background = 'linear-gradient(90deg, #fd7e14, #dc3545)';
+                } else { // Rot
+                    barElement.style.background = 'linear-gradient(90deg, #dc3545, #e83e8c)';
+                }
+            }, 40);
+        }
+        
+        // Kombinierte Stats Card aktualisieren
+        function updateCombinedStats(completed, total) {
+            const completedElement = document.getElementById('completedCount');
+            const totalElement = document.getElementById('totalCount');
+            const percentageElement = document.getElementById('completionPercentage');
+            const ringElement = document.getElementById('completionRing');
+            
+            if (!completedElement || !totalElement || !percentageElement || !ringElement) return;
+            
+            // Zahlen animieren
+            animateNumber('completedCount', completed);
+            animateNumber('totalCount', total);
+            
+            // Prozentwert berechnen
+            const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
+            
+            // Ring-Animation
+            const circumference = 2 * Math.PI * 25; // r = 25
+            const offset = circumference - (percentage / 100) * circumference;
+            
+            // Animation für Ring und Prozent
+            setTimeout(() => {
+                ringElement.style.strokeDashoffset = offset;
+                percentageElement.textContent = percentage + '%';
+                
+                // Dynamische Farbe für Ring und Prozent
+                const color = getProgressColor(percentage);
+                ringElement.style.stroke = color;
+                percentageElement.style.color = color;
+            }, 300); // Kleine Verzögerung für bessere Optik
+        }
+        
+        // Globale Variablen für Fortschrittswerte
+        let currentPflichtAvg = 0;
+        let currentGesamtAvg = 0;
+        
+        // Progress Display aktualisieren
+        function updateProgressDisplay(pflichtAvg, gesamtAvg) {
+            currentPflichtAvg = pflichtAvg;
+            currentGesamtAvg = gesamtAvg;
+            
+            console.log('Progress Display Update:', { pflichtAvg, gesamtAvg });
+            
+            // Aktuell ausgewählten Typ ermitteln
+            const selectedRadio = document.querySelector('input[name="progressType"]:checked');
+            if (!selectedRadio) {
+                console.error('No radio button selected, defaulting to pflicht');
+                // Fallback: Pflicht als Default setzen
+                const pflichtRadio = document.querySelector('input[name="progressType"][value="pflicht"]');
+                if (pflichtRadio) pflichtRadio.checked = true;
+            }
+            
+            const selectedType = selectedRadio ? selectedRadio.value : 'pflicht';
+            const targetValue = selectedType === 'pflicht' ? pflichtAvg : gesamtAvg;
+            
+            console.log('Selected type:', selectedType, 'Target value:', targetValue);
+            
+            animateProgressBar('avgCompletionText', 'avgCompletionBar', targetValue);
+        }
+        
+        // Toggle zwischen Pflicht und Gesamt Fortschritt
+        function toggleProgressType() {
+            const selectedType = document.querySelector('input[name="progressType"]:checked').value;
+            const pflichtLabel = document.getElementById('pflichtLabel');
+            const gesamtLabel = document.getElementById('gesamtLabel');
+            const progressLabel = document.getElementById('progressLabel');
+            
+            // Label-Styling aktualisieren
+            if (selectedType === 'pflicht') {
+                pflichtLabel.classList.add('active');
+                gesamtLabel.classList.remove('active');
+                progressLabel.textContent = 'Durchschnitt Pflicht';
+                animateProgressBar('avgCompletionText', 'avgCompletionBar', currentPflichtAvg);
+            } else {
+                pflichtLabel.classList.remove('active');
+                gesamtLabel.classList.add('active');
+                progressLabel.textContent = 'Durchschnitt Gesamt';
+                animateProgressBar('avgCompletionText', 'avgCompletionBar', currentGesamtAvg);
+            }
         }
         
         // Insights generieren
