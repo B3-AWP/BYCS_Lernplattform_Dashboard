@@ -28,6 +28,36 @@
             border: 1px solid #E9ECEF;
         }
         
+        /* Filter-Bereiche die näher an ihre zugehörigen Elemente gehören */
+        .filter-section {
+            background: #F8F9FA;
+            padding: 16px;
+            border-radius: 8px 8px 0 0;
+            border: 1px solid #E9ECEF;
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+        
+        /* Nachfolgende Elemente die zu Filtern gehören */
+        .filter-section + .chart-container,
+        .filter-section + .config-section {
+            border-radius: 0 0 8px 8px;
+            margin-top: 0;
+            border-top: 1px solid #E9ECEF;
+        }
+        
+        /* Spezielle Behandlung für aufeinanderfolgende Charts nach Filter */
+        .filter-section + .chart-container + .chart-container {
+            border-radius: 0;
+            border-top: 1px solid #E9ECEF;
+        }
+        
+        /* Letztes Element nach Filter-Gruppe */
+        .filter-section + .chart-container + .chart-container + .config-section,
+        .filter-section + .config-section {
+            border-radius: 0 0 8px 8px;
+        }
+        
         .api-btn {
             background: #0066CC;
             color: white;
@@ -313,14 +343,6 @@
             border-left: 4px solid #667eea;
         }
         
-        .filter-section {
-            background: linear-gradient(145deg, #ffffff, #f8f9fa);
-            padding: 12px;
-            border-radius: 8px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            margin-bottom: 15px;
-            border: 1px solid rgba(255,255,255,0.2);
-        }
         
         .filter-controls {
             display: flex;
