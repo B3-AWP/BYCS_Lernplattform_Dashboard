@@ -822,24 +822,21 @@
 </head>
 <body>
     <div style="position: relative;">
-        <div id="testModeIndicator" style="position: absolute; top: 0; left: 0; background: rgba(255,255,255,0.2); color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.7rem; display: none;">TESTMODUS</div>
+        <div id="testModeIndicator" style="position: absolute; top: 0; left: 0; background: rgba(255,255,255,0.2); color: grey; padding: 4px 8px; border-radius: 4px; font-size: 0.7rem; display: none;">TESTMODUS</div>
         
         <div style="background: #FFFFFF; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 24px; border: 1px solid #E9ECEF;">
             <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
                 <h1 style="margin: 0; font-size: 1.8rem; color: #333; font-weight: 700;">📊 Mebis Analytics Dashboard</h1>
-                
-                <nav style="display: flex; align-items: center; gap: 4px;">
-                    <button class="api-btn active" id="tabChecklists" onclick="showTab('checklists')" style="padding: 10px 16px; font-size: 0.9rem;">Checklisten</button>
-                    <button class="api-btn inactive" id="tabPflicht" onclick="showTab('pflicht')" style="padding: 10px 16px; font-size: 0.9rem;">Pflichtaufgaben</button>
+                 <nav style="display: flex; align-items: center; gap: 4px;">
                     <button class="api-btn" id="refreshBtn" title="Aktualisieren" style="padding: 10px 16px; font-size: 1rem; margin-left: 12px;">🔄</button>
                 </nav>
+               
             </div>
         </div>
     </div>
 
-    <!-- Checklisten Tab -->
-    <div id="checklistsTab">
-        <div class="stats-row" id="statsRow" style="display: none;">
+    <!-- Stats Rows (Always Visible) -->
+    <div class="stats-row" id="statsRow" style="display: grid;">
             <div class="stat-card combined-stats-card">
                 <div class="combined-stats-content">
                     <div class="completion-overview">
@@ -884,6 +881,42 @@
             </div>
         </div>
         
+    <div class="stats-row" id="pflichtStatsRow" style="display: grid;">
+            <div class="stat-card combined-stats-card">
+                <div class="combined-stats-content">
+                    <div class="completion-overview">
+                        <div class="completion-main">
+                            <span class="completion-count" id="pflichtCompletedCount">0</span>
+                            <span class="completion-separator">von</span>
+                            <span class="completion-total" id="pflichtTotalCount">0</span>
+                        </div>
+                        <div class="completion-label">Pflichtaufgaben abgeschlossen</div>
+                    </div>
+                    <div class="completion-visual">
+                        <div class="completion-progress-ring">
+                            <svg width="60" height="60" viewBox="0 0 60 60">
+                                <circle cx="30" cy="30" r="25" stroke="#e9ecef" stroke-width="4" fill="none"/>
+                                <circle id="pflichtCompletionRing" cx="30" cy="30" r="25" stroke="#28a745" stroke-width="4" 
+                                        fill="none" stroke-dasharray="157" stroke-dashoffset="157" 
+                                        style="transition: stroke-dashoffset 0.8s ease-in-out;"/>
+                            </svg>
+                            <div class="completion-percentage" id="pflichtCompletionPercentage">0%</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="pflichtAverageGrade">-</div>
+                <div class="stat-label">Durchschnittsnote</div>
+            </div>
+        </div>
+        
+    <!-- Checklisten Tab -->
+      <nav style="display: flex; align-items: center; gap: 4px;">
+                    <button class="api-btn active" id="tabChecklists" onclick="showTab('checklists')" style="padding: 10px 16px; font-size: 0.9rem;">Checklisten</button>
+                    <button class="api-btn inactive" id="tabPflicht" onclick="showTab('pflicht')" style="padding: 10px 16px; font-size: 0.9rem;">Pflichtaufgaben</button>
+    </nav>
+    <div id="checklistsTab">
         <div class="loading" id="loadingIndicator" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1000; background: rgba(255,255,255,0.9); padding: 20px; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
             <div class="spinner"></div>
             <p>Analysiere Daten...</p>
@@ -956,35 +989,6 @@
 
     <!-- Pflichtaufgaben Tab -->
     <div id="pflichtTab" style="display:none;">
-        <div class="stats-row" id="pflichtStatsRow" style="display: none;">
-            <div class="stat-card combined-stats-card">
-                <div class="combined-stats-content">
-                    <div class="completion-overview">
-                        <div class="completion-main">
-                            <span class="completion-count" id="pflichtCompletedCount">0</span>
-                            <span class="completion-separator">von</span>
-                            <span class="completion-total" id="pflichtTotalCount">0</span>
-                        </div>
-                        <div class="completion-label">Pflichtaufgaben abgeschlossen</div>
-                    </div>
-                    <div class="completion-visual">
-                        <div class="completion-progress-ring">
-                            <svg width="60" height="60" viewBox="0 0 60 60">
-                                <circle cx="30" cy="30" r="25" stroke="#e9ecef" stroke-width="4" fill="none"/>
-                                <circle id="pflichtCompletionRing" cx="30" cy="30" r="25" stroke="#28a745" stroke-width="4" 
-                                        fill="none" stroke-dasharray="157" stroke-dashoffset="157" 
-                                        style="transition: stroke-dashoffset 0.8s ease-in-out;"/>
-                            </svg>
-                            <div class="completion-percentage" id="pflichtCompletionPercentage">0%</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-number" id="pflichtAverageGrade">-</div>
-                <div class="stat-label">Durchschnittsnote</div>
-            </div>
-        </div>
         
         <div class="dashboard-container" id="pflichtDashboardContainer" style="display:none;">
             <div class="chart-container">
@@ -1399,8 +1403,8 @@
             updateCharts();
             updateStatistics();
             generateInsights();
-            document.getElementById('dashboardContainer').style.display = 'grid';
-            document.getElementById('statsRow').style.display = 'grid';
+            document.getElementById('dashboardContainer').style.display = 'none';
+            showBothStatsRows();
         }
         
         // Statistiken aktualisieren
@@ -1532,11 +1536,7 @@
             
             if (!window.pflichtData || window.pflichtData.length === 0) {
                 console.log('No pflichtData available');
-                // Auch bei leeren Daten die Stats-Row verstecken
-                const pflichtStatsRow = document.getElementById('pflichtStatsRow');
-                if (pflichtStatsRow) {
-                    pflichtStatsRow.style.display = 'none';
-                }
+                // Stats-Rows bleiben sichtbar auch bei leeren Daten
                 return;
             }
             
@@ -1656,9 +1656,8 @@
             console.log('pflichtStatsRow element:', pflichtStatsRow);
             
             if (pflichtStatsRow) {
-                pflichtStatsRow.style.display = 'grid';
-                pflichtStatsRow.style.setProperty('display', 'grid', 'important');
-                console.log('pflichtStatsRow display set to grid with !important');
+                showBothStatsRows();
+                console.log('Both stats rows updated');
             } else {
                 console.error('pflichtStatsRow element not found!');
             }
@@ -2083,24 +2082,27 @@
             detailGesamtChart.update();
         }
 
+        // Funktion um beide Stats-Rows anzuzeigen wenn Daten verfügbar sind
+        function showBothStatsRows() {
+            const statsRow = document.getElementById('statsRow');
+            const pflichtStatsRow = document.getElementById('pflichtStatsRow');
+            
+            if (statsRow && window.data && window.data.length > 0) {
+                statsRow.style.display = 'grid';
+            }
+            
+            if (pflichtStatsRow && window.pflichtData && window.pflichtData.length > 0) {
+                pflichtStatsRow.style.display = 'grid';
+            }
+        }
+        
         // Tabs Umschalten
         function showTab(tab) {
             document.getElementById('checklistsTab').style.display = tab === 'checklists' ? 'block' : 'none';
             document.getElementById('pflichtTab').style.display = tab === 'pflicht' ? 'block' : 'none';
             
-            // Stats-Rows anzeigen wenn Daten verfügbar sind
-            if (tab === 'pflicht') {
-                const pflichtStatsRow = document.getElementById('pflichtStatsRow');
-                if (pflichtStatsRow && window.pflichtData && window.pflichtData.length > 0) {
-                    pflichtStatsRow.style.display = 'grid';
-                    console.log('Showing pflichtStatsRow via showTab');
-                }
-            } else if (tab === 'checklists') {
-                const statsRow = document.getElementById('statsRow');
-                if (statsRow) {
-                    // Stats-Row für Checklisten ist bereits korrekt implementiert
-                }
-            }
+            // Stats-Rows sind jetzt immer sichtbar, keine bedingte Anzeige mehr nötig
+            showBothStatsRows();
             
             // Button-Highlight
             // Update active/inactive states
@@ -2164,13 +2166,10 @@
                 options: { responsive: true, scales: { y: { beginAtZero: true } } }
             });
 
-            document.getElementById('pflichtDashboardContainer').style.display = 'grid';
+            document.getElementById('pflichtDashboardContainer').style.display = 'none';
             
-            // Auch Stats-Row anzeigen falls vorhanden
-            const pflichtStatsRow = document.getElementById('pflichtStatsRow');
-            if (pflichtStatsRow && window.pflichtData && window.pflichtData.length > 0) {
-                pflichtStatsRow.style.display = 'grid';
-            }
+            // Auch Stats-Rows anzeigen falls vorhanden
+            showBothStatsRows();
         }
 
         // Pflichtaufgaben laden überschreiben
