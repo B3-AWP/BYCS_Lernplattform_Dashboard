@@ -317,12 +317,32 @@
         }
         
         .info-table th {
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            color: white;
+            background: linear-gradient(180deg, #788ef3, #0066CC);
+            color: white !important;
             font-weight: 600;
             text-transform: uppercase;
             font-size: 0.85rem;
             letter-spacing: 0.5px;
+            border: none;
+            box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);
+            position: relative;
+        }
+        
+        .info-table th.sortable-header {
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .info-table th.sortable-header:hover {
+            background: linear-gradient(260deg, #788ef3, #0066CC);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(102, 126, 234, 0.4);
+        }
+        
+        .info-table th .sort-icon {
+            margin-left: 8px;
+            opacity: 0.7;
+            font-size: 0.9em;
         }
         
         .info-table tbody tr:hover {
@@ -370,15 +390,23 @@
         
         .filter-controls {
             display: flex;
-            gap: 10px;
+            gap: 20px;
             flex-wrap: wrap;
-            align-items: center;
+            align-items: flex-start;
             font-size: 0.85rem;
+        }
+        
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            min-width: 120px;
         }
         
         .filter-controls label {
             font-weight: 600;
             color: #333;
+            font-size: 0.9rem;
         }
         
         .filter-controls select, .filter-controls input {
@@ -981,33 +1009,41 @@
         <div class="filter-section" id="filterSection" style="display: none;">
             <h3>🔍 Filter & Optionen</h3>
             <div class="filter-controls">
-                <label>Ansicht:</label>
-                <select id="viewFilter" onchange="applyFilters()">
-                    <option value="all">Alle anzeigen</option>
-                    <option value="completed">Nur abgeschlossene</option>
-                    <option value="pending">Nur ausstehende</option>
-                    <option value="high">Hoher Fortschritt (>75%)</option>
-                </select>
-                
-                <label>Sortierung:</label>
-                <select id="sortFilter" onchange="applyFilters()">
-                    <option value="name">Nach Name</option>
-                    <option value="pflicht-desc">Pflicht % absteigend</option>
-                    <option value="pflicht-asc">Pflicht % aufsteigend</option>
-                    <option value="gesamt-desc">Gesamt % absteigend</option>
-                    <option value="gesamt-asc">Gesamt % aufsteigend</option>
-                </select>
-                
-                <label>Min-Fortschritt:</label>
-                <div class="single-slider-container">
-                    <input type="range" id="progressFilterMin" class="single-range" min="0" max="100" value="0" oninput="validateSliders('min')">
-                    <span id="minProgressValue" class="slider-value min-value">0%</span>
+                <div class="filter-group">
+                    <label>Ansicht:</label>
+                    <select id="viewFilter" onchange="applyFilters()">
+                        <option value="all">Alle anzeigen</option>
+                        <option value="completed">Nur abgeschlossene</option>
+                        <option value="pending">Nur ausstehende</option>
+                        <option value="high">Hoher Fortschritt (>75%)</option>
+                    </select>
                 </div>
                 
-                <label>Max-Fortschritt:</label>
-                <div class="single-slider-container">
-                    <input type="range" id="progressFilterMax" class="single-range" min="0" max="100" value="100" oninput="validateSliders('max')">
-                    <span id="maxProgressValue" class="slider-value max-value">100%</span>
+                <div class="filter-group">
+                    <label>Sortierung:</label>
+                    <select id="sortFilter" onchange="applyFilters()">
+                        <option value="name">Nach Name</option>
+                        <option value="pflicht-desc">Pflicht % absteigend</option>
+                        <option value="pflicht-asc">Pflicht % aufsteigend</option>
+                        <option value="gesamt-desc">Gesamt % absteigend</option>
+                        <option value="gesamt-asc">Gesamt % aufsteigend</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label>Min-Fortschritt:</label>
+                    <div class="single-slider-container">
+                        <input type="range" id="progressFilterMin" class="single-range" min="0" max="100" value="0" oninput="validateSliders('min')">
+                        <span id="minProgressValue" class="slider-value min-value">0%</span>
+                    </div>
+                </div>
+                
+                <div class="filter-group">
+                    <label>Max-Fortschritt:</label>
+                    <div class="single-slider-container">
+                        <input type="range" id="progressFilterMax" class="single-range" min="0" max="100" value="100" oninput="validateSliders('max')">
+                        <span id="maxProgressValue" class="slider-value max-value">100%</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1045,39 +1081,47 @@
         <div class="filter-section" id="pflichtFilterSection" style="display: none;">
             <h3>🔍 Filter & Optionen - Pflichtaufgaben</h3>
             <div class="filter-controls">
-                <label>Status:</label>
-                <select id="pflichtStatusFilter" onchange="applyPflichtFilters()">
-                    <option value="all">Alle anzeigen</option>
-                    <option value="completed">Nur erledigte</option>
-                    <option value="pending">Nur zu erledigende</option>
-                </select>
+                <div class="filter-group">
+                    <label>Status:</label>
+                    <select id="pflichtStatusFilter" onchange="applyPflichtFilters()">
+                        <option value="all">Alle anzeigen</option>
+                        <option value="completed">Nur erledigte</option>
+                        <option value="pending">Nur zu erledigende</option>
+                    </select>
+                </div>
                 
-                <label>Typ:</label>
-                <select id="pflichtTypeFilter" onchange="applyPflichtFilters()">
-                    <option value="all">Alle Typen</option>
-                    <option value="Aufgabe">Nur Aufgaben</option>
-                    <option value="Quiz">Nur Quizzes</option>
-                </select>
+                <div class="filter-group">
+                    <label>Typ:</label>
+                    <select id="pflichtTypeFilter" onchange="applyPflichtFilters()">
+                        <option value="all">Alle Typen</option>
+                        <option value="Aufgabe">Nur Aufgaben</option>
+                        <option value="Quiz">Nur Quizzes</option>
+                    </select>
+                </div>
                 
-                <label>Bewertung:</label>
-                <select id="pflichtGradeFilter" onchange="applyPflichtFilters()">
-                    <option value="all">Alle Bewertungen</option>
-                    <option value="graded">Nur bewertete</option>
-                    <option value="ungraded">Nur unbewertete</option>
-                    <option value="excellent">Sehr gut (≤1,5)</option>
-                    <option value="good">Gut (≤2,5)</option>
-                    <option value="satisfactory">Befriedigend (≤3,5)</option>
-                </select>
+                <div class="filter-group">
+                    <label>Bewertung:</label>
+                    <select id="pflichtGradeFilter" onchange="applyPflichtFilters()">
+                        <option value="all">Alle Bewertungen</option>
+                        <option value="graded">Nur bewertete</option>
+                        <option value="ungraded">Nur unbewertete</option>
+                        <option value="excellent">Sehr gut (≤1,5)</option>
+                        <option value="good">Gut (≤2,5)</option>
+                        <option value="satisfactory">Befriedigend (≤3,5)</option>
+                    </select>
+                </div>
                 
-                <label>Sortierung:</label>
-                <select id="pflichtSortFilter" onchange="applyPflichtFilters()">
-                    <option value="name">Nach Name</option>
-                    <option value="type">Nach Typ</option>
-                    <option value="status-completed">Erledigte zuerst</option>
-                    <option value="status-pending">Ausstehende zuerst</option>
-                    <option value="grade-best">Beste Noten zuerst</option>
-                    <option value="grade-worst">Schlechteste Noten zuerst</option>
-                </select>
+                <div class="filter-group">
+                    <label>Sortierung:</label>
+                    <select id="pflichtSortFilter" onchange="applyPflichtFilters()">
+                        <option value="name">Nach Name</option>
+                        <option value="type">Nach Typ</option>
+                        <option value="status-completed">Erledigte zuerst</option>
+                        <option value="status-pending">Ausstehende zuerst</option>
+                        <option value="grade-best">Beste Noten zuerst</option>
+                        <option value="grade-worst">Schlechteste Noten zuerst</option>
+                    </select>
+                </div>
             </div>
         </div>
         
@@ -2029,8 +2073,8 @@
             filteredData.forEach((item, index) => {
                 const pflichtPercent = item.pflichtProgress !== undefined ? item.pflichtProgress : 0;
                 const gesamtPercent = item.gesamtProgress !== undefined ? item.gesamtProgress : 0;
-                const pflichtDisplay = item.pflichtProgress !== undefined ? `${item.pflichtProgress}%` : 'n/a';
-                const gesamtDisplay = item.gesamtProgress !== undefined ? `${item.gesamtProgress}%` : 'n/a';
+                const pflichtDisplay = item.pflichtProgress !== undefined ? `${Math.round(item.pflichtProgress)}%` : 'n/a';
+                const gesamtDisplay = item.gesamtProgress !== undefined ? `${Math.round(item.gesamtProgress)}%` : 'n/a';
                 
                 html += `<tr data-name="${item.name.toLowerCase()}" data-pflicht="${pflichtPercent}" data-gesamt="${gesamtPercent}">
                     <td><a href="${item.url}" target="_blank">${item.name}</a></td>
