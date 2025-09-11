@@ -1085,29 +1085,41 @@ window.addEventListener('DOMContentLoaded', () => {
 
     extractFromChecklistIndex();
     extractPflichtOverview();
-});
-document.getElementById('refreshBtn').onclick = async () => {
-    const activeTab = document.getElementById('checklistsTab').style.display !== 'none' ? 'checklists' : 'pflicht';
-    try {
-        setRefreshButtonLoading(true);
-        if (activeTab === 'checklists') {
-            await extractFromChecklistIndex();
-        } else {
-            await extractPflichtOverview();
-        }
-    } catch (e) {
-        console.error('Refresh fehlgeschlagen:', e);
-    } finally {
-        setRefreshButtonLoading(false);
+
+    // RefreshBtn Event Handler
+    const refreshBtn = document.getElementById('refreshBtn');
+    if (refreshBtn) {
+        refreshBtn.onclick = async () => {
+            const activeTab = document.getElementById('checklistsTab').style.display !== 'none' ? 'checklists' : 'pflicht';
+            try {
+                setRefreshButtonLoading(true);
+                if (activeTab === 'checklists') {
+                    await extractFromChecklistIndex();
+                } else {
+                    await extractPflichtOverview();
+                }
+            } catch (e) {
+                console.error('Refresh fehlgeschlagen:', e);
+            } finally {
+                setRefreshButtonLoading(false);
+            }
+        };
     }
-};
 
-document.getElementById('tabPflicht').onclick = () => {
-    showTab('pflicht');
-    extractPflichtOverview();
-};
+    // Tab Event Handlers
+    const tabPflicht = document.getElementById('tabPflicht');
+    if (tabPflicht) {
+        tabPflicht.onclick = () => {
+            showTab('pflicht');
+            extractPflichtOverview();
+        };
+    }
 
-document.getElementById('tabChecklists').onclick = () => {
-    showTab('checklists');
-    extractFromChecklistIndex();
-};
+    const tabChecklists = document.getElementById('tabChecklists');
+    if (tabChecklists) {
+        tabChecklists.onclick = () => {
+            showTab('checklists');
+            extractFromChecklistIndex();
+        };
+    }
+});
