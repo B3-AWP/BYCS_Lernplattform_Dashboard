@@ -208,7 +208,7 @@
         
         .stats-row {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
+            grid-template-columns: repeat(3, 1fr);
             gap: 12px;
             margin-bottom: 15px;
         }
@@ -240,6 +240,30 @@
             font-weight: 500;
             text-transform: none;
             letter-spacing: 0px;
+        }
+        
+        .ihk-grade-details {
+            margin-top: 8px;
+        }
+        
+        .ihk-grade-percentage {
+            font-size: 0.8rem;
+            color: #6C757D;
+            margin-bottom: 4px;
+        }
+        
+        .ihk-grade-tendency {
+            font-size: 0.75rem;
+            font-weight: bold;
+            min-height: 14px;
+        }
+        
+        .ihk-grade-tendency.positive {
+            color: #28a745;
+        }
+        
+        .ihk-grade-tendency.negative {
+            color: #dc3545;
         }
         
         .chart-container {
@@ -392,7 +416,7 @@
                 grid-template-columns: 1fr;
             }
             .stats-row {
-                grid-template-columns: 1fr;
+                grid-template-columns: repeat(2, 1fr);
             }
             h1 {
                 font-size: 1.8rem;
@@ -877,7 +901,15 @@
                         <div class="stat-progress-fill" id="avgCompletionBar" style="width: 0%"></div>
                     </div>
                 </div>
-                <div class="stat-label" id="progressLabel">Durchschnitt Pflicht</div>
+                <div class="stat-label" id="progressLabel">Checkliste Durchschnitt Pflicht</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="ihkGradeText">-</div>
+                <div class="stat-label">Note gemäß IHK</div>
+                <div class="ihk-grade-details">
+                    <div class="ihk-grade-percentage" id="ihkGradePercentage">0%</div>
+                    <div class="ihk-grade-tendency" id="ihkGradeTendency"></div>
+                </div>
             </div>
         </div>
         
@@ -907,7 +939,7 @@
             </div>
             <div class="stat-card">
                 <div class="stat-number" id="pflichtAverageGrade">-</div>
-                <div class="stat-label">Durchschnittsnote</div>
+                <div class="stat-label">Pflicht Aufgaben Durchschnittsnote</div>
             </div>
         </div>
         
@@ -1723,9 +1755,71 @@
             console.log('Selected type:', selectedType, 'Target value:', targetValue);
             
             animateProgressBar('avgCompletionText', 'avgCompletionBar', targetValue);
+            updateIHKGrade(targetValue);
         }
         
         // Toggle zwischen Pflicht und Gesamt Fortschritt
+        function calculateIHKGrade(percentage) {
+            let grade, tendency = '';
+            
+            if (percentage > 91) {
+                grade = 1;
+                if (percentage <= 92) tendency = '+';
+            } else if (percentage > 80) {
+                grade = 2;
+                if (percentage <= 81) tendency = '+';
+                else if (percentage >= 90) tendency = '-';
+            } else if (percentage > 66) {
+                grade = 3;
+                if (percentage <= 67) tendency = '+';
+                else if (percentage >= 79) tendency = '-';
+            } else if (percentage > 49) {
+                grade = 4;
+                if (percentage <= 50) tendency = '+';
+                else if (percentage >= 65) tendency = '-';
+            } else if (percentage > 29) {
+                grade = 5;
+                if (percentage <= 30) tendency = '+';
+                else if (percentage >= 48) tendency = '-';
+            } else {
+                grade = 6;
+                if (percentage >= 28) tendency = '-';
+            }
+            
+            return { grade, tendency };
+        }
+        
+        function updateIHKGrade(percentage) {
+            const gradeInfo = calculateIHKGrade(percentage);
+            const gradeText = document.getElementById('ihkGradeText');
+            const gradePercentage = document.getElementById('ihkGradePercentage');
+            const gradeTendency = document.getElementById('ihkGradeTendency');
+            
+            gradeText.textContent = gradeInfo.grade;
+            gradePercentage.textContent = Math.round(percentage) + '%';
+            
+            // Farbe der Note basierend auf Qualität
+            if (gradeInfo.grade <= 2) {
+                gradeText.style.color = '#28a745'; // Grün
+            } else if (gradeInfo.grade <= 4) {
+                gradeText.style.color = '#ffc107'; // Gelb
+            } else {
+                gradeText.style.color = '#dc3545'; // Rot
+            }
+            
+            // Tendenz anzeigen
+            if (gradeInfo.tendency === '+') {
+                gradeTendency.textContent = 'Tendenz: +';
+                gradeTendency.className = 'ihk-grade-tendency positive';
+            } else if (gradeInfo.tendency === '-') {
+                gradeTendency.textContent = 'Tendenz: -';
+                gradeTendency.className = 'ihk-grade-tendency negative';
+            } else {
+                gradeTendency.textContent = '';
+                gradeTendency.className = 'ihk-grade-tendency';
+            }
+        }
+
         function toggleProgressType() {
             const selectedType = document.querySelector('input[name="progressType"]:checked').value;
             const pflichtLabel = document.getElementById('pflichtLabel');
@@ -1738,11 +1832,13 @@
                 gesamtLabel.classList.remove('active');
                 progressLabel.textContent = 'Durchschnitt Pflicht';
                 animateProgressBar('avgCompletionText', 'avgCompletionBar', currentPflichtAvg);
+                updateIHKGrade(currentPflichtAvg);
             } else {
                 pflichtLabel.classList.remove('active');
                 gesamtLabel.classList.add('active');
-                progressLabel.textContent = 'Durchschnitt Gesamt';
+                progressLabel.textContent = 'Checkliste Durchschnitt Gesamt';
                 animateProgressBar('avgCompletionText', 'avgCompletionBar', currentGesamtAvg);
+                updateIHKGrade(currentGesamtAvg);
             }
         }
         
