@@ -30,6 +30,41 @@
                 </nav>
                
             </div>
+            
+            <!-- Referenzwochen-Auswahl -->
+            <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #E9ECEF;">
+                <div style="display: flex; align-items: center; gap: 20px; flex-wrap: wrap;">
+                    <div style="display: flex; align-items: center; gap: 12px; min-width: 300px;">
+                        <svg width="20" height="20" style="color: #4f46e5;" aria-hidden="true">
+                            <use href="#icon-target"></use>
+                        </svg>
+                        <label for="referenceWeekSlider" style="font-weight: 600; color: #374151; min-width: 80px;">
+                            Schulwoche:
+                        </label>
+                        <div style="flex: 1; display: flex; align-items: center; gap: 2px;">
+                            <span style="font-size: 0.875rem; color: #6b7280; min-width: 10px;">1</span>
+                            <input 
+                                type="range" 
+                                id="referenceWeekSlider" 
+                                min="1" 
+                                max="10" 
+                                value="10" 
+                                style="flex: 1; height: 6px; background: #e5e7eb; border-radius: 3px; outline: none; cursor: pointer;"
+                                oninput="updateReferenceWeek(this.value)"
+                            >
+                            <span style="font-size: 0.875rem; color: #6b7280; min-width: 20px;">10</span>
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 0.875rem; color: #6b7280;">Schulwoche</span>
+                        <span id="referenceWeekValue" style="font-weight: 700; color: #4f46e5; font-size: 1.125rem; min-width: 30px; text-align: center;">10</span>
+                        <span style="font-size: 0.875rem; color: #6b7280;">von 10</span>
+                    </div>
+                    <div style="font-size: 0.875rem; color: #6b7280; font-style: italic;">
+                        Zeigt Fortschritt relativ zur gewählten Schulwoche an.
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 

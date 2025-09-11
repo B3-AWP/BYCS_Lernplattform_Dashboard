@@ -311,6 +311,7 @@ body {
     box-shadow: var(--shadow-sm);
     border: 1px solid var(--border-color);
     transition: transform 0.3s ease;
+    position: relative;
 }
 
 .stat-card:hover {
@@ -845,6 +846,23 @@ h1 {
 .completion-visual {
     position: relative;
 }
+
+/* Reference Week Overlay */
+.reference-week-overlay {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    background: rgba(0, 102, 204, 0.9);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    z-index: 10;
+    pointer-events: none;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
 
 .completion-progress-ring {
     position: relative;

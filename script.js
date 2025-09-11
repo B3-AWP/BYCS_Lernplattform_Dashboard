@@ -3,6 +3,10 @@ let overviewGesamtChart, detailPflichtChart, detailGesamtChart, trendChart, rank
 let checklistData = [];
 let historicalData = [];
 
+// Referenzwochen-System (10 Wochen Gesamtzeitraum)
+const TOTAL_WEEKS = 10;
+let currentReferenceWeek = 10; // Standard: Woche 10 (100% der Zeit)
+
 
 
 // zentrale Course ID (ein Ort für die ID)
@@ -25,6 +29,97 @@ const colorPalette = {
 };
 
 
+
+// Referenzwochen-Funktionen
+function updateReferenceWeek(weekValue) {
+    currentReferenceWeek = parseInt(weekValue);
+    document.getElementById('referenceWeekValue').textContent = currentReferenceWeek;
+    
+    // Labels mit Referenzwoche aktualisieren
+    updateReferenceWeekLabels();
+    
+    // Alle Berechnungen neu durchführen
+    if (checklistData && checklistData.length > 0) {
+        updateStatistics();
+        updateCharts();
+        updateChecklistTable(checklistData);
+    }
+    
+    if (window.pflichtData && window.pflichtData.length > 0) {
+        updatePflichtStats();
+        updatePflichtTable(window.pflichtData);
+    }
+}
+
+function updateReferenceWeekLabels() {
+    const isNormalView = currentReferenceWeek === 10;
+    
+    // Labels bleiben unverändert - nur Overlays werden erstellt/entfernt
+    updateReferenceWeekOverlays(isNormalView);
+}
+
+function updateReferenceWeekOverlays(isNormalView) {
+    // Entferne alle existierenden Overlays
+    document.querySelectorAll('.reference-week-overlay').forEach(overlay => overlay.remove());
+    
+    if (isNormalView) return; // Keine Overlays bei Woche 10
+    
+    // Stat-Cards mit Referenzwochen-Overlays versehen
+    const statCards = document.querySelectorAll('.stat-card');
+    statCards.forEach(card => {
+        const overlay = document.createElement('div');
+        overlay.className = 'reference-week-overlay';
+        overlay.textContent = `Schulwoche ${currentReferenceWeek}`;
+        card.appendChild(overlay);
+    });
+}
+
+function calculateReferenceProgress(actualProgress, totalItems) {
+    // Bei Woche 10: Normale Berechnung (keine Referenzwoche)
+    if (currentReferenceWeek === 10) {
+        return totalItems > 0 ? (actualProgress / totalItems) * 100 : 0;
+    }
+    
+    // Berechnet den erwarteten Fortschritt basierend auf der Referenzwoche
+    // actualProgress: Tatsächlich erledigte Items
+    // totalItems: Gesamtanzahl Items über 10 Wochen
+    
+    const expectedItemsByWeek = (totalItems / TOTAL_WEEKS) * currentReferenceWeek;
+    
+    if (expectedItemsByWeek === 0) return 0;
+    
+    return Math.min(100, (actualProgress / expectedItemsByWeek) * 100);
+}
+
+function calculateReferenceProgressFromPercentage(currentPercentage, totalItems) {
+    // Bei Woche 10: Originaler Prozentsatz zurückgeben
+    if (currentReferenceWeek === 10) {
+        return currentPercentage;
+    }
+    
+    // Konvertiert bestehende Prozentangaben in Referenzwochen-Prozente
+    // currentPercentage: Aktueller Prozentsatz (0-100)
+    // totalItems: Gesamtanzahl Items
+    
+    const actualItems = (currentPercentage / 100) * totalItems;
+    return calculateReferenceProgress(actualItems, totalItems);
+}
+
+function calculateReferenceProgressFromSinglePercentage(currentPercentage) {
+    // Bei Woche 10: Originaler Prozentsatz zurückgeben
+    if (currentReferenceWeek === 10) {
+        return currentPercentage;
+    }
+    
+    // Für einzelne Checklist-Items: berechnet Referenz-Fortschritt
+    // currentPercentage: Aktueller Prozentsatz einer einzelnen Checkliste (0-100)
+    
+    const expectedProgressByWeek = (100 / TOTAL_WEEKS) * currentReferenceWeek;
+    
+    if (expectedProgressByWeek === 0) return 0;
+    
+    return Math.min(100, (currentPercentage / expectedProgressByWeek) * 100);
+}
 
 // Utility-Funktionen
 function showLoading(show) {
@@ -120,6 +215,7 @@ async function loadSingleChecklist(url) {
 function createCharts(data) {
     checklistData = data;
     document.getElementById('filterSection').style.display = 'block';
+    updateReferenceWeekLabels(); // Labels beim ersten Laden aktualisieren
     initCharts();
     updateCharts();
     updateStatistics();
@@ -134,14 +230,29 @@ function updateStatistics() {
     const totalChecklists = validChecklists.length;
 
     if (totalChecklists > 0) {
+        // Ursprüngliche Werte berechnen
         const avgPflicht = validChecklists.reduce((sum, item) => sum + (item.pflichtProgress || 0), 0) / totalChecklists;
         const avgGesamt = validChecklists.reduce((sum, item) => sum + (item.gesamtProgress || 0), 0) / totalChecklists;
         const completed = validChecklists.filter(item => item.pflichtProgress >= 100).length;
-        const pending = totalChecklists - completed;
-
-        console.log('Statistics Update:', { totalChecklists, avgPflicht, avgGesamt, completed, pending });
-        updateCombinedStats(completed, totalChecklists);
-        updateProgressDisplay(Math.round(avgPflicht), Math.round(avgGesamt));
+        
+        // Referenzwochen-adjustierte Werte berechnen
+        const referenceAvgPflicht = calculateReferenceProgressFromPercentage(avgPflicht, totalChecklists);
+        const referenceAvgGesamt = calculateReferenceProgressFromPercentage(avgGesamt, totalChecklists);
+        const referenceCompleted = calculateReferenceProgress(completed, totalChecklists);
+        
+        console.log('Statistics Update:', { 
+            totalChecklists, 
+            originalAvg: { pflicht: avgPflicht, gesamt: avgGesamt },
+            referenceAvg: { pflicht: referenceAvgPflicht, gesamt: referenceAvgGesamt },
+            completed: completed,
+            referenceWeek: currentReferenceWeek
+        });
+        
+        updateCombinedStats(completed, totalChecklists, referenceCompleted);
+        updateProgressDisplay(
+            currentReferenceWeek === 10 ? Math.round(referenceAvgPflicht) : Math.ceil(referenceAvgPflicht), 
+            currentReferenceWeek === 10 ? Math.round(referenceAvgGesamt) : Math.ceil(referenceAvgGesamt)
+        );
     }
 }
 
@@ -237,7 +348,7 @@ function setThemeColor(variableName, colorValue) {
 }
 
 
-function updateCombinedStats(completed, total) {
+function updateCombinedStats(completed, total, referencePercentage = null) {
     const completedElement = document.getElementById('completedCount');
     const totalElement = document.getElementById('totalCount');
     const percentageElement = document.getElementById('completionPercentage');
@@ -245,10 +356,19 @@ function updateCombinedStats(completed, total) {
 
     if (!completedElement || !totalElement || !percentageElement || !ringElement) return;
 
-    animateNumber('completedCount', completed);
-    animateNumber('totalCount', total);
+    // Bei Woche 10: Original-Total anzeigen, sonst erwartete Anzahl
+    const expectedTotal = currentReferenceWeek === 10 ? 
+        total : 
+        Math.ceil((total / TOTAL_WEEKS) * currentReferenceWeek);
 
-    const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
+    animateNumber('completedCount', completed);
+    animateNumber('totalCount', expectedTotal);
+
+    // Verwende referencePercentage wenn verfügbar, sonst normale Berechnung
+    const percentage = referencePercentage !== null ? 
+        (currentReferenceWeek === 10 ? Math.round(referencePercentage) : Math.ceil(referencePercentage)) : 
+        (total > 0 ? (currentReferenceWeek === 10 ? Math.round((completed / total) * 100) : Math.ceil((completed / total) * 100)) : 0);
+        
     const circumference = 2 * Math.PI * 25;
     const offset = circumference - (percentage / 100) * circumference;
 
@@ -270,6 +390,9 @@ function updatePflichtStats() {
 
     const totalPflicht = window.pflichtData.length;
     const completedPflicht = window.pflichtData.filter(item => item.completionStatus === 'Erledigt').length;
+    
+    // Referenzwochen-adjustierte Werte berechnen
+    const referencePflichtProgress = calculateReferenceProgress(completedPflicht, totalPflicht);
 
     const gradedItems = window.pflichtData.filter(item => {
         const grade = item.grade;
@@ -292,11 +415,12 @@ function updatePflichtStats() {
         }
     }
 
-    updatePflichtCombinedStats(completedPflicht, totalPflicht);
+    updatePflichtCombinedStats(completedPflicht, totalPflicht, referencePflichtProgress);
+    updateReferenceWeekLabels(); // Labels auch bei Pflichtaufgaben aktualisieren
     showBothStatsRows();
 }
 
-function updatePflichtCombinedStats(completed, total) {
+function updatePflichtCombinedStats(completed, total, referencePercentage = null) {
     const completedElement = document.getElementById('pflichtCompletedCount');
     const totalElement = document.getElementById('pflichtTotalCount');
     const percentageElement = document.getElementById('pflichtCompletionPercentage');
@@ -304,10 +428,19 @@ function updatePflichtCombinedStats(completed, total) {
 
     if (!completedElement || !totalElement || !percentageElement || !ringElement) return;
 
-    animateNumber('pflichtCompletedCount', completed);
-    animateNumber('pflichtTotalCount', total);
+    // Bei Woche 10: Original-Total anzeigen, sonst erwartete Anzahl
+    const expectedTotal = currentReferenceWeek === 10 ? 
+        total : 
+        Math.ceil((total / TOTAL_WEEKS) * currentReferenceWeek);
 
-    const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
+    animateNumber('pflichtCompletedCount', completed);
+    animateNumber('pflichtTotalCount', expectedTotal);
+
+    // Verwende referencePercentage wenn verfügbar, sonst normale Berechnung
+    const percentage = referencePercentage !== null ? 
+        (currentReferenceWeek === 10 ? Math.round(referencePercentage) : Math.ceil(referencePercentage)) : 
+        (total > 0 ? (currentReferenceWeek === 10 ? Math.round((completed / total) * 100) : Math.ceil((completed / total) * 100)) : 0);
+        
     const circumference = 2 * Math.PI * 25;
     const offset = circumference - (percentage / 100) * circumference;
 
@@ -563,16 +696,21 @@ function updateChartsWithFilteredData(filteredData) {
     }
     
     const shortNames = filteredData.map(item => item.name.length > 20 ? item.name.substring(0, 20) + '...' : item.name);
-    const pflichtColors = filteredData.map(item => getProgressColor(item.pflichtProgress || 0));
-    const gesamtColors = filteredData.map(item => getProgressColor(item.gesamtProgress || 0));
+    
+    // Immer ursprüngliche Werte verwenden (keine Referenzwochen-Berechnung für Charts)
+    const originalPflichtData = filteredData.map(item => item.pflichtProgress || 0);
+    const originalGesamtData = filteredData.map(item => item.gesamtProgress || 0);
+    
+    const pflichtColors = originalPflichtData.map(item => getProgressColor(item));
+    const gesamtColors = originalGesamtData.map(item => getProgressColor(item));
 
     detailPflichtChart.data.labels = shortNames;
-    detailPflichtChart.data.datasets[0].data = filteredData.map(item => item.pflichtProgress || 0);
+    detailPflichtChart.data.datasets[0].data = originalPflichtData;
     detailPflichtChart.data.datasets[0].backgroundColor = pflichtColors;
     detailPflichtChart.update();
 
     detailGesamtChart.data.labels = shortNames;
-    detailGesamtChart.data.datasets[0].data = filteredData.map(item => item.gesamtProgress || 0);
+    detailGesamtChart.data.datasets[0].data = originalGesamtData;
     detailGesamtChart.data.datasets[0].backgroundColor = gesamtColors;
     detailGesamtChart.update();
 }
@@ -590,15 +728,22 @@ function updateChecklistTable(filteredData) {
     html += '<tbody id="checklistTableBody">';
 
     filteredData.forEach((item, index) => {
-        const pflichtPercent = item.pflichtProgress !== undefined ? item.pflichtProgress : 0;
-        const gesamtPercent = item.gesamtProgress !== undefined ? item.gesamtProgress : 0;
-        const pflichtDisplay = item.pflichtProgress !== undefined ? `${Math.round(item.pflichtProgress)}%` : 'n/a';
-        const gesamtDisplay = item.gesamtProgress !== undefined ? `${Math.round(item.gesamtProgress)}%` : 'n/a';
+        const originalPflichtPercent = item.pflichtProgress !== undefined ? item.pflichtProgress : 0;
+        const originalGesamtPercent = item.gesamtProgress !== undefined ? item.gesamtProgress : 0;
+        
+        // Referenzwochen-adjustierte Werte berechnen
+        const referencePflichtPercent = calculateReferenceProgressFromSinglePercentage(originalPflichtPercent);
+        const referenceGesamtPercent = calculateReferenceProgressFromSinglePercentage(originalGesamtPercent);
+        
+        const pflichtDisplay = item.pflichtProgress !== undefined ? 
+            `${currentReferenceWeek === 10 ? Math.round(referencePflichtPercent) : Math.ceil(referencePflichtPercent)}%` : 'n/a';
+        const gesamtDisplay = item.gesamtProgress !== undefined ? 
+            `${currentReferenceWeek === 10 ? Math.round(referenceGesamtPercent) : Math.ceil(referenceGesamtPercent)}%` : 'n/a';
 
-        html += `<tr data-name="${item.name.toLowerCase()}" data-pflicht="${pflichtPercent}" data-gesamt="${gesamtPercent}">
+        html += `<tr data-name="${item.name.toLowerCase()}" data-pflicht="${referencePflichtPercent}" data-gesamt="${referenceGesamtPercent}">
             <td><a href="${item.url}" target="_blank">${item.name}</a></td>
-            <td><strong class="progress-cell" data-value="${pflichtPercent}">${pflichtDisplay}</strong></td>
-            <td><strong class="progress-cell" data-value="${gesamtPercent}">${gesamtDisplay}</strong></td>
+            <td><strong class="progress-cell" data-value="${referencePflichtPercent}">${pflichtDisplay}</strong></td>
+            <td><strong class="progress-cell" data-value="${referenceGesamtPercent}">${gesamtDisplay}</strong></td>
         </tr>`;
     });
 
@@ -628,7 +773,9 @@ function initCharts() {
         options: {
             responsive: true,
             scales: { y: { beginAtZero: true, max: 100 }},
-            plugins: { legend: { display: false }}
+            plugins: { 
+                legend: { display: false }
+            }
         }
     });
 
@@ -646,7 +793,9 @@ function initCharts() {
         options: {
             responsive: true,
             scales: { y: { beginAtZero: true, max: 100 }},
-            plugins: { legend: { display: false }}
+            plugins: { 
+                legend: { display: false }
+            }
         }
     });
 }
@@ -660,13 +809,17 @@ function updateCharts() {
     const successColor = getCssVariable('--success-color');
     const infoColor = getCssVariable('--info-color');
 
+    // Immer ursprüngliche Werte verwenden (keine Referenzwochen-Berechnung für Charts)
+    const originalPflichtData = validChecklists.map(item => item.pflichtProgress || 0);
+    const originalGesamtData = validChecklists.map(item => item.gesamtProgress || 0);
+
     detailPflichtChart.data.labels = shortNames;
-    detailPflichtChart.data.datasets[0].data = validChecklists.map(item => item.pflichtProgress || 0);
+    detailPflichtChart.data.datasets[0].data = originalPflichtData;
     detailPflichtChart.data.datasets[0].backgroundColor = successColor;
     detailPflichtChart.update();
 
     detailGesamtChart.data.labels = shortNames;
-    detailGesamtChart.data.datasets[0].data = validChecklists.map(item => item.gesamtProgress || 0);
+    detailGesamtChart.data.datasets[0].data = originalGesamtData;
     detailGesamtChart.data.datasets[0].backgroundColor = infoColor;
     detailGesamtChart.update();
 }
