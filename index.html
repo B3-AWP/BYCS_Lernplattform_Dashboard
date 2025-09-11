@@ -8,7 +8,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@2.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     <script src="script.js"></script>
     <link rel="stylesheet" href="style.css">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect x='3' y='6' width='2' height='12' rx='1' fill='%234f46e5'/><rect x='8' y='10' width='2' height='8' rx='1' fill='%234f46e5'/><rect x='13' y='4' width='2' height='14' rx='1' fill='%234f46e5'/><rect x='18' y='8' width='2' height='10' rx='1' fill='%234f46e5'/></svg>">
 </head>
 <body>
     <div style="position: relative;">
@@ -16,7 +16,7 @@
         
         <div style="background: #FFFFFF; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 24px; border: 1px solid #E9ECEF;">
             <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
-                <h1 style="margin: 0; font-size: 1.8rem; color: #333; font-weight: 700;">📊 Mebis Analytics Dashboard</h1>
+                <h1 style="margin: 0; font-size: 1.8rem; color: #333; font-weight: 700; display: flex; align-items: center; gap: 12px;"><svg width="24" height="24" aria-hidden="true"><use href="#icon-dashboard"></use></svg>Mebis Analytics Dashboard</h1>
                  <nav style="display: flex; align-items: center; gap: 4px;">
                      <div style="display: flex; align-items: center; gap: 4px;">
                 <!-- Verbesserter Refresh-Button: Icon + Text + Spinner -->
@@ -136,7 +136,7 @@
         </div>   
         
         <div class="filter-section" id="filterSection" style="display: none;">
-            <h3>🔍 Filter & Optionen</h3>
+            <h3 style="display: flex; align-items: center; gap: 8px;"><svg width="18" height="18" aria-hidden="true"><use href="#icon-filter"></use></svg>Filter & Optionen</h3>
             <div class="filter-controls">
                 <div class="filter-group">
                     <label>Ansicht:</label>
@@ -203,7 +203,7 @@
     <!-- Pflichtaufgaben Tab -->
     <div id="pflichtTab" style="display:none;">        
         <div class="filter-section" id="pflichtFilterSection" style="display: none;">
-            <h3>🔍 Filter & Optionen - Pflichtaufgaben</h3>
+            <h3 style="display: flex; align-items: center; gap: 8px;"><svg width="18" height="18" aria-hidden="true"><use href="#icon-filter"></use></svg>Filter & Optionen - Pflichtaufgaben</h3>
             <div class="filter-controls">
                 <div class="filter-group">
                     <label>Status:</label>
@@ -254,8 +254,18 @@
         </div>
     </div>
 
-    <!-- Checkliste SVG Icon-->
+    <!-- SVG Icon Definitions -->
     <svg aria-hidden="true" style="position:absolute; width:0; height:0; overflow:hidden;" focusable="false">
+        <!-- Dashboard Analytics Icon -->
+        <symbol id="icon-dashboard" viewBox="0 0 24 24">
+            <rect x="3" y="6" width="2" height="12" rx="1" fill="currentColor"/>
+            <rect x="8" y="10" width="2" height="8" rx="1" fill="currentColor"/>
+            <rect x="13" y="4" width="2" height="14" rx="1" fill="currentColor"/>
+            <rect x="18" y="8" width="2" height="10" rx="1" fill="currentColor"/>
+            <circle cx="12" cy="2" r="1.5" fill="currentColor"/>
+        </symbol>
+
+        <!-- Checklist Icon -->
         <symbol id="icon-checklist" viewBox="0 0 24 24">
             <rect x="3" y="4" width="14" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/>
             <path d="M7 8h6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
@@ -264,35 +274,98 @@
             <path d="M19 7l1.5 1.5L22 6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
         </symbol>
 
-        <!-- Neues: zentrales Refresh-Symbol -->
+        <!-- Refresh Icon -->
         <symbol id="icon-refresh" viewBox="0 0 24 24">
             <path d="M21 10a9 9 0 1 0-2.5 5.9l1.7 1.7v-5.6H15l2.2 2.2A7 7 0 1 1 21 10z" fill="currentColor"/>
             <path d="M12 6v6l4 2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
         </symbol>
 
-        <!-- Neues: Icon für 'Pflicht-Fortschritt pro Checkliste' (z.B. Clipboard mit Häkchen) -->
+        <!-- Pflicht (Required Tasks) Icon -->
         <symbol id="icon-pflicht" viewBox="0 0 24 24">
             <rect x="3" y="4" width="14" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/>
             <path d="M8 11l2 2 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
             <rect x="5" y="2" width="6" height="4" rx="1" fill="none" stroke="currentColor" stroke-width="1.2"/>
+            <circle cx="19" cy="6" r="3" fill="#e74c3c"/>
+            <path d="M18 6l1 1 2-2" fill="none" stroke="white" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
         </symbol>
 
-        <!-- Neues: Icon für 'Gesamt-Fortschritt pro Checklist' (z.B. Balken/Chart-Symbol) -->
+        <!-- Gesamt (Total Progress) Icon -->
         <symbol id="icon-gesamt" viewBox="0 0 24 24">
             <rect x="3" y="6" width="2" height="12" rx="1" fill="currentColor"/>
             <rect x="8" y="10" width="2" height="8" rx="1" fill="currentColor"/>
             <rect x="13" y="4" width="2" height="14" rx="1" fill="currentColor"/>
             <rect x="18" y="8" width="2" height="10" rx="1" fill="currentColor"/>
         </symbol>
-    </svg>
 
-    <!-- Refresh SVG Icon-->
-    <svg aria-hidden="true" style="position:absolute; width:0; height:0; overflow:hidden;" focusable="false">
-        
-        <!-- Neues: zentrales Refresh-Symbol -->
-        <symbol id="icon-refresh" viewBox="0 0 24 24">
-            <path d="M21 10a9 9 0 1 0-2.5 5.9l1.7 1.7v-5.6H15l2.2 2.2A7 7 0 1 1 21 10z" fill="currentColor"/>
-            <path d="M12 6v6l4 2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <!-- Filter/Search Icon -->
+        <symbol id="icon-filter" viewBox="0 0 24 24">
+            <circle cx="11" cy="11" r="8" fill="none" stroke="currentColor" stroke-width="2"/>
+            <path d="m21 21-4.35-4.35" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="11" cy="8" r="2" fill="none" stroke="currentColor" stroke-width="1.5"/>
+        </symbol>
+
+        <!-- Books/Library Icon -->
+        <symbol id="icon-books" viewBox="0 0 24 24">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2H6.5A2.5 2.5 0 0 0 4 5.5v14Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M8 7h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            <path d="M8 11h6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </symbol>
+
+        <!-- Success/Check Icon -->
+        <symbol id="icon-success" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="9" fill="#22c55e"/>
+            <path d="M9 12l2 2 4-4" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </symbol>
+
+        <!-- Warning Icon -->
+        <symbol id="icon-warning" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="9" fill="#f59e0b"/>
+            <path d="M12 8v4" stroke="white" stroke-width="2" stroke-linecap="round"/>
+            <circle cx="12" cy="16" r="1" fill="white"/>
+        </symbol>
+
+        <!-- Alert/Focus Icon -->
+        <symbol id="icon-alert" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="9" fill="#ef4444"/>
+            <path d="M12 8v4" stroke="white" stroke-width="2" stroke-linecap="round"/>
+            <circle cx="12" cy="16" r="1" fill="white"/>
+        </symbol>
+
+        <!-- Celebration/Fireworks Icon -->
+        <symbol id="icon-celebrate" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="3" fill="#8b5cf6"/>
+            <path d="M12 1v6m0 6v6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <path d="m19.07 4.93-4.24 4.24m0 5.66 4.24 4.24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <path d="M23 12h-6m-6 0H1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <path d="m19.07 19.07-4.24-4.24m0-5.66-4.24-4.24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </symbol>
+
+        <!-- Trending Up Icon -->
+        <symbol id="icon-trending" viewBox="0 0 24 24">
+            <polyline points="22,7 13.5,15.5 8.5,10.5 2,17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <polyline points="16,7 22,7 22,13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </symbol>
+
+        <!-- Target/Goal Icon -->
+        <symbol id="icon-target" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/>
+            <circle cx="12" cy="12" r="6" fill="none" stroke="currentColor" stroke-width="2"/>
+            <circle cx="12" cy="12" r="2" fill="currentColor"/>
+        </symbol>
+
+        <!-- Sort Icons -->
+        <symbol id="icon-sort-asc" viewBox="0 0 24 24">
+            <path d="M12 5l-7 7h14z" fill="currentColor"/>
+        </symbol>
+
+        <symbol id="icon-sort-desc" viewBox="0 0 24 24">
+            <path d="M12 19l7-7H5z" fill="currentColor"/>
+        </symbol>
+
+        <symbol id="icon-sort-both" viewBox="0 0 24 24">
+            <path d="M8 9l4-4 4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M16 15l-4 4-4-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </symbol>
     </svg>
 </body>

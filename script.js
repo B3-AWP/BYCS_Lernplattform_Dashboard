@@ -426,20 +426,20 @@ function generateInsights() {
 
     let pflichtInsight = '';
     if (avgPflicht >= 80) {
-        pflichtInsight = '✅ Ausgezeichneter Fortschritt! Die meisten Pflichtaufgaben sind erfüllt.';
+        pflichtInsight = '<svg width="16" height="16" style="vertical-align: text-bottom; margin-right: 4px;"><use href="#icon-success"></use></svg>Ausgezeichneter Fortschritt! Die meisten Pflichtaufgaben sind erfüllt.';
     } else if (avgPflicht >= 50) {
-        pflichtInsight = '🟡 Guter Fortschritt, aber es gibt noch Verbesserungspotential.';
+        pflichtInsight = '<svg width="16" height="16" style="vertical-align: text-bottom; margin-right: 4px;"><use href="#icon-warning"></use></svg>Guter Fortschritt, aber es gibt noch Verbesserungspotential.';
     } else {
-        pflichtInsight = '🟠 Mehr Fokus auf Pflichtaufgaben empfohlen.';
+        pflichtInsight = '<svg width="16" height="16" style="vertical-align: text-bottom; margin-right: 4px;"><use href="#icon-alert"></use></svg>Mehr Fokus auf Pflichtaufgaben empfohlen.';
     }
 
     let gesamtInsight = '';
     if (avgGesamt >= 80) {
-        gesamtInsight = '🎆 Hervorragender Gesamtfortschritt!';
+        gesamtInsight = '<svg width="16" height="16" style="vertical-align: text-bottom; margin-right: 4px;"><use href="#icon-celebrate"></use></svg>Hervorragender Gesamtfortschritt!';
     } else if (avgGesamt >= 50) {
-        gesamtInsight = '📈 Solider Fortschritt in allen Bereichen.';
+        gesamtInsight = '<svg width="16" height="16" style="vertical-align: text-bottom; margin-right: 4px;"><use href="#icon-trending"></use></svg>Solider Fortschritt in allen Bereichen.';
     } else {
-        gesamtInsight = '🎯 Konzentration auf mehr Aufgaben erforderlich.';
+        gesamtInsight = '<svg width="16" height="16" style="vertical-align: text-bottom; margin-right: 4px;"><use href="#icon-target"></use></svg>Konzentration auf mehr Aufgaben erforderlich.';
     }
 
     document.getElementById('filterSection').style.display = 'block';
@@ -582,9 +582,9 @@ function updateChecklistTable(filteredData) {
     let html = '<table class="info-table" id="checklistTable">';
     html += '<thead>';
     html += '<tr>';
-    html += '<th onclick="sortChecklistTableByColumn(0)" class="sortable-header" style="cursor: pointer;">Name <span class="sort-icon">↕️</span></th>';
-    html += '<th onclick="sortChecklistTableByColumn(1)" class="sortable-header" style="cursor: pointer;">Pflicht % <span class="sort-icon">↕️</span></th>';
-    html += '<th onclick="sortChecklistTableByColumn(2)" class="sortable-header" style="cursor: pointer;">Gesamt % <span class="sort-icon">↕️</span></th>';
+    html += '<th onclick="sortChecklistTableByColumn(0)" class="sortable-header" style="cursor: pointer;">Name <span class="sort-icon"><svg width="12" height="12"><use href="#icon-sort-both"></use></svg></span></th>';
+    html += '<th onclick="sortChecklistTableByColumn(1)" class="sortable-header" style="cursor: pointer;">Pflicht % <span class="sort-icon"><svg width="12" height="12"><use href="#icon-sort-both"></use></svg></span></th>';
+    html += '<th onclick="sortChecklistTableByColumn(2)" class="sortable-header" style="cursor: pointer;">Gesamt % <span class="sort-icon"><svg width="12" height="12"><use href="#icon-sort-both"></use></svg></span></th>';
     html += '</tr>';
     html += '</thead>';
     html += '<tbody id="checklistTableBody">';
@@ -925,14 +925,14 @@ function applyPflichtFilters() {
 }
 
 function updatePflichtTable(data) {
-    let html = '<h4>📚 Pflichtaufgaben-Übersicht</h4>';
+    let html = '<h4 style="display: flex; align-items: center; gap: 8px;"><svg width="18" height="18"><use href="#icon-books"></use></svg>Pflichtaufgaben-Übersicht</h4>';
     html += '<table class="info-table" id="pflichtTable">';
     html += '<thead><tr>';
-    html += '<th onclick="sortPflichtTableByColumn(0)" class="sortable-header" style="cursor: pointer;">Name <span class="sort-icon">↕️</span></th>';
-    html += '<th onclick="sortPflichtTableByColumn(1)" class="sortable-header" style="cursor: pointer;">Typ <span class="sort-icon">↕️</span></th>';
-    html += '<th onclick="sortPflichtTableByColumn(2)" class="sortable-header" style="cursor: pointer;">Status <span class="sort-icon">↕️</span></th>';
-    html += '<th onclick="sortPflichtTableByColumn(3)" class="sortable-header" style="cursor: pointer;">Abgabe <span class="sort-icon">↕️</span></th>';
-    html += '<th onclick="sortPflichtTableByColumn(4)" class="sortable-header" style="cursor: pointer;">Note <span class="sort-icon">↕️</span></th>';
+    html += '<th onclick="sortPflichtTableByColumn(0)" class="sortable-header" style="cursor: pointer;">Name <span class="sort-icon"><svg width="12" height="12"><use href="#icon-sort-both"></use></svg></span></th>';
+    html += '<th onclick="sortPflichtTableByColumn(1)" class="sortable-header" style="cursor: pointer;">Typ <span class="sort-icon"><svg width="12" height="12"><use href="#icon-sort-both"></use></svg></span></th>';
+    html += '<th onclick="sortPflichtTableByColumn(2)" class="sortable-header" style="cursor: pointer;">Status <span class="sort-icon"><svg width="12" height="12"><use href="#icon-sort-both"></use></svg></span></th>';
+    html += '<th onclick="sortPflichtTableByColumn(3)" class="sortable-header" style="cursor: pointer;">Abgabe <span class="sort-icon"><svg width="12" height="12"><use href="#icon-sort-both"></use></svg></span></th>';
+    html += '<th onclick="sortPflichtTableByColumn(4)" class="sortable-header" style="cursor: pointer;">Note <span class="sort-icon"><svg width="12" height="12"><use href="#icon-sort-both"></use></svg></span></th>';
     html += '</tr></thead><tbody id="pflichtTableBody">';
 
     data.forEach((item, index) => {
@@ -1019,11 +1019,11 @@ function sortPflichtTableByColumn(columnIndex) {
 
 function updatePflichtSortIcons(activeColumn, ascending) {
     const headers = document.querySelectorAll('#pflichtTable .sortable-header .sort-icon');
-    headers.forEach(icon => icon.textContent = '↕️');
+    headers.forEach(icon => icon.innerHTML = '<svg width="12" height="12"><use href="#icon-sort-both"></use></svg>');
 
     const activeIcon = document.querySelector(`#pflichtTable .sortable-header:nth-child(${activeColumn + 1}) .sort-icon`);
     if (activeIcon) {
-        activeIcon.textContent = ascending ? '↑' : '↓';
+        activeIcon.innerHTML = ascending ? '<svg width="12" height="12"><use href="#icon-sort-asc"></use></svg>' : '<svg width="12" height="12"><use href="#icon-sort-desc"></use></svg>';
     }
 }
 
@@ -1066,11 +1066,11 @@ function sortChecklistTableByColumn(columnIndex) {
 
 function updateChecklistSortIcons(activeColumn, ascending) {
     const headers = document.querySelectorAll('#checklistTable .sortable-header .sort-icon');
-    headers.forEach(icon => icon.textContent = '↕️');
+    headers.forEach(icon => icon.innerHTML = '<svg width="12" height="12"><use href="#icon-sort-both"></use></svg>');
 
     const activeIcon = document.querySelector(`#checklistTable .sortable-header:nth-child(${activeColumn + 1}) .sort-icon`);
     if (activeIcon) {
-        activeIcon.textContent = ascending ? '↑' : '↓';
+        activeIcon.innerHTML = ascending ? '<svg width="12" height="12"><use href="#icon-sort-asc"></use></svg>' : '<svg width="12" height="12"><use href="#icon-sort-desc"></use></svg>';
     }
 }
 
