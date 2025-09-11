@@ -928,8 +928,7 @@
         
         // Checklisten-Übersichtstabelle mit gefilterten Daten aktualisieren
         function updateChecklistTable(filteredData) {
-            let html = '<h4>📊 Checklist-Übersicht</h4>';
-            html += '<table class="info-table" id="checklistTable">';
+            let html = '<table class="info-table" id="checklistTable">';
             html += '<thead>';
             html += '<tr>';
             html += '<th onclick="sortChecklistTableByColumn(0)" class="sortable-header" style="cursor: pointer;">Name <span class="sort-icon">↕️</span></th>';
