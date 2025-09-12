@@ -15,6 +15,23 @@
 </head>
 
 <body>
+    <!-- Dashboard Loading Overlay -->
+    <div id="dashboardLoadingOverlay" class="dashboard-loading-overlay" style="display: none;">
+        <div class="dashboard-loading-content">
+            <div class="dashboard-loading-spinner"></div>
+            <div class="dashboard-loading-text" id="loadingMainText">Lade Dashboard...</div>
+            <div class="dashboard-loading-subtext" id="loadingSubText">Initialisiere System...</div>
+            <div class="dashboard-loading-progress">
+                <div class="progress-steps" id="loadingSteps">
+                    <div class="progress-step" id="step1">✓ System initialisiert</div>
+                    <div class="progress-step pending" id="step2">○ Schiene wird erkannt...</div>
+                    <div class="progress-step pending" id="step3">○ Checklisten werden geladen...</div>
+                    <div class="progress-step pending" id="step4">○ Pflichtaufgaben werden geladen...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="relative-container">
         <div class="card-container">
             <nav class="nav-container">
@@ -252,40 +269,48 @@ Beta-Version. Angaben ohne Gewähr.
             </div>
 
             <!-- Pflichtaufgaben Charts Group -->
-            <div class="chart-group chart-group-pflicht">
-                <div class="chart-group-title">
-                    <svg width="20" height="20" aria-hidden="true">
-                        <use href="#icon-pflicht"></use>
-                    </svg>
-                    Pflichtaufgaben Analyse
-                </div>
-                <div class="chart-container chart-full-width">
+            <div class="collapsible-chart">
+                <div class="chart-header" onclick="toggleChart('pflichtChart')">
                     <h2>
                         <svg class="h2-icon pflicht" aria-hidden="true" width="18" height="18" focusable="false">
                             <use href="#icon-pflicht"></use>
                         </svg>
                         Durchschnittlicher Pflicht-Fortschritt pro Checkliste
                     </h2>
-                    <canvas id="detailPflichtChart"></canvas>
+                    <button class="chart-toggle" id="pflichtChartToggle">
+                        <span>Diagramm anzeigen</span>
+                        <svg class="chart-toggle-icon" width="16" height="16" aria-hidden="true">
+                            <use href="#icon-chevron-down"></use>
+                        </svg>
+                    </button>
+                </div>
+                <div class="chart-content collapsed" id="pflichtChartContent">
+                    <div class="chart-container chart-full-width">
+                        <canvas id="detailPflichtChart"></canvas>
+                    </div>
                 </div>
             </div>
 
             <!-- Checklisten Charts Group -->
-            <div class="chart-group chart-group-checklist">
-                <div class="chart-group-title">
-                    <svg width="20" height="20" aria-hidden="true">
-                        <use href="#icon-checklist"></use>
-                    </svg>
-                    Checklisten Analyse
-                </div>
-                <div class="chart-container chart-full-width">
+            <div class="collapsible-chart">
+                <div class="chart-header" onclick="toggleChart('gesamtChart')">
                     <h2>
                         <svg class="h2-icon gesamt" aria-hidden="true" width="18" height="18" focusable="false">
                             <use href="#icon-gesamt"></use>
                         </svg>
                         Gesamt-Fortschritt pro Checklist
                     </h2>
-                    <canvas id="detailGesamtChart"></canvas>
+                    <button class="chart-toggle" id="gesamtChartToggle">
+                        <span>Diagramm anzeigen</span>
+                        <svg class="chart-toggle-icon" width="16" height="16" aria-hidden="true">
+                            <use href="#icon-chevron-down"></use>
+                        </svg>
+                    </button>
+                </div>
+                <div class="chart-content collapsed" id="gesamtChartContent">
+                    <div class="chart-container chart-full-width">
+                        <canvas id="detailGesamtChart"></canvas>
+                    </div>
                 </div>
             </div>
         </div>
@@ -496,6 +521,11 @@ Beta-Version. Angaben ohne Gewähr.
             <line x1="16" y1="13" x2="8" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
             <line x1="16" y1="17" x2="8" y2="17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
             <polyline points="10,9 9,9 8,9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </symbol>
+        
+        <!-- Chevron Down Icon for collapsible charts -->
+        <symbol id="icon-chevron-down" viewBox="0 0 24 24">
+            <polyline points="6,9 12,15 18,9" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
         </symbol>
     </svg>
 </body>

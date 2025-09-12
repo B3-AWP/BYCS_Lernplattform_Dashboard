@@ -211,6 +211,14 @@ function initializeReferenceWeek() {
     updateSystemForTrack(savedTrack, totalWeeks, currentWeek);
     hideTrackSelection(); // Verstecke Schienen-Auswahl bei erfolgreicher Erkennung
     preselectTrack(savedTrack);
+    updateDashboardLoadingProgress(1, 'Schiene erkannt', `${savedTrack} (${totalWeeks} Wochen) - Woche ${currentWeek}`);
+    setTimeout(() => {
+      const step2 = document.getElementById('step2');
+      if (step2) {
+        step2.className = 'progress-step completed';
+        step2.innerHTML = `✓ ${savedTrack} identifiziert (${totalWeeks} Wochen)`;
+      }
+    }, 300);
     console.log(`Gespeicherte Schulwoche ${currentWeek} für ${savedTrack}`);
     return;
   }
@@ -223,11 +231,20 @@ function initializeReferenceWeek() {
     updateSystemForClass(savedClass, totalWeeks, currentWeek);
     hideTrackSelection(); // Verstecke Schienen-Auswahl bei erfolgreicher Erkennung
     preselectTrack(track);
+    updateDashboardLoadingProgress(1, 'Klasse erkannt', `${savedClass} → ${track} (${totalWeeks} Wochen)`);
+    setTimeout(() => {
+      const step2 = document.getElementById('step2');
+      if (step2) {
+        step2.className = 'progress-step completed';
+        step2.innerHTML = `✓ ${savedClass} → ${track} identifiziert`;
+      }
+    }, 300);
     console.log(`Automatische Schulwoche ${currentWeek} für Klasse ${savedClass} (${track})`);
     return;
   }
   
   // Versuche automatische Erkennung
+  updateDashboardLoadingProgress(1, 'Erkenne Schiene...', 'Analysiere Mebis-Kurs...');
   detectUserClass().then(detectedClass => {
     if (detectedClass) {
       localStorage.setItem('userClass', detectedClass);
@@ -237,6 +254,14 @@ function initializeReferenceWeek() {
       updateSystemForClass(detectedClass, totalWeeks, currentWeek);
       hideTrackSelection(); // Verstecke Schienen-Auswahl bei erfolgreicher automatischer Erkennung
       preselectTrack(track);
+      updateDashboardLoadingProgress(1, 'Schiene erkannt!', `${detectedClass} → ${track} (${totalWeeks} Wochen)`);
+      setTimeout(() => {
+        const step2 = document.getElementById('step2');
+        if (step2) {
+          step2.className = 'progress-step completed';
+          step2.innerHTML = `✓ ${detectedClass} → ${track} identifiziert`;
+        }
+      }, 300);
       console.log(`Automatische Schulwoche ${currentWeek} für erkannte Klasse ${detectedClass} (${track})`);
     } else {
       // Fallback: Standard verwenden, aber Buttons aktiviert lassen für manuelle Auswahl
@@ -244,6 +269,14 @@ function initializeReferenceWeek() {
       updateSystemForTrack(null, totalWeeks, totalWeeks);
       showTrackSelection(); // Zeige Schienen-Auswahl wenn keine automatische Erkennung möglich
       enableTrackButtons();
+      updateDashboardLoadingProgress(1, 'Standard-Modus', 'Manuelle Schienen-Auswahl verfügbar');
+      setTimeout(() => {
+        const step2 = document.getElementById('step2');
+        if (step2) {
+          step2.className = 'progress-step completed';
+          step2.innerHTML = '✓ Standard-Modus aktiviert';
+        }
+      }, 300);
       console.log(`Keine Klasse erkannt - verwende Standard (${totalWeeks} Wochen). Schienen-Auswahl verfügbar.`);
     }
   });
@@ -534,6 +567,95 @@ function showLoading(show) {
     document.getElementById('loadingIndicator').style.display = show ? 'block' : 'none';
 }
 
+function showDashboardLoading(show) {
+    // Show/hide fullscreen loading overlay
+    const overlay = document.getElementById('dashboardLoadingOverlay');
+    if (overlay) {
+        overlay.style.display = show ? 'flex' : 'none';
+    }
+    
+    // Show/hide loading state on stat cards
+    const statCards = document.querySelectorAll('.stat-card');
+    const statsGroups = document.querySelectorAll('.stats-group');
+    
+    if (show) {
+        statCards.forEach(card => card.classList.add('loading'));
+        statsGroups.forEach(group => group.classList.add('loading'));
+        // Reset progress steps when starting
+        resetLoadingProgress();
+    } else {
+        statCards.forEach(card => card.classList.remove('loading'));
+        statsGroups.forEach(group => group.classList.remove('loading'));
+    }
+}
+
+function updateDashboardLoadingProgress(step, message, subtext = '') {
+    const mainText = document.getElementById('loadingMainText');
+    const subText = document.getElementById('loadingSubText');
+    
+    if (mainText) mainText.textContent = message;
+    if (subText) subText.textContent = subtext;
+    
+    // Update step states
+    const steps = ['step1', 'step2', 'step3', 'step4'];
+    steps.forEach((stepId, index) => {
+        const stepElement = document.getElementById(stepId);
+        if (stepElement) {
+            stepElement.className = 'progress-step';
+            if (index < step) {
+                stepElement.className += ' completed';
+            } else if (index === step) {
+                stepElement.className += ' active';
+            } else {
+                stepElement.className += ' pending';
+            }
+        }
+    });
+}
+
+function resetLoadingProgress() {
+    // Reset all steps to initial state
+    const step1 = document.getElementById('step1');
+    const step2 = document.getElementById('step2');
+    const step3 = document.getElementById('step3');
+    const step4 = document.getElementById('step4');
+    
+    if (step1) {
+        step1.className = 'progress-step completed';
+        step1.innerHTML = '✓ System initialisiert';
+    }
+    if (step2) {
+        step2.className = 'progress-step pending';
+        step2.innerHTML = '○ Schiene wird erkannt...';
+    }
+    if (step3) {
+        step3.className = 'progress-step pending';
+        step3.innerHTML = '○ Checklisten werden geladen...';
+    }
+    if (step4) {
+        step4.className = 'progress-step pending';
+        step4.innerHTML = '○ Pflichtaufgaben werden geladen...';
+    }
+}
+
+function checkAndHideDashboardLoading() {
+    // Hide dashboard loading state when both checklists and pflicht data are available
+    if (checklistData && checklistData.length > 0 && window.pflichtData && window.pflichtData.length > 0) {
+        // Show completion message
+        const totalItems = checklistData.length + window.pflichtData.length;
+        updateDashboardLoadingProgress(4, 'Dashboard bereit!', `${totalItems} Elemente erfolgreich geladen`);
+        
+        // Ensure loading is visible for at least 1.5 seconds for better UX
+        const loadingStartTime = window.dashboardLoadingStartTime || 0;
+        const elapsed = Date.now() - loadingStartTime;
+        const minLoadingTime = 1500; // 1.5 seconds
+        
+        setTimeout(() => {
+            showDashboardLoading(false);
+        }, Math.max(500, minLoadingTime - elapsed)); // At least 500ms to show completion
+    }
+}
+
 function updateLoadingProgress(completed, total) {
     const loadingIndicator = document.getElementById('loadingIndicator');
     if (loadingIndicator) {
@@ -555,6 +677,7 @@ function updateLoadingProgress(completed, total) {
 
 function extractPflichtOverview() {
     showLoading(true);
+    updateDashboardLoadingProgress(3, 'Lade Pflichtaufgaben...', 'Analysiere Aufgaben und Quizzes...');
 
     const assignmentOverviewUrl = `https://lernplattform.mebis.bycs.de/course/overview.php?id=${COURSE_ID}&expand[]=assign#assign_overview_collapsible`;
     const quizOverviewUrl = `https://lernplattform.mebis.bycs.de/course/overview.php?id=${COURSE_ID}&expand[]=quiz#quiz_overview_collapsible`;
@@ -567,6 +690,15 @@ function extractPflichtOverview() {
             updatePflichtStats();
             const pfSection = document.getElementById('pflichtFilterSection');
             if (pfSection) pfSection.style.display = 'block';
+            
+            updateDashboardLoadingProgress(3, `${data.length} Pflichtaufgaben geladen`, 'Aufgaben und Quizzes analysiert');
+            setTimeout(() => {
+                const step4 = document.getElementById('step4');
+                if (step4) {
+                    step4.className = 'progress-step completed';
+                    step4.innerHTML = `✓ ${data.length} Pflichtaufgaben identifiziert`;
+                }
+            }, 300);
         })
         .catch(err => {
             console.error('extractPflichtOverview error:', err);
@@ -577,6 +709,7 @@ function extractPflichtOverview() {
 
 async function extractFromChecklistIndex() {
     showLoading(true);
+    updateDashboardLoadingProgress(2, 'Lade Checklisten...', 'Verbinde mit Mebis...');
     console.log('Starting checklist extraction...');
 
     try {
@@ -594,6 +727,15 @@ async function extractFromChecklistIndex() {
 
         console.log(`Found ${checklistLinks.length} checklist links`);
         document.getElementById('totalCount').textContent = checklistLinks.length;
+        
+        updateDashboardLoadingProgress(2, `${checklistLinks.length} Checklisten gefunden`, 'Lade Details...');
+        setTimeout(() => {
+            const step3 = document.getElementById('step3');
+            if (step3) {
+                step3.className = 'progress-step completed';
+                step3.innerHTML = `✓ ${checklistLinks.length} Checklisten gefunden`;
+            }
+        }, 300);
 
         if (checklistLinks.length === 0) {
             console.warn('No checklist links found in HTML. Checking for alternative selectors...');
@@ -733,6 +875,9 @@ function createCharts(data) {
     generateInsights();
     // dashboardContainer element not found - removing this line
     showBothStatsRows();
+    
+    // Check if both datasets are loaded and hide dashboard loading
+    checkAndHideDashboardLoading();
 }
 
 function updateStatistics() {
@@ -1233,6 +1378,24 @@ function getProgressColor(progress) {
     return '#dc3545'; // Rot
 }
 
+// IHK-Grade-basierte Farben für Charts
+function getIHKGradeColor(percentage) {
+    // Basiert auf IHK-Notensystem für präzisere Farbzuordnung
+    if (percentage > 91) {
+        return '#1e7e34'; // Dunkelgrün - Note 1 (sehr gut)
+    } else if (percentage > 80) {
+        return '#28a745'; // Grün - Note 2 (gut)
+    } else if (percentage > 66) {
+        return '#7cb342'; // Hellgrün - Note 3 (befriedigend)
+    } else if (percentage > 49) {
+        return '#ffc107'; // Gelb - Note 4 (ausreichend)
+    } else if (percentage > 29) {
+        return '#fd7e14'; // Orange - Note 5 (mangelhaft)
+    } else {
+        return '#dc3545'; // Rot - Note 6 (ungenügend)
+    }
+}
+
 function getGradientColor(color) {
     const successDark = getCssVariable('--success-dark');
     const warningColor = getCssVariable('--warning-color');
@@ -1260,8 +1423,8 @@ function updateChartsWithFilteredData(filteredData) {
     const originalPflichtData = filteredData.map(item => item.pflichtProgress || 0);
     const originalGesamtData = filteredData.map(item => item.gesamtProgress || 0);
     
-    const pflichtColors = originalPflichtData.map(item => getProgressColor(item));
-    const gesamtColors = originalGesamtData.map(item => getProgressColor(item));
+    const pflichtColors = originalPflichtData.map(item => getIHKGradeColor(item));
+    const gesamtColors = originalGesamtData.map(item => getIHKGradeColor(item));
 
     detailPflichtChart.data.labels = shortNames;
     detailPflichtChart.data.datasets[0].data = originalPflichtData;
@@ -1396,21 +1559,23 @@ function updateCharts() {
 
     const validChecklists = checklistData.filter(item => !item.error);
     const shortNames = validChecklists.map(item => item.name.length > 15 ? item.name.substring(0, 15) + '...' : item.name);
-    const successColor = getCssVariable('--success-color');
-    const infoColor = getCssVariable('--info-color');
 
     // Immer ursprüngliche Werte verwenden (keine Referenzwochen-Berechnung für Charts)
     const originalPflichtData = validChecklists.map(item => item.pflichtProgress || 0);
     const originalGesamtData = validChecklists.map(item => item.gesamtProgress || 0);
+    
+    // Use IHK grade-based colors for both charts
+    const pflichtColors = originalPflichtData.map(item => getIHKGradeColor(item));
+    const gesamtColors = originalGesamtData.map(item => getIHKGradeColor(item));
 
     detailPflichtChart.data.labels = shortNames;
     detailPflichtChart.data.datasets[0].data = originalPflichtData;
-    detailPflichtChart.data.datasets[0].backgroundColor = successColor;
+    detailPflichtChart.data.datasets[0].backgroundColor = pflichtColors;
     detailPflichtChart.update();
 
     detailGesamtChart.data.labels = shortNames;
     detailGesamtChart.data.datasets[0].data = originalGesamtData;
-    detailGesamtChart.data.datasets[0].backgroundColor = infoColor;
+    detailGesamtChart.data.datasets[0].backgroundColor = gesamtColors;
     detailGesamtChart.update();
 }
 
@@ -1457,6 +1622,9 @@ function createPflichtCharts(data) {
     });
 
     showBothStatsRows();
+    
+    // Check if both datasets are loaded and hide dashboard loading
+    checkAndHideDashboardLoading();
 }
 
 async function fetchData(assignmentOverviewUrl, quizOverviewUrl) {
@@ -1905,6 +2073,43 @@ function updateChecklistSortIcons(activeColumn, ascending) {
     }
 }
 
+// Chart Toggle Functionality
+function toggleChart(chartId) {
+    const contentId = chartId + 'Content';
+    const toggleId = chartId + 'Toggle';
+    
+    const content = document.getElementById(contentId);
+    const toggle = document.getElementById(toggleId);
+    
+    if (!content || !toggle) return;
+    
+    const isCurrentlyCollapsed = content.classList.contains('collapsed');
+    
+    if (isCurrentlyCollapsed) {
+        // Expand
+        content.classList.remove('collapsed');
+        content.classList.add('expanded');
+        toggle.classList.add('expanded');
+        toggle.querySelector('span').textContent = 'Diagramm ausblenden';
+        
+        // Trigger chart resize after expansion animation
+        setTimeout(() => {
+            if (chartId === 'pflichtChart' && window.detailPflichtChart) {
+                window.detailPflichtChart.resize();
+            } else if (chartId === 'gesamtChart' && window.detailGesamtChart) {
+                window.detailGesamtChart.resize();
+            }
+        }, 300);
+        
+    } else {
+        // Collapse
+        content.classList.remove('expanded');
+        content.classList.add('collapsed');
+        toggle.classList.remove('expanded');
+        toggle.querySelector('span').textContent = 'Diagramm anzeigen';
+    }
+}
+
 // Event Listeners
 window.addEventListener('DOMContentLoaded', () => {
     showTab('home');
@@ -1916,6 +2121,10 @@ window.addEventListener('DOMContentLoaded', () => {
 
     // Automatische Referenzwochen-Initialisierung
     initializeReferenceWeek();
+
+    // Show loading state for dashboard cards during data loading
+    window.dashboardLoadingStartTime = Date.now();
+    showDashboardLoading(true);
 
     extractFromChecklistIndex();
     extractPflichtOverview();
@@ -1929,6 +2138,8 @@ window.addEventListener('DOMContentLoaded', () => {
             
             try {
                 setRefreshButtonLoading(true);
+                window.dashboardLoadingStartTime = Date.now();
+                showDashboardLoading(true);
                 // if (activeTab === 'checklists') {
                     await extractFromChecklistIndex();
                 // } else {
