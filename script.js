@@ -850,10 +850,10 @@ function updateCombinedStats(completed, total, referencePercentage = null) {
     animateNumber('completedCount', completed);
     animateNumber('totalCount', expectedTotal);
 
-    // Verwende referencePercentage wenn verfügbar, sonst normale Berechnung
+    // Berechne Prozentsatz basierend auf der angezeigten Anzahl für Konsistenz
     const percentage = referencePercentage !== null ? 
         (currentReferenceWeek === TOTAL_WEEKS ? Math.round(referencePercentage) : Math.ceil(referencePercentage)) : 
-        (total > 0 ? (currentReferenceWeek === TOTAL_WEEKS ? Math.round((completed / total) * 100) : Math.ceil((completed / total) * 100)) : 0);
+        (expectedTotal > 0 ? Math.round((completed / expectedTotal) * 100) : 0);
         
     const circumference = 2 * Math.PI * 25;
     // For ring visual: cap at 100% (full circle), but text can show over 100%
@@ -926,10 +926,10 @@ function updatePflichtCombinedStats(completed, total, referencePercentage = null
     animateNumber('pflichtCompletedCount', completed);
     animateNumber('pflichtTotalCount', expectedTotal);
 
-    // Verwende referencePercentage wenn verfügbar, sonst normale Berechnung
+    // Berechne Prozentsatz basierend auf der angezeigten Anzahl für Konsistenz
     const percentage = referencePercentage !== null ? 
         (currentReferenceWeek === TOTAL_WEEKS ? Math.round(referencePercentage) : Math.ceil(referencePercentage)) : 
-        (total > 0 ? (currentReferenceWeek === TOTAL_WEEKS ? Math.round((completed / total) * 100) : Math.ceil((completed / total) * 100)) : 0);
+        (expectedTotal > 0 ? Math.round((completed / expectedTotal) * 100) : 0);
         
     const circumference = 2 * Math.PI * 25;
     // For ring visual: cap at 100% (full circle), but text can show over 100%
@@ -1254,7 +1254,34 @@ function updateChecklistTable(filteredData) {
 }
 
 
+function destroyCharts() {
+    // Destroy existing charts to prevent canvas reuse errors
+    if (detailPflichtChart) {
+        detailPflichtChart.destroy();
+        detailPflichtChart = null;
+    }
+    if (detailGesamtChart) {
+        detailGesamtChart.destroy();
+        detailGesamtChart = null;
+    }
+    if (overviewGesamtChart) {
+        overviewGesamtChart.destroy();
+        overviewGesamtChart = null;
+    }
+    if (trendChart) {
+        trendChart.destroy();
+        trendChart = null;
+    }
+    if (rankingChart) {
+        rankingChart.destroy();
+        rankingChart = null;
+    }
+}
+
 function initCharts() {
+    // Always destroy existing charts first
+    destroyCharts();
+    
     const successColor = getCssVariable('--success-color');
     const infoColor = getCssVariable('--info-color');
 
@@ -1302,6 +1329,13 @@ function initCharts() {
 
 function updateCharts() {
     if (!checklistData.length) return;
+    
+    // Ensure charts are initialized
+    if (!detailPflichtChart || !detailGesamtChart) {
+        console.log('Charts not initialized, initializing now...');
+        initCharts();
+        return;
+    }
 
     const validChecklists = checklistData.filter(item => !item.error);
     const shortNames = validChecklists.map(item => item.name.length > 15 ? item.name.substring(0, 15) + '...' : item.name);
