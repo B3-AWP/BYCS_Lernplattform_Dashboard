@@ -867,19 +867,19 @@ function updateCombinedStats(completed, total, referencePercentage = null) {
         Math.ceil((total / TOTAL_WEEKS) * currentReferenceWeek);
 
     animateNumber('completedCount', completed);
-    animateNumber('totalCount', expectedTotal);
+    totalElement.textContent = expectedTotal;
 
-    // Berechne Prozentsatz basierend auf der angezeigten Anzahl für Konsistenz
-    const percentage = referencePercentage !== null ? 
-        (currentReferenceWeek === TOTAL_WEEKS ? Math.round(referencePercentage) : Math.ceil(referencePercentage)) : 
-        (expectedTotal > 0 ? Math.round((completed / expectedTotal) * 100) : 0);
-        
-    const circumference = 2 * Math.PI * 25;
-    // For ring visual: cap at 100% (full circle), but text can show over 100%
-    const visualPercentage = Math.min(100, percentage);
-    const offset = circumference - (visualPercentage / 100) * circumference;
-
+    // Warte bis Animation abgeschlossen ist, dann berechne Prozentsatz basierend auf tatsächlich angezeigten Werten
     setTimeout(() => {
+        const displayedCompleted = parseInt(completedElement.textContent) || 0;
+        const displayedTotal = parseInt(totalElement.textContent) || 0;
+        const percentage = displayedTotal > 0 ? Math.round((displayedCompleted / displayedTotal) * 100) : 0;
+        
+        const circumference = 2 * Math.PI * 25;
+        // For ring visual: cap at 100% (full circle), but text can show over 100%
+        const visualPercentage = Math.min(100, percentage);
+        const offset = circumference - (visualPercentage / 100) * circumference;
+
         ringElement.style.strokeDashoffset = offset;
         // Text can show over 100%
         percentageElement.textContent = percentage + '%';
@@ -888,7 +888,7 @@ function updateCombinedStats(completed, total, referencePercentage = null) {
         const color = percentage >= 100 ? '#10b981' : getProgressColor(percentage);
         ringElement.style.stroke = color;
         percentageElement.style.color = color;
-    }, 300);
+    }, 400);
 }
 
 function updatePflichtStats() {
@@ -943,19 +943,19 @@ function updatePflichtCombinedStats(completed, total, referencePercentage = null
         Math.ceil((total / TOTAL_WEEKS) * currentReferenceWeek);
 
     animateNumber('pflichtCompletedCount', completed);
-    animateNumber('pflichtTotalCount', expectedTotal);
+    totalElement.textContent = expectedTotal;
 
-    // Berechne Prozentsatz basierend auf der angezeigten Anzahl für Konsistenz
-    const percentage = referencePercentage !== null ? 
-        (currentReferenceWeek === TOTAL_WEEKS ? Math.round(referencePercentage) : Math.ceil(referencePercentage)) : 
-        (expectedTotal > 0 ? Math.round((completed / expectedTotal) * 100) : 0);
-        
-    const circumference = 2 * Math.PI * 25;
-    // For ring visual: cap at 100% (full circle), but text can show over 100%
-    const visualPercentage = Math.min(100, percentage);
-    const offset = circumference - (visualPercentage / 100) * circumference;
-
+    // Warte bis Animation abgeschlossen ist, dann berechne Prozentsatz basierend auf tatsächlich angezeigten Werten
     setTimeout(() => {
+        const displayedCompleted = parseInt(completedElement.textContent) || 0;
+        const displayedTotal = parseInt(totalElement.textContent) || 0;
+        const percentage = displayedTotal > 0 ? Math.round((displayedCompleted / displayedTotal) * 100) : 0;
+        
+        const circumference = 2 * Math.PI * 25;
+        // For ring visual: cap at 100% (full circle), but text can show over 100%
+        const visualPercentage = Math.min(100, percentage);
+        const offset = circumference - (visualPercentage / 100) * circumference;
+
         ringElement.style.strokeDashoffset = offset;
         // Text can show over 100%
         percentageElement.textContent = percentage + '%';
@@ -964,7 +964,7 @@ function updatePflichtCombinedStats(completed, total, referencePercentage = null
         const color = percentage >= 100 ? '#10b981' : getProgressColor(percentage);
         ringElement.style.stroke = color;
         percentageElement.style.color = color;
-    }, 300);
+    }, 400);
 }
 
 let currentPflichtAvg = 0;
