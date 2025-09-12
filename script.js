@@ -209,7 +209,7 @@ function initializeReferenceWeek() {
     const totalWeeks = getTotalWeeksForTrack(savedTrack);
     const currentWeek = getCurrentSchulwocheForTrack(savedTrack);
     updateSystemForTrack(savedTrack, totalWeeks, currentWeek);
-    enableTrackButtons();
+    hideTrackSelection(); // Verstecke Schienen-Auswahl bei erfolgreicher Erkennung
     preselectTrack(savedTrack);
     console.log(`Gespeicherte Schulwoche ${currentWeek} für ${savedTrack}`);
     return;
@@ -221,7 +221,7 @@ function initializeReferenceWeek() {
     const totalWeeks = getTotalWeeksForClass(savedClass);
     const currentWeek = getCurrentSchulwoche(savedClass);
     updateSystemForClass(savedClass, totalWeeks, currentWeek);
-    enableTrackButtons();
+    hideTrackSelection(); // Verstecke Schienen-Auswahl bei erfolgreicher Erkennung
     preselectTrack(track);
     console.log(`Automatische Schulwoche ${currentWeek} für Klasse ${savedClass} (${track})`);
     return;
@@ -235,13 +235,14 @@ function initializeReferenceWeek() {
       const totalWeeks = getTotalWeeksForClass(detectedClass);
       const currentWeek = getCurrentSchulwoche(detectedClass);
       updateSystemForClass(detectedClass, totalWeeks, currentWeek);
-      enableTrackButtons();
+      hideTrackSelection(); // Verstecke Schienen-Auswahl bei erfolgreicher automatischer Erkennung
       preselectTrack(track);
       console.log(`Automatische Schulwoche ${currentWeek} für erkannte Klasse ${detectedClass} (${track})`);
     } else {
       // Fallback: Standard verwenden, aber Buttons aktiviert lassen für manuelle Auswahl
       const totalWeeks = calculateTotalWeeks();
       updateSystemForTrack(null, totalWeeks, totalWeeks);
+      showTrackSelection(); // Zeige Schienen-Auswahl wenn keine automatische Erkennung möglich
       enableTrackButtons();
       console.log(`Keine Klasse erkannt - verwende Standard (${totalWeeks} Wochen). Schienen-Auswahl verfügbar.`);
     }
@@ -320,6 +321,40 @@ function disableTrackButtons() {
     btn.classList.remove('active', 'inactive');
   });
   console.log('Track buttons disabled - no Schiene could be determined');
+}
+
+function hideTrackSelection() {
+  const trackContainer = document.getElementById('trackSelectionContainer');
+  if (trackContainer) {
+    trackContainer.style.display = 'none';
+    console.log('Track selection hidden - automatic detection successful');
+  }
+}
+
+function showTrackSelection() {
+  const trackContainer = document.getElementById('trackSelectionContainer');
+  if (trackContainer) {
+    trackContainer.style.display = 'flex';
+    console.log('Track selection shown - manual selection required');
+  }
+}
+
+function setToCurrentWeek() {
+  // Bestimme aktuelle Woche basierend auf gespeicherter oder erkannter Klasse/Schiene
+  let currentWeek = TOTAL_WEEKS; // Default fallback
+  
+  const savedTrack = localStorage.getItem('userTrack');
+  const savedClass = localStorage.getItem('userClass');
+  
+  if (savedTrack && TRACK_SCHEDULES[savedTrack]) {
+    currentWeek = getCurrentSchulwocheForTrack(savedTrack);
+  } else if (savedClass && CLASS_TO_TRACK[savedClass]) {
+    currentWeek = getCurrentSchulwoche(savedClass);
+  }
+  
+  // Setze Referenzwoche auf aktuelle Woche
+  updateReferenceWeek(currentWeek);
+  console.log(`Aktuelle Woche gesetzt: ${currentWeek}`);
 }
 
 function updateSystemForClass(className, totalWeeks, currentWeek) {
@@ -416,7 +451,7 @@ const colorPalette = {
 // Referenzwochen-Funktionen
 function updateReferenceWeek(weekValue) {
     currentReferenceWeek = parseInt(weekValue);
-    document.getElementById('referenceWeekSlider').textContent = currentReferenceWeek;
+    document.getElementById('referenceWeekSlider').value = currentReferenceWeek;
     
     // Mark this as a manual override to prevent track system from overriding
     localStorage.setItem('manualReferenceWeek', currentReferenceWeek);
@@ -812,19 +847,27 @@ function animateProgressBar(textElementId, barElementId, targetValue) {
         barElement.style.width = roundedBarValue + '%';
 
         // Dynamische Farben basierend auf Fortschritt (use text value for color logic)
+        let textColor, barColor;
         if (roundedTextValue >= 100) {
-            barElement.style.background = '#10b981'; // Special green for >100%
+            textColor = barColor = '#10b981'; // Special green for >100%
         } else if (roundedTextValue >= 80) {
-            barElement.style.background = successColor;
+            textColor = barColor = successColor;
         } else if (roundedTextValue >= 60) {
-            barElement.style.background = '#6cc04a';
+            textColor = barColor = '#6cc04a';
         } else if (roundedTextValue >= 40) {
-            barElement.style.background = warningColor;
+            textColor = barColor = warningColor;
         } else if (roundedTextValue >= 20) {
-            barElement.style.background = '#fd7e14';
+            textColor = barColor = '#fd7e14';
         } else {
-            barElement.style.background = dangerColor;
+            textColor = barColor = dangerColor;
         }
+        
+        // Apply colors to both text and bar
+        // Override CSS gradient for dynamic color on text
+        textElement.style.background = 'none';
+        textElement.style.webkitTextFillColor = textColor;
+        textElement.style.color = textColor;
+        barElement.style.background = barColor;
     }, 40);
 }
 

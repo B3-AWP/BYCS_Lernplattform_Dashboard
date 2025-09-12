@@ -56,7 +56,7 @@ Beta-Version. Angaben ohne Gewähr.
                 <!-- Referenzwochen-Auswahl -->
                 <div style="padding: 10px; border-top: 1px solid #E9ECEF;">
                     <div style="display: flex; align-items: center; gap: 20px; flex-wrap: wrap;">
-                        <div style="display: flex; align-items: center; gap: 12px;">
+                        <div id="trackSelectionContainer" style="display: flex; align-items: center; gap: 12px;">
                             <svg width="20" height="20" style="color: #4f46e5;" aria-hidden="true">
                                 <use href="#icon-target"></use>
                             </svg>
@@ -83,6 +83,14 @@ Beta-Version. Angaben ohne Gewähr.
                                 oninput="updateReferenceWeek(this.value)">
                             <span style="font-size: 0.875rem; color: #6b7280; min-width: 20px;">9</span>
                         </div>
+                        
+                        <button id="currentWeekBtn" class="nav-btn" onclick="setToCurrentWeek()" 
+                                style="display: flex; align-items: center; gap: 6px; padding: 8px 12px; font-size: 0.875rem; font-weight: 500;">
+                            <svg class="icon" width="16" height="16" aria-hidden="true">
+                                <use href="#icon-current-week"></use>
+                            </svg>
+                            <span>Aktuelle Woche</span>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -441,6 +449,14 @@ Beta-Version. Angaben ohne Gewähr.
                 stroke-linejoin="round" />
             <path d="M16 15l-4 4-4-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                 stroke-linejoin="round" />
+        </symbol>
+        
+        <symbol id="icon-current-week" viewBox="0 0 24 24">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke="currentColor" stroke-width="2" fill="none"/>
+            <line x1="16" y1="2" x2="16" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <line x1="8" y1="2" x2="8" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <circle cx="12" cy="15" r="2" fill="currentColor"/>
         </symbol>
     </svg>
 </body>
