@@ -33,36 +33,72 @@
             
             <!-- Referenzwochen-Auswahl -->
             <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #E9ECEF;">
-                <div style="display: flex; align-items: center; gap: 20px; flex-wrap: wrap;">
-                    <div style="display: flex; align-items: center; gap: 12px; min-width: 300px;">
-                        <svg width="20" height="20" style="color: #4f46e5;" aria-hidden="true">
+                 
+                            
+                    <div style="display: flex; align-items: center; gap: 20px; flex-wrap: wrap;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                          <svg width="20" height="20" style="color: #4f46e5;" aria-hidden="true">
                             <use href="#icon-target"></use>
-                        </svg>
+                        </svg> 
+                        <div>
+                            Schiene: 
+                            <button id="trackTab1" data-track="Schiene1" class="track-tab" style="
+                                flex: 1;
+                                padding: 8px 8px;
+                                border: none;
+                                border-radius: 4px;
+                                font-size: 0.875rem;
+                                font-weight: 500;
+                                cursor: pointer;
+                                transition: all 0.2s ease;
+                                background: transparent;
+                                color: #6b7280;
+                            ">
+                                1
+                            </button>
+                            <button id="trackTab3" data-track="Schiene3" class="track-tab" style="
+                                flex: 1;
+                                padding: 8px 8px;
+                                border: none;
+                                border-radius: 4px;
+                                font-size: 0.875rem;
+                                font-weight: 500;
+                                cursor: pointer;
+                                transition: all 0.2s ease;
+                                background: transparent;
+                                color: #6b7280;
+                            ">
+                                3
+                            </button>
+                        </div>
+                    </div>
+                       
                         <label for="referenceWeekSlider" style="font-weight: 600; color: #374151; min-width: 80px;">
                             Schulwoche:
                         </label>
-                        <div style="flex: 1; display: flex; align-items: center; gap: 2px;">
+                        <div >
                             <span style="font-size: 0.875rem; color: #6b7280; min-width: 10px;">1</span>
                             <input 
                                 type="range" 
                                 id="referenceWeekSlider" 
                                 min="1" 
-                                max="10" 
-                                value="10" 
+                                max="9" 
+                                value="9" 
                                 style="flex: 1; height: 6px; background: #e5e7eb; border-radius: 3px; outline: none; cursor: pointer;"
                                 oninput="updateReferenceWeek(this.value)"
                             >
-                            <span style="font-size: 0.875rem; color: #6b7280; min-width: 20px;">10</span>
+                            <span style="font-size: 0.875rem; color: #6b7280; min-width: 20px;">9</span>
                         </div>
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <span style="font-size: 0.875rem; color: #6b7280;">Schulwoche</span>
-                        <span id="referenceWeekValue" style="font-weight: 700; color: #4f46e5; font-size: 1.125rem; min-width: 30px; text-align: center;">10</span>
-                        <span style="font-size: 0.875rem; color: #6b7280;">von 10</span>
-                    </div>
-                    <div style="font-size: 0.875rem; color: #6b7280; font-style: italic;">
-                        Zeigt Fortschritt relativ zur gewählten Schulwoche an.
-                    </div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="font-size: 0.875rem; color: #6b7280;">Schulwoche</span>
+                            <span id="referenceWeekValue" style="font-weight: 700; color: #4f46e5; font-size: 1.125rem; min-width: 30px; text-align: center;">9</span>
+                            <span style="font-size: 0.875rem; color: #6b7280;">von 9</span>
+                        </div>
+                        <div style="font-size: 0.875rem; color: #6b7280; font-style: italic;">
+                                Fortschritt relativ zur Schulwoche.
+                            </div>
+                        </div>
+                    
                 </div>
             </div>
         </div>
@@ -115,7 +151,7 @@
             </div>
             <div class="stat-card">
                 <div class="stat-number" id="ihkGradeText">-</div>
-                <div class="stat-label">Note gemäß IHK</div>
+                <div class="stat-label">Note Pflicht-Checklisten gemäß IHK</div>
                 <div class="ihk-grade-details">
                     <div class="ihk-grade-percentage" id="ihkGradePercentage">0%</div>
                     <div class="ihk-grade-tendency" id="ihkGradeTendency"></div>

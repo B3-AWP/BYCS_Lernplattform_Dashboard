@@ -863,6 +863,130 @@ h1 {
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
+/* Reference Week Section */
+.reference-week-section {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid #E9ECEF;
+}
+
+.reference-week-description {
+    font-size: 0.875rem;
+    color: #6b7280;
+    font-style: italic;
+    margin-bottom: 16px;
+}
+
+.reference-controls {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.track-selector-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.track-selector-icon {
+    width: 20px;
+    height: 20px;
+    color: #4f46e5;
+}
+
+.track-label-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #374151;
+    font-size: 0.875rem;
+}
+
+.week-slider-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.week-slider-label {
+    font-weight: 600;
+    color: #374151;
+    min-width: 80px;
+}
+
+.week-slider-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.week-slider-min,
+.week-slider-max {
+    font-size: 0.875rem;
+    color: #6b7280;
+    min-width: 10px;
+}
+
+.week-slider {
+    flex: 1;
+    height: 6px;
+    background: #e5e7eb;
+    border-radius: 3px;
+    outline: none;
+    cursor: pointer;
+}
+
+.week-display-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.week-display-label {
+    font-size: 0.875rem;
+    color: #6b7280;
+}
+
+.week-display-value {
+    font-weight: 700;
+    color: #4f46e5;
+    font-size: 1.125rem;
+    min-width: 30px;
+    text-align: center;
+}
+
+.week-display-total {
+    font-size: 0.875rem;
+    color: #6b7280;
+}
+
+/* Track Tab Styles */
+.track-tab {
+    padding: 8px;
+    border: none;
+    border-radius: 4px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: transparent;
+    color: #6b7280;
+    min-width: 24px;
+}
+
+.track-tab:hover {
+    background: #e5e7eb;
+    color: #374151;
+}
+
+.track-tab.active {
+    background: #4f46e5;
+    color: white;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
 
 .completion-progress-ring {
     position: relative;
