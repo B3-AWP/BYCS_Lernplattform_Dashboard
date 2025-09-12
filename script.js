@@ -413,7 +413,8 @@ function calculateReferenceProgress(actualProgress, totalItems) {
     
     if (expectedItemsByWeek === 0) return 0;
     
-    return Math.min(100, (actualProgress / expectedItemsByWeek) * 100);
+    // Allow values over 100% for reference weeks - no Math.min cap
+    return (actualProgress / expectedItemsByWeek) * 100;
 }
 
 function calculateReferenceProgressFromPercentage(currentPercentage, totalItems) {
@@ -443,7 +444,8 @@ function calculateReferenceProgressFromSinglePercentage(currentPercentage) {
     
     if (expectedProgressByWeek === 0) return 0;
     
-    return Math.min(100, (currentPercentage / expectedProgressByWeek) * 100);
+    // Allow values over 100% for reference weeks - no Math.min cap
+    return (currentPercentage / expectedProgressByWeek) * 100;
 }
 
 // Utility-Funktionen
@@ -616,31 +618,46 @@ function animateProgressBar(textElementId, barElementId, targetValue) {
     const warningColor = getCssVariable('--warning-color');
     const dangerColor = getCssVariable('--danger-color');
 
-    const safeTargetValue = Math.max(0, Math.min(100, Math.round(targetValue || 0)));
+    // Allow text to show values over 100%, but cap bar width at 100%
+    const textTargetValue = Math.max(0, Math.round(targetValue || 0));
+    const barTargetValue = Math.min(100, textTargetValue); // Visual bar capped at 100%
+    
     const currentText = textElement.textContent.replace('%', '') || '0';
     const currentValue = parseInt(currentText) || 0;
-    const increment = (safeTargetValue - currentValue) / 40;
+    const textIncrement = (textTargetValue - currentValue) / 40;
+    const barIncrement = (barTargetValue - Math.min(100, currentValue)) / 40;
 
-    let current = currentValue;
+    let currentText = currentValue;
+    let currentBar = Math.min(100, currentValue);
+    
     const timer = setInterval(() => {
-        current += increment;
-        if ((increment > 0 && current >= safeTargetValue) || (increment < 0 && current <= safeTargetValue)) {
-            current = safeTargetValue;
+        currentText += textIncrement;
+        currentBar += barIncrement;
+        
+        if ((textIncrement > 0 && currentText >= textTargetValue) || (textIncrement < 0 && currentText <= textTargetValue)) {
+            currentText = textTargetValue;
+            currentBar = barTargetValue;
             clearInterval(timer);
         }
 
-        const roundedValue = Math.round(current);
-        textElement.textContent = roundedValue + '%';
-        barElement.style.width = roundedValue + '%';
+        const roundedTextValue = Math.round(currentText);
+        const roundedBarValue = Math.round(currentBar);
+        
+        // Text can show over 100%
+        textElement.textContent = roundedTextValue + '%';
+        // Bar width capped at 100%
+        barElement.style.width = roundedBarValue + '%';
 
-        // Dynamische Farben basierend auf Fortschritt
-        if (roundedValue >= 80) {
+        // Dynamische Farben basierend auf Fortschritt (use text value for color logic)
+        if (roundedTextValue >= 100) {
+            barElement.style.background = '#10b981'; // Special green for >100%
+        } else if (roundedTextValue >= 80) {
             barElement.style.background = successColor;
-        } else if (roundedValue >= 60) {
+        } else if (roundedTextValue >= 60) {
             barElement.style.background = '#6cc04a';
-        } else if (roundedValue >= 40) {
+        } else if (roundedTextValue >= 40) {
             barElement.style.background = warningColor;
-        } else if (roundedValue >= 20) {
+        } else if (roundedTextValue >= 20) {
             barElement.style.background = '#fd7e14';
         } else {
             barElement.style.background = dangerColor;
@@ -695,13 +712,17 @@ function updateCombinedStats(completed, total, referencePercentage = null) {
         (total > 0 ? (currentReferenceWeek === TOTAL_WEEKS ? Math.round((completed / total) * 100) : Math.ceil((completed / total) * 100)) : 0);
         
     const circumference = 2 * Math.PI * 25;
-    const offset = circumference - (percentage / 100) * circumference;
+    // For ring visual: cap at 100% (full circle), but text can show over 100%
+    const visualPercentage = Math.min(100, percentage);
+    const offset = circumference - (visualPercentage / 100) * circumference;
 
     setTimeout(() => {
         ringElement.style.strokeDashoffset = offset;
+        // Text can show over 100%
         percentageElement.textContent = percentage + '%';
 
-        const color = getProgressColor(percentage);
+        // Use actual percentage for color (even >100%)
+        const color = percentage >= 100 ? '#10b981' : getProgressColor(percentage);
         ringElement.style.stroke = color;
         percentageElement.style.color = color;
     }, 300);
@@ -767,13 +788,17 @@ function updatePflichtCombinedStats(completed, total, referencePercentage = null
         (total > 0 ? (currentReferenceWeek === TOTAL_WEEKS ? Math.round((completed / total) * 100) : Math.ceil((completed / total) * 100)) : 0);
         
     const circumference = 2 * Math.PI * 25;
-    const offset = circumference - (percentage / 100) * circumference;
+    // For ring visual: cap at 100% (full circle), but text can show over 100%
+    const visualPercentage = Math.min(100, percentage);
+    const offset = circumference - (visualPercentage / 100) * circumference;
 
     setTimeout(() => {
         ringElement.style.strokeDashoffset = offset;
+        // Text can show over 100%
         percentageElement.textContent = percentage + '%';
 
-        const color = getProgressColor(percentage);
+        // Use actual percentage for color (even >100%)
+        const color = percentage >= 100 ? '#10b981' : getProgressColor(percentage);
         ringElement.style.stroke = color;
         percentageElement.style.color = color;
     }, 300);
