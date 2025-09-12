@@ -381,17 +381,11 @@ function updateSliderForTotalWeeks(totalWeeks) {
     vonLabel.textContent = `von ${totalWeeks}`;
   }
   
-  // Auch den Wert-Display aktualisieren
-  const valueDisplay = document.getElementById('referenceWeekValue');
-  if (valueDisplay) {
-    valueDisplay.textContent = totalWeeks;
-  }
 }
 
 function setReferenceWeek(weekNumber) {
   currentReferenceWeek = weekNumber;
   document.getElementById('referenceWeekSlider').value = weekNumber;
-  document.getElementById('referenceWeekValue').textContent = weekNumber;
   updateReferenceWeekLabels();
 }
 
@@ -399,6 +393,7 @@ function setReferenceWeek(weekNumber) {
 
 // zentrale Course ID (ein Ort für die ID)
 const COURSE_ID = '2036416';
+
 
 // Farbpalette für bessere Visualisierung
 const colorPalette = {
@@ -421,7 +416,7 @@ const colorPalette = {
 // Referenzwochen-Funktionen
 function updateReferenceWeek(weekValue) {
     currentReferenceWeek = parseInt(weekValue);
-    document.getElementById('referenceWeekValue').textContent = currentReferenceWeek;
+    document.getElementById('referenceWeekSlider').textContent = currentReferenceWeek;
     
     // Mark this as a manual override to prevent track system from overriding
     localStorage.setItem('manualReferenceWeek', currentReferenceWeek);
@@ -456,12 +451,12 @@ function updateReferenceWeekOverlays(isNormalView) {
     if (isNormalView) return; // Keine Overlays bei letzter Woche
     
     // Stat-Cards mit Referenzwochen-Overlays versehen
-    const statCards = document.querySelectorAll('.stat-card');
-    statCards.forEach(card => {
+    const statCards = document.querySelectorAll('#referenceWeekContainer');
+    statCards.forEach(row => {
         const overlay = document.createElement('div');
         overlay.className = 'reference-week-overlay';
-        overlay.textContent = `Schulwoche ${currentReferenceWeek}`;
-        card.appendChild(overlay);
+        overlay.textContent = `Schulwoche ${currentReferenceWeek} (Fortschritt basierend auf Schulwoche)`;
+        row.appendChild(overlay);
     });
 }
 
@@ -578,6 +573,7 @@ async function extractFromChecklistIndex() {
             .filter(link => link.getAttribute('href').startsWith('view.php?id='));
 
         console.log(`Found ${checklistLinks.length} checklist links`);
+        document.getElementById('totalCount').textContent = checklistLinks.length;
 
         if (checklistLinks.length === 0) {
             console.warn('No checklist links found in HTML. Checking for alternative selectors...');
@@ -1394,25 +1390,22 @@ function showBothStatsRows() {
 }
 
 function showTab(tab) {
-    document.getElementById('checklistsTab').style.display = tab === 'checklists' ? 'block' : 'none';
-    document.getElementById('pflichtTab').style.display = tab === 'pflicht' ? 'block' : 'none';
+    const tabs = ['homeTab', 'checklistsTab', 'pflichtTab'];
+    tabs.forEach(tabId => {
+        const tabElement = document.getElementById(tabId);
+        if (tabElement) {
+            tabElement.style.display = tabId === `${tab}Tab` ? 'block' : 'none';
+        }
+    });
 
-    showBothStatsRows();
-
-    const checklistBtn = document.getElementById('tabChecklists');
-    const pflichtBtn = document.getElementById('tabPflicht');
-
-    if (tab === 'checklists') {
-        checklistBtn.classList.add('active');
-        checklistBtn.classList.remove('inactive');
-        pflichtBtn.classList.add('inactive');
-        pflichtBtn.classList.remove('active');
-    } else {
-        pflichtBtn.classList.add('active');
-        pflichtBtn.classList.remove('inactive');
-        checklistBtn.classList.add('inactive');
-        checklistBtn.classList.remove('active');
-    }
+    const buttons = ['tabHome', 'tabChecklists', 'tabPflicht'];
+    buttons.forEach(buttonId => {
+        const buttonElement = document.getElementById(buttonId);
+        if (buttonElement) {
+            buttonElement.classList.toggle('active', buttonId === `tab${tab.charAt(0).toUpperCase() + tab.slice(1)}`);
+            buttonElement.classList.toggle('inactive', buttonId !== `tab${tab.charAt(0).toUpperCase() + tab.slice(1)}`);
+        }
+    });
 }
 
 function createPflichtCharts(data) {
@@ -1710,9 +1703,10 @@ function sortPflichtTableByColumn(columnIndex) {
             case 4: // Grade
                 valueA = parseFloat(a.grade.replace(',', '.'));
                 valueB = parseFloat(b.grade.replace(',', '.'));
-                if (isNaN(valueA)) valueA = 999;
-                if (isNaN(valueB)) valueB = 999;
-                break;
+                if (isNaN(gradeA) && isNaN(gradeB)) return 0;
+                if (isNaN(gradeA)) return 1;
+                if (isNaN(gradeB)) return -1;
+                return gradeA - gradeB;
             default:
                 return 0;
         }
@@ -1785,7 +1779,7 @@ function updateChecklistSortIcons(activeColumn, ascending) {
 
 // Event Listeners
 window.addEventListener('DOMContentLoaded', () => {
-    showTab('checklists');
+    showTab('home');
 
     const sliderDelay = 5000;
     setTimeout(() => {
@@ -1802,14 +1796,16 @@ window.addEventListener('DOMContentLoaded', () => {
     const refreshBtn = document.getElementById('refreshBtn');
     if (refreshBtn) {
         refreshBtn.onclick = async () => {
-            const activeTab = document.getElementById('checklistsTab').style.display !== 'none' ? 'checklists' : 'pflicht';
+            
+            // const activeTab = document.getElementById('checklistsTab').style.display !== 'none' ? 'checklists' : 'pflicht';
+            
             try {
                 setRefreshButtonLoading(true);
-                if (activeTab === 'checklists') {
+                // if (activeTab === 'checklists') {
                     await extractFromChecklistIndex();
-                } else {
+                // } else {
                     await extractPflichtOverview();
-                }
+                // }
             } catch (e) {
                 console.error('Refresh fehlgeschlagen:', e);
             } finally {
@@ -1823,7 +1819,7 @@ window.addEventListener('DOMContentLoaded', () => {
     if (tabPflicht) {
         tabPflicht.onclick = () => {
             showTab('pflicht');
-            extractPflichtOverview();
+            // extractPflichtOverview();
         };
     }
 
@@ -1831,7 +1827,7 @@ window.addEventListener('DOMContentLoaded', () => {
     if (tabChecklists) {
         tabChecklists.onclick = () => {
             showTab('checklists');
-            extractFromChecklistIndex();
+            // extractFromChecklistIndex();
         };
     }
 });
