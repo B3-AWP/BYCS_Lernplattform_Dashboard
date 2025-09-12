@@ -138,72 +138,62 @@ function getCurrentSchulwoche(className = null) {
 }
 
 async function detectUserClass() {
-  try {
-    // Versuche zuerst die Mebis-Kurs-Methode
-    const courseUrl = `https://lernplattform.mebis.bycs.de/course/view.php?id=${COURSE_ID}&section=0`;
-    const response = await fetch(courseUrl, {
-      credentials: 'same-origin',
-      headers: { 'X-Requested-With': 'XMLHttpRequest' }
-    });
-    
-    if (!response.ok) throw new Error('Mebis-Kurs-Zugriff fehlgeschlagen');
-    
-    const html = await response.text();
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(html, 'text/html');
-    
-    // Suche nach nav-links in den Kurs-Tabs
-    const navTabs = doc.querySelector('ul.nav.nav-tabs.format_onetopic-tabs');
-    if (navTabs) {
-      const navLinks = navTabs.querySelectorAll('a.nav-link[title]');
+  // Versuche verschiedene URL-Varianten um die Klassen-Tabs zu finden
+  const urlsToTry = [
+    `https://lernplattform.mebis.bycs.de/course/view.php?id=${COURSE_ID}`,
+    `https://lernplattform.mebis.bycs.de/course/view.php?id=${COURSE_ID}&section=0`
+  ];
+  
+  for (const courseUrl of urlsToTry) {
+    try {
+      const response = await fetch(courseUrl, {
+        credentials: 'same-origin',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+      });
       
-      for (const link of navLinks) {
-        const className = link.getAttribute('title');
-        if (className && CLASS_TO_TRACK[className]) {
-          console.log(`Klasse aus Mebis-Kurs-Tab erkannt: ${className}`);
-          return className;
+      if (!response.ok) continue;
+      
+      const html = await response.text();
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, 'text/html');
+      
+      // Suche nach ALLEN nav-tabs Containern (horizontale und vertikale)
+      const navTabsContainers = doc.querySelectorAll('ul.nav.nav-tabs.format_onetopic-tabs');
+      
+      if (navTabsContainers.length > 0) {
+        // Durchsuche alle Container
+        for (let i = 0; i < navTabsContainers.length; i++) {
+          const container = navTabsContainers[i];
+          const navLinks = container.querySelectorAll('a.nav-link[title]');
+          
+          // Suche nach relevanten Klassen in diesem Container
+          for (const link of navLinks) {
+            const className = link.getAttribute('title');
+            if (className && CLASS_TO_TRACK[className]) {
+              console.log(`Klasse aus Mebis-Kurs-Tab erkannt: ${className}`);
+              return className;
+            }
+          }
+        }
+      } else {
+        // Alternative: Suche nach beliebigen nav-links mit relevanten Titeln
+        const allNavLinks = doc.querySelectorAll('a.nav-link[title]');
+        for (const link of allNavLinks) {
+          const className = link.getAttribute('title');
+          if (className && CLASS_TO_TRACK[className]) {
+            console.log(`Klasse über alternativen Selektor erkannt: ${className}`);
+            return className;
+          }
         }
       }
+      
+    } catch (error) {
+      console.warn('Mebis-Kurserkennung fehlgeschlagen:', error);
     }
-    
-    // Fallback: Versuche LDAP-Methode
-    console.log('Mebis-Tab-Erkennung fehlgeschlagen, versuche LDAP...');
-    return await detectUserClassFromLDAP();
-    
-  } catch (error) {
-    console.warn('Mebis-Kurserkennung fehlgeschlagen, versuche LDAP:', error);
-    return await detectUserClassFromLDAP();
   }
-}
-
-async function detectUserClassFromLDAP() {
-  try {
-    const response = await fetch('https://idm.bycs.de/selfservice/ldapportal.pl?mode=authenticate;shibboleth=1', {
-      credentials: 'same-origin',
-      mode: 'cors'
-    });
-    
-    if (!response.ok) throw new Error('LDAP-Zugriff fehlgeschlagen');
-    
-    const html = await response.text();
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(html, 'text/html');
-    
-    const classElements = doc.querySelectorAll('#profilegrouplistselfservice .maintag');
-    const classes = Array.from(classElements).map(el => el.textContent.trim());
-    
-    // Suche nach relevanten Klassen (IFA12A, IFA12B, etc.)
-    const relevantClass = classes.find(className => CLASS_TO_TRACK[className]);
-    
-    if (relevantClass) {
-      console.log(`Klasse aus LDAP erkannt: ${relevantClass}`);
-    }
-    
-    return relevantClass || null;
-  } catch (error) {
-    console.warn('LDAP-Klassenerkennung fehlgeschlagen:', error);
-    return null;
-  }
+  
+  console.log('Keine relevante Klasse in Mebis-Kurs-Tabs gefunden');
+  return null;
 }
 
 function initializeReferenceWeek() {
@@ -219,6 +209,7 @@ function initializeReferenceWeek() {
     const totalWeeks = getTotalWeeksForTrack(savedTrack);
     const currentWeek = getCurrentSchulwocheForTrack(savedTrack);
     updateSystemForTrack(savedTrack, totalWeeks, currentWeek);
+    enableTrackButtons();
     preselectTrack(savedTrack);
     console.log(`Gespeicherte Schulwoche ${currentWeek} für ${savedTrack}`);
     return;
@@ -230,6 +221,7 @@ function initializeReferenceWeek() {
     const totalWeeks = getTotalWeeksForClass(savedClass);
     const currentWeek = getCurrentSchulwoche(savedClass);
     updateSystemForClass(savedClass, totalWeeks, currentWeek);
+    enableTrackButtons();
     preselectTrack(track);
     console.log(`Automatische Schulwoche ${currentWeek} für Klasse ${savedClass} (${track})`);
     return;
@@ -243,26 +235,34 @@ function initializeReferenceWeek() {
       const totalWeeks = getTotalWeeksForClass(detectedClass);
       const currentWeek = getCurrentSchulwoche(detectedClass);
       updateSystemForClass(detectedClass, totalWeeks, currentWeek);
+      enableTrackButtons();
       preselectTrack(track);
       console.log(`Automatische Schulwoche ${currentWeek} für erkannte Klasse ${detectedClass} (${track})`);
     } else {
-      // Fallback: Standard verwenden
+      // Fallback: Standard verwenden, aber Buttons aktiviert lassen für manuelle Auswahl
       const totalWeeks = calculateTotalWeeks();
       updateSystemForTrack(null, totalWeeks, totalWeeks);
+      enableTrackButtons();
       console.log(`Keine Klasse erkannt - verwende Standard (${totalWeeks} Wochen). Schienen-Auswahl verfügbar.`);
     }
   });
 }
 
 function setupTrackSelector() {
-  // Event Listener für Tab-Buttons einmalig einrichten
-  const trackTabs = document.querySelectorAll('.track-tab');
-  trackTabs.forEach(tab => {
-    tab.onclick = function() {
+  // Event Listener für Track-Buttons einmalig einrichten
+  const trackBtns = document.querySelectorAll('.track-btn');
+  trackBtns.forEach(btn => {
+    btn.onclick = function() {
+      if (this.disabled) return; // Ignore clicks on disabled buttons
+      
       const selectedTrack = this.getAttribute('data-track');
       if (selectedTrack && TRACK_SCHEDULES[selectedTrack]) {
-        // Visuelles Update der Tabs
-        trackTabs.forEach(t => t.classList.remove('active'));
+        // Visuelles Update der Buttons
+        trackBtns.forEach(b => {
+          b.classList.remove('active');
+          b.classList.add('inactive');
+        });
+        this.classList.remove('inactive');
         this.classList.add('active');
         
         // System aktualisieren
@@ -290,13 +290,36 @@ function setupTrackSelector() {
 }
 
 function preselectTrack(trackName) {
-  const trackTabs = document.querySelectorAll('.track-tab');
-  trackTabs.forEach(tab => tab.classList.remove('active'));
+  const trackBtns = document.querySelectorAll('.track-btn');
+  trackBtns.forEach(btn => {
+    btn.classList.remove('active');
+    btn.classList.add('inactive');
+  });
   
-  const activeTab = document.querySelector(`.track-tab[data-track="${trackName}"]`);
-  if (activeTab) {
-    activeTab.classList.add('active');
+  const activeBtn = document.querySelector(`.track-btn[data-track="${trackName}"]`);
+  if (activeBtn) {
+    activeBtn.classList.remove('inactive');
+    activeBtn.classList.add('active');
   }
+}
+
+function enableTrackButtons() {
+  const trackBtns = document.querySelectorAll('.track-btn');
+  trackBtns.forEach(btn => {
+    btn.disabled = false;
+    btn.classList.remove('inactive');
+    btn.classList.add('inactive'); // Default to inactive until selected
+  });
+  console.log('Track buttons enabled - user can select Schiene manually');
+}
+
+function disableTrackButtons() {
+  const trackBtns = document.querySelectorAll('.track-btn');
+  trackBtns.forEach(btn => {
+    btn.disabled = true;
+    btn.classList.remove('active', 'inactive');
+  });
+  console.log('Track buttons disabled - no Schiene could be determined');
 }
 
 function updateSystemForClass(className, totalWeeks, currentWeek) {
