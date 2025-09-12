@@ -3,9 +3,331 @@ let overviewGesamtChart, detailPflichtChart, detailGesamtChart, trendChart, rank
 let checklistData = [];
 let historicalData = [];
 
-// Referenzwochen-System (10 Wochen Gesamtzeitraum)
-const TOTAL_WEEKS = 10;
-let currentReferenceWeek = 10; // Standard: Woche 10 (100% der Zeit)
+// Referenzwochen-System - wird dynamisch berechnet
+let TOTAL_WEEKS = 9; // Default, wird später aktualisiert
+let currentReferenceWeek = 9; // Standard: Letzte Woche (100% der Zeit)
+
+// Schienen-basierte Schulwochen-Konfiguration
+const TRACK_SCHEDULES = {
+  "Schiene1": [
+    { week: 1, start: "2025-09-15", end: "2025-09-19" },
+    { week: 2, start: "2025-09-22", end: "2025-09-26" },
+    { week: 3, start: "2025-10-20", end: "2025-10-24" },
+    { week: 4, start: "2025-10-27", end: "2025-10-31" },
+    { week: 5, start: "2025-12-08", end: "2025-12-12" },
+    { week: 6, start: "2026-02-23", end: "2026-02-27" },
+    { week: 7, start: "2026-03-02", end: "2026-03-06" },
+    { week: 8, start: "2026-04-13", end: "2026-04-17" },
+    { week: 9, start: "2026-04-20", end: "2026-04-24" }
+  ],
+  "Schiene3": [
+    { week: 1, start: "2025-10-06", end: "2025-10-10" },
+    { week: 2, start: "2025-10-13", end: "2025-10-17" },
+    { week: 3, start: "2025-11-24", end: "2025-11-28" },
+    { week: 4, start: "2025-12-01", end: "2025-12-05" },
+    { week: 5, start: "2026-01-07", end: "2026-01-09" },
+    { week: 6, start: "2026-01-12", end: "2026-01-16" },
+    { week: 7, start: "2026-03-09", end: "2026-03-13" },
+    { week: 8, start: "2026-03-16", end: "2026-03-20" },
+    { week: 9, start: "2026-03-23", end: "2026-03-27" }
+  ]
+};
+
+const CLASS_TO_TRACK = {
+  "IFA12A": "Schiene1",
+  "IFA12C": "Schiene1", 
+  "IFA12E": "Schiene1",
+  "IFA12B": "Schiene3",
+  "IFA12D": "Schiene3"
+};
+
+// Berechne maximale Wochenanzahl aus allen Schienen
+function calculateTotalWeeks() {
+  let maxWeeks = 0;
+  Object.values(TRACK_SCHEDULES).forEach(schedule => {
+    const trackMaxWeek = Math.max(...schedule.map(week => week.week));
+    maxWeeks = Math.max(maxWeeks, trackMaxWeek);
+  });
+  return maxWeeks;
+}
+
+// Berechne maximale Wochenanzahl für spezifische Klasse/Schiene
+function getTotalWeeksForClass(className) {
+  const track = CLASS_TO_TRACK[className];
+  if (!track || !TRACK_SCHEDULES[track]) {
+    return calculateTotalWeeks(); // Fallback: Maximum aller Schienen
+  }
+  
+  const schedule = TRACK_SCHEDULES[track];
+  return Math.max(...schedule.map(week => week.week));
+}
+
+// Berechne maximale Wochenanzahl für spezifische Schiene
+function getTotalWeeksForTrack(trackName) {
+  if (!TRACK_SCHEDULES[trackName]) {
+    return calculateTotalWeeks(); // Fallback: Maximum aller Schienen
+  }
+  
+  const schedule = TRACK_SCHEDULES[trackName];
+  return Math.max(...schedule.map(week => week.week));
+}
+
+// Berechne aktuelle Schulwoche für spezifische Schiene
+function getCurrentSchulwocheForTrack(trackName) {
+  const today = new Date();
+  const totalWeeks = getTotalWeeksForTrack(trackName);
+  
+  if (!TRACK_SCHEDULES[trackName]) {
+    console.log(`Kein Zeitplan für ${trackName} gefunden`);
+    return totalWeeks; // Fallback: Vollansicht
+  }
+  
+  const schedule = TRACK_SCHEDULES[trackName];
+  let lastCompletedWeek = null;
+  
+  console.log(`Berechne Schulwoche für ${trackName}. Heute: ${today.toDateString()}`);
+  
+  for (let i = 0; i < schedule.length; i++) {
+    const week = schedule[i];
+    const startDate = new Date(week.start);
+    const endDate = new Date(week.end);
+    
+    console.log(`  Prüfe Woche ${week.week}: ${startDate.toDateString()} - ${endDate.toDateString()}`);
+    
+    // Prüfe ob wir in dieser Woche sind
+    if (today >= startDate && today <= endDate) {
+      console.log(`→ In aktueller Schulwoche ${week.week} (${week.start} - ${week.end})`);
+      return week.week; // Aktuelle Woche
+    }
+    
+    // Prüfe ob diese Woche noch in der Zukunft liegt
+    if (today < startDate) {
+      // Vor der ersten Woche: Zeige Woche 1
+      if (lastCompletedWeek === null) {
+        console.log(`→ Vor erster Schulwoche, zeige Woche 1`);
+        return 1;
+      }
+      // Zwischen Wochen: Zeige letzte abgeschlossene Woche
+      console.log(`→ Zwischen Schulwochen, zeige letzte abgeschlossene Woche ${lastCompletedWeek}`);
+      return lastCompletedWeek;
+    }
+    
+    // Diese Woche ist vorbei, merke sie als letzte abgeschlossene
+    if (today > endDate) {
+      lastCompletedWeek = week.week;
+      console.log(`  Woche ${week.week} ist bereits vorbei`);
+    }
+  }
+  
+  // Alle Wochen sind vorbei: Zeige letzte Woche oder Vollansicht
+  const result = lastCompletedWeek || totalWeeks;
+  console.log(`→ Alle Schulwochen vorbei, zeige Woche ${result}`);
+  return result;
+}
+
+// Automatische Referenzwochen-Berechnung
+function getCurrentSchulwoche(className = null) {
+  const track = className ? CLASS_TO_TRACK[className] : null;
+  
+  if (!track) {
+    return calculateTotalWeeks(); // Fallback: Vollansicht
+  }
+  
+  // Verwende die Schienen-basierte Logik
+  return getCurrentSchulwocheForTrack(track);
+}
+
+async function detectUserClass() {
+  try {
+    const response = await fetch('https://idm.bycs.de/selfservice/ldapportal.pl?mode=authenticate;shibboleth=1', {
+      credentials: 'same-origin',
+      mode: 'cors'
+    });
+    
+    if (!response.ok) throw new Error('LDAP-Zugriff fehlgeschlagen');
+    
+    const html = await response.text();
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    
+    const classElements = doc.querySelectorAll('#profilegrouplistselfservice .maintag');
+    const classes = Array.from(classElements).map(el => el.textContent.trim());
+    
+    // Suche nach relevanten Klassen (IFA12A, IFA12B, etc.)
+    const relevantClass = classes.find(className => CLASS_TO_TRACK[className]);
+    
+    return relevantClass || null;
+  } catch (error) {
+    console.warn('Automatische Klassenerkennung fehlgeschlagen:', error);
+    return null;
+  }
+}
+
+function initializeReferenceWeek() {
+  // Immer Schienen-Auswahl einrichten
+  setupTrackSelector();
+  
+  // Prüfe LocalStorage für gespeicherte Schiene oder Klasse
+  let savedTrack = localStorage.getItem('userTrack');
+  let savedClass = localStorage.getItem('userClass');
+  
+  // Schiene hat Priorität
+  if (savedTrack && TRACK_SCHEDULES[savedTrack]) {
+    const totalWeeks = getTotalWeeksForTrack(savedTrack);
+    const currentWeek = getCurrentSchulwocheForTrack(savedTrack);
+    updateSystemForTrack(savedTrack, totalWeeks, currentWeek);
+    preselectTrack(savedTrack);
+    console.log(`Gespeicherte Schulwoche ${currentWeek} für ${savedTrack}`);
+    return;
+  }
+  
+  // Fallback: Gespeicherte Klasse
+  if (savedClass && CLASS_TO_TRACK[savedClass]) {
+    const track = CLASS_TO_TRACK[savedClass];
+    const totalWeeks = getTotalWeeksForClass(savedClass);
+    const currentWeek = getCurrentSchulwoche(savedClass);
+    updateSystemForClass(savedClass, totalWeeks, currentWeek);
+    preselectTrack(track);
+    console.log(`Automatische Schulwoche ${currentWeek} für Klasse ${savedClass} (${track})`);
+    return;
+  }
+  
+  // Versuche automatische Erkennung
+  detectUserClass().then(detectedClass => {
+    if (detectedClass) {
+      localStorage.setItem('userClass', detectedClass);
+      const track = CLASS_TO_TRACK[detectedClass];
+      const totalWeeks = getTotalWeeksForClass(detectedClass);
+      const currentWeek = getCurrentSchulwoche(detectedClass);
+      updateSystemForClass(detectedClass, totalWeeks, currentWeek);
+      preselectTrack(track);
+      console.log(`Automatische Schulwoche ${currentWeek} für erkannte Klasse ${detectedClass} (${track})`);
+    } else {
+      // Fallback: Standard verwenden
+      const totalWeeks = calculateTotalWeeks();
+      updateSystemForTrack(null, totalWeeks, totalWeeks);
+      console.log(`Keine Klasse erkannt - verwende Standard (${totalWeeks} Wochen). Schienen-Auswahl verfügbar.`);
+    }
+  });
+}
+
+function setupTrackSelector() {
+  // Event Listener für Tab-Buttons einmalig einrichten
+  const trackTabs = document.querySelectorAll('.track-tab');
+  trackTabs.forEach(tab => {
+    tab.onclick = function() {
+      const selectedTrack = this.getAttribute('data-track');
+      if (selectedTrack && TRACK_SCHEDULES[selectedTrack]) {
+        // Visuelles Update der Tabs
+        trackTabs.forEach(t => t.classList.remove('active'));
+        this.classList.add('active');
+        
+        // System aktualisieren
+        localStorage.setItem('userTrack', selectedTrack);
+        const totalWeeks = getTotalWeeksForTrack(selectedTrack);
+        const currentWeek = getCurrentSchulwocheForTrack(selectedTrack);
+        updateSystemForTrack(selectedTrack, totalWeeks, currentWeek);
+        
+        console.log(`Schienen-Wechsel: Schulwoche ${currentWeek} für ${selectedTrack}`);
+        
+        // Daten neu laden mit korrekter Referenzwoche
+        if (checklistData && checklistData.length > 0) {
+          updateStatistics();
+          updateCharts();
+          updateChecklistTable(checklistData);
+        }
+        
+        if (window.pflichtData && window.pflichtData.length > 0) {
+          updatePflichtStats();
+          updatePflichtTable(window.pflichtData);
+        }
+      }
+    };
+  });
+}
+
+function preselectTrack(trackName) {
+  const trackTabs = document.querySelectorAll('.track-tab');
+  trackTabs.forEach(tab => tab.classList.remove('active'));
+  
+  const activeTab = document.querySelector(`.track-tab[data-track="${trackName}"]`);
+  if (activeTab) {
+    activeTab.classList.add('active');
+  }
+}
+
+function updateSystemForClass(className, totalWeeks, currentWeek) {
+  // Globale Variablen aktualisieren
+  TOTAL_WEEKS = totalWeeks;
+  
+  // UI-Elemente aktualisieren
+  updateSliderForTotalWeeks(totalWeeks);
+  
+  // Check if user has manually set reference week - if so, respect it
+  const manualWeek = localStorage.getItem('manualReferenceWeek');
+  if (manualWeek && parseInt(manualWeek) <= totalWeeks) {
+    currentReferenceWeek = parseInt(manualWeek);
+    setReferenceWeek(currentReferenceWeek);
+  } else {
+    // Use automatic week calculation
+    currentReferenceWeek = currentWeek;
+    setReferenceWeek(currentWeek);
+    localStorage.removeItem('manualReferenceWeek'); // Clear any invalid manual setting
+  }
+}
+
+function updateSystemForTrack(trackName, totalWeeks, currentWeek) {
+  // Globale Variablen aktualisieren
+  TOTAL_WEEKS = totalWeeks;
+  
+  // UI-Elemente aktualisieren
+  updateSliderForTotalWeeks(totalWeeks);
+  
+  // Check if user has manually set reference week - if so, respect it
+  const manualWeek = localStorage.getItem('manualReferenceWeek');
+  if (manualWeek && parseInt(manualWeek) <= totalWeeks) {
+    currentReferenceWeek = parseInt(manualWeek);
+    setReferenceWeek(currentReferenceWeek);
+  } else {
+    // Use automatic week calculation
+    currentReferenceWeek = currentWeek;
+    setReferenceWeek(currentWeek);
+    localStorage.removeItem('manualReferenceWeek'); // Clear any invalid manual setting
+  }
+}
+
+function updateSliderForTotalWeeks(totalWeeks) {
+  const slider = document.getElementById('referenceWeekSlider');
+  const maxLabel = slider.nextElementSibling;
+  const vonLabel = document.querySelector('[data-week-total]') || 
+                   document.querySelector('span[style*="von"]');
+  
+  if (slider) {
+    slider.max = totalWeeks;
+    slider.value = totalWeeks;
+  }
+  
+  if (maxLabel) {
+    maxLabel.textContent = totalWeeks;
+  }
+  
+  if (vonLabel) {
+    vonLabel.textContent = `von ${totalWeeks}`;
+  }
+  
+  // Auch den Wert-Display aktualisieren
+  const valueDisplay = document.getElementById('referenceWeekValue');
+  if (valueDisplay) {
+    valueDisplay.textContent = totalWeeks;
+  }
+}
+
+function setReferenceWeek(weekNumber) {
+  currentReferenceWeek = weekNumber;
+  document.getElementById('referenceWeekSlider').value = weekNumber;
+  document.getElementById('referenceWeekValue').textContent = weekNumber;
+  updateReferenceWeekLabels();
+}
 
 
 
@@ -35,6 +357,9 @@ function updateReferenceWeek(weekValue) {
     currentReferenceWeek = parseInt(weekValue);
     document.getElementById('referenceWeekValue').textContent = currentReferenceWeek;
     
+    // Mark this as a manual override to prevent track system from overriding
+    localStorage.setItem('manualReferenceWeek', currentReferenceWeek);
+    
     // Labels mit Referenzwoche aktualisieren
     updateReferenceWeekLabels();
     
@@ -52,7 +377,7 @@ function updateReferenceWeek(weekValue) {
 }
 
 function updateReferenceWeekLabels() {
-    const isNormalView = currentReferenceWeek === 10;
+    const isNormalView = currentReferenceWeek === TOTAL_WEEKS;
     
     // Labels bleiben unverändert - nur Overlays werden erstellt/entfernt
     updateReferenceWeekOverlays(isNormalView);
@@ -62,7 +387,7 @@ function updateReferenceWeekOverlays(isNormalView) {
     // Entferne alle existierenden Overlays
     document.querySelectorAll('.reference-week-overlay').forEach(overlay => overlay.remove());
     
-    if (isNormalView) return; // Keine Overlays bei Woche 10
+    if (isNormalView) return; // Keine Overlays bei letzter Woche
     
     // Stat-Cards mit Referenzwochen-Overlays versehen
     const statCards = document.querySelectorAll('.stat-card');
@@ -75,14 +400,14 @@ function updateReferenceWeekOverlays(isNormalView) {
 }
 
 function calculateReferenceProgress(actualProgress, totalItems) {
-    // Bei Woche 10: Normale Berechnung (keine Referenzwoche)
-    if (currentReferenceWeek === 10) {
+    // Bei letzter Woche: Normale Berechnung (keine Referenzwoche)
+    if (currentReferenceWeek === TOTAL_WEEKS) {
         return totalItems > 0 ? (actualProgress / totalItems) * 100 : 0;
     }
     
     // Berechnet den erwarteten Fortschritt basierend auf der Referenzwoche
     // actualProgress: Tatsächlich erledigte Items
-    // totalItems: Gesamtanzahl Items über 10 Wochen
+    // totalItems: Gesamtanzahl Items über 9 Wochen
     
     const expectedItemsByWeek = (totalItems / TOTAL_WEEKS) * currentReferenceWeek;
     
@@ -92,8 +417,8 @@ function calculateReferenceProgress(actualProgress, totalItems) {
 }
 
 function calculateReferenceProgressFromPercentage(currentPercentage, totalItems) {
-    // Bei Woche 10: Originaler Prozentsatz zurückgeben
-    if (currentReferenceWeek === 10) {
+    // Bei letzter Woche: Originaler Prozentsatz zurückgeben
+    if (currentReferenceWeek === TOTAL_WEEKS) {
         return currentPercentage;
     }
     
@@ -106,8 +431,8 @@ function calculateReferenceProgressFromPercentage(currentPercentage, totalItems)
 }
 
 function calculateReferenceProgressFromSinglePercentage(currentPercentage) {
-    // Bei Woche 10: Originaler Prozentsatz zurückgeben
-    if (currentReferenceWeek === 10) {
+    // Bei letzter Woche: Originaler Prozentsatz zurückgeben
+    if (currentReferenceWeek === TOTAL_WEEKS) {
         return currentPercentage;
     }
     
@@ -250,8 +575,8 @@ function updateStatistics() {
         
         updateCombinedStats(completed, totalChecklists, referenceCompleted);
         updateProgressDisplay(
-            currentReferenceWeek === 10 ? Math.round(referenceAvgPflicht) : Math.ceil(referenceAvgPflicht), 
-            currentReferenceWeek === 10 ? Math.round(referenceAvgGesamt) : Math.ceil(referenceAvgGesamt)
+            currentReferenceWeek === TOTAL_WEEKS ? Math.round(referenceAvgPflicht) : Math.ceil(referenceAvgPflicht), 
+            currentReferenceWeek === TOTAL_WEEKS ? Math.round(referenceAvgGesamt) : Math.ceil(referenceAvgGesamt)
         );
     }
 }
@@ -356,8 +681,8 @@ function updateCombinedStats(completed, total, referencePercentage = null) {
 
     if (!completedElement || !totalElement || !percentageElement || !ringElement) return;
 
-    // Bei Woche 10: Original-Total anzeigen, sonst erwartete Anzahl
-    const expectedTotal = currentReferenceWeek === 10 ? 
+    // Bei letzter Woche: Original-Total anzeigen, sonst erwartete Anzahl
+    const expectedTotal = currentReferenceWeek === TOTAL_WEEKS ? 
         total : 
         Math.ceil((total / TOTAL_WEEKS) * currentReferenceWeek);
 
@@ -366,8 +691,8 @@ function updateCombinedStats(completed, total, referencePercentage = null) {
 
     // Verwende referencePercentage wenn verfügbar, sonst normale Berechnung
     const percentage = referencePercentage !== null ? 
-        (currentReferenceWeek === 10 ? Math.round(referencePercentage) : Math.ceil(referencePercentage)) : 
-        (total > 0 ? (currentReferenceWeek === 10 ? Math.round((completed / total) * 100) : Math.ceil((completed / total) * 100)) : 0);
+        (currentReferenceWeek === TOTAL_WEEKS ? Math.round(referencePercentage) : Math.ceil(referencePercentage)) : 
+        (total > 0 ? (currentReferenceWeek === TOTAL_WEEKS ? Math.round((completed / total) * 100) : Math.ceil((completed / total) * 100)) : 0);
         
     const circumference = 2 * Math.PI * 25;
     const offset = circumference - (percentage / 100) * circumference;
@@ -428,8 +753,8 @@ function updatePflichtCombinedStats(completed, total, referencePercentage = null
 
     if (!completedElement || !totalElement || !percentageElement || !ringElement) return;
 
-    // Bei Woche 10: Original-Total anzeigen, sonst erwartete Anzahl
-    const expectedTotal = currentReferenceWeek === 10 ? 
+    // Bei letzter Woche: Original-Total anzeigen, sonst erwartete Anzahl
+    const expectedTotal = currentReferenceWeek === TOTAL_WEEKS ? 
         total : 
         Math.ceil((total / TOTAL_WEEKS) * currentReferenceWeek);
 
@@ -438,8 +763,8 @@ function updatePflichtCombinedStats(completed, total, referencePercentage = null
 
     // Verwende referencePercentage wenn verfügbar, sonst normale Berechnung
     const percentage = referencePercentage !== null ? 
-        (currentReferenceWeek === 10 ? Math.round(referencePercentage) : Math.ceil(referencePercentage)) : 
-        (total > 0 ? (currentReferenceWeek === 10 ? Math.round((completed / total) * 100) : Math.ceil((completed / total) * 100)) : 0);
+        (currentReferenceWeek === TOTAL_WEEKS ? Math.round(referencePercentage) : Math.ceil(referencePercentage)) : 
+        (total > 0 ? (currentReferenceWeek === TOTAL_WEEKS ? Math.round((completed / total) * 100) : Math.ceil((completed / total) * 100)) : 0);
         
     const circumference = 2 * Math.PI * 25;
     const offset = circumference - (percentage / 100) * circumference;
@@ -466,7 +791,8 @@ function updateProgressDisplay(pflichtAvg, gesamtAvg) {
     const targetValue = selectedType === 'pflicht' ? pflichtAvg : gesamtAvg;
 
     animateProgressBar('avgCompletionText', 'avgCompletionBar', targetValue);
-    updateIHKGrade(targetValue);
+    // Grade always based on Pflicht, never Gesamt
+    updateIHKGrade(pflichtAvg);
 }
 
 function calculateIHKGrade(percentage) {
@@ -474,26 +800,28 @@ function calculateIHKGrade(percentage) {
 
     if (percentage > 91) {
         grade = 1;
-        if (percentage <= 92) tendency = '+';
+        if (percentage >= 98) tendency = '+';  // High end gets +
+        else if (percentage <= 93) tendency = '-';  // Low end gets -
     } else if (percentage > 80) {
         grade = 2;
-        if (percentage <= 81) tendency = '+';
-        else if (percentage >= 90) tendency = '-';
+        if (percentage >= 90) tendency = '+';  // High end gets +
+        else if (percentage <= 81) tendency = '-';  // Low end gets -
     } else if (percentage > 66) {
         grade = 3;
-        if (percentage <= 67) tendency = '+';
-        else if (percentage >= 79) tendency = '-';
+        if (percentage >= 79) tendency = '+';  // High end gets +
+        else if (percentage <= 67) tendency = '-';  // Low end gets -
     } else if (percentage > 49) {
         grade = 4;
-        if (percentage <= 50) tendency = '+';
-        else if (percentage >= 65) tendency = '-';
+        if (percentage >= 65) tendency = '+';  // High end gets +
+        else if (percentage <= 51) tendency = '-';  // Low end gets -
     } else if (percentage > 29) {
         grade = 5;
-        if (percentage <= 30) tendency = '+';
-        else if (percentage >= 48) tendency = '-';
+        if (percentage >= 48) tendency = '+';  // High end gets +
+        else if (percentage <= 31) tendency = '-';  // Low end gets -
     } else {
         grade = 6;
-        if (percentage >= 28) tendency = '-';
+        if (percentage >= 28) tendency = '+';  // Any points in grade 6 is relatively good
+        else if (percentage <= 10) tendency = '-'; 
     }
 
     return { grade, tendency };
@@ -539,13 +867,15 @@ function toggleProgressType() {
         gesamtLabel.classList.remove('active');
         progressLabel.textContent = 'Checkliste Durchschnitt';
         animateProgressBar('avgCompletionText', 'avgCompletionBar', currentPflichtAvg);
+        // Grade always based on Pflicht, never Gesamt
         updateIHKGrade(currentPflichtAvg);
     } else {
         pflichtLabel.classList.remove('active');
         gesamtLabel.classList.add('active');
         progressLabel.textContent = 'Checkliste Durchschnitt';
         animateProgressBar('avgCompletionText', 'avgCompletionBar', currentGesamtAvg);
-        updateIHKGrade(currentGesamtAvg);
+        // Grade always based on Pflicht, never Gesamt
+        updateIHKGrade(currentPflichtAvg);
     }
 }
 
@@ -736,9 +1066,9 @@ function updateChecklistTable(filteredData) {
         const referenceGesamtPercent = calculateReferenceProgressFromSinglePercentage(originalGesamtPercent);
         
         const pflichtDisplay = item.pflichtProgress !== undefined ? 
-            `${currentReferenceWeek === 10 ? Math.round(referencePflichtPercent) : Math.ceil(referencePflichtPercent)}%` : 'n/a';
+            `${currentReferenceWeek === TOTAL_WEEKS ? Math.round(referencePflichtPercent) : Math.ceil(referencePflichtPercent)}%` : 'n/a';
         const gesamtDisplay = item.gesamtProgress !== undefined ? 
-            `${currentReferenceWeek === 10 ? Math.round(referenceGesamtPercent) : Math.ceil(referenceGesamtPercent)}%` : 'n/a';
+            `${currentReferenceWeek === TOTAL_WEEKS ? Math.round(referenceGesamtPercent) : Math.ceil(referenceGesamtPercent)}%` : 'n/a';
 
         html += `<tr data-name="${item.name.toLowerCase()}" data-pflicht="${referencePflichtPercent}" data-gesamt="${referenceGesamtPercent}">
             <td><a href="${item.url}" target="_blank">${item.name}</a></td>
@@ -1235,6 +1565,9 @@ window.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => {
         initSliders();
     }, sliderDelay);
+
+    // Automatische Referenzwochen-Initialisierung
+    initializeReferenceWeek();
 
     extractFromChecklistIndex();
     extractPflichtOverview();
