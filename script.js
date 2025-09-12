@@ -139,6 +139,45 @@ function getCurrentSchulwoche(className = null) {
 
 async function detectUserClass() {
   try {
+    // Versuche zuerst die Mebis-Kurs-Methode
+    const courseUrl = `https://lernplattform.mebis.bycs.de/course/view.php?id=${COURSE_ID}&section=0`;
+    const response = await fetch(courseUrl, {
+      credentials: 'same-origin',
+      headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    });
+    
+    if (!response.ok) throw new Error('Mebis-Kurs-Zugriff fehlgeschlagen');
+    
+    const html = await response.text();
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    
+    // Suche nach nav-links in den Kurs-Tabs
+    const navTabs = doc.querySelector('ul.nav.nav-tabs.format_onetopic-tabs');
+    if (navTabs) {
+      const navLinks = navTabs.querySelectorAll('a.nav-link[title]');
+      
+      for (const link of navLinks) {
+        const className = link.getAttribute('title');
+        if (className && CLASS_TO_TRACK[className]) {
+          console.log(`Klasse aus Mebis-Kurs-Tab erkannt: ${className}`);
+          return className;
+        }
+      }
+    }
+    
+    // Fallback: Versuche LDAP-Methode
+    console.log('Mebis-Tab-Erkennung fehlgeschlagen, versuche LDAP...');
+    return await detectUserClassFromLDAP();
+    
+  } catch (error) {
+    console.warn('Mebis-Kurserkennung fehlgeschlagen, versuche LDAP:', error);
+    return await detectUserClassFromLDAP();
+  }
+}
+
+async function detectUserClassFromLDAP() {
+  try {
     const response = await fetch('https://idm.bycs.de/selfservice/ldapportal.pl?mode=authenticate;shibboleth=1', {
       credentials: 'same-origin',
       mode: 'cors'
@@ -156,9 +195,13 @@ async function detectUserClass() {
     // Suche nach relevanten Klassen (IFA12A, IFA12B, etc.)
     const relevantClass = classes.find(className => CLASS_TO_TRACK[className]);
     
+    if (relevantClass) {
+      console.log(`Klasse aus LDAP erkannt: ${relevantClass}`);
+    }
+    
     return relevantClass || null;
   } catch (error) {
-    console.warn('Automatische Klassenerkennung fehlgeschlagen:', error);
+    console.warn('LDAP-Klassenerkennung fehlgeschlagen:', error);
     return null;
   }
 }
@@ -453,6 +496,24 @@ function showLoading(show) {
     document.getElementById('loadingIndicator').style.display = show ? 'block' : 'none';
 }
 
+function updateLoadingProgress(completed, total) {
+    const loadingIndicator = document.getElementById('loadingIndicator');
+    if (loadingIndicator) {
+        const percentage = Math.round((completed / total) * 100);
+        loadingIndicator.innerHTML = `
+            <div style="text-align: center; padding: 20px;">
+                <div style="font-weight: bold; margin-bottom: 10px;">Lade Checklisten...</div>
+                <div style="background: #f0f0f0; border-radius: 10px; height: 20px; overflow: hidden;">
+                    <div style="background: #4f46e5; height: 100%; width: ${percentage}%; transition: width 0.3s ease;"></div>
+                </div>
+                <div style="margin-top: 8px; font-size: 0.9em; color: #666;">
+                    ${completed} von ${total} geladen (${percentage}%)
+                </div>
+            </div>
+        `;
+    }
+}
+
 
 function extractPflichtOverview() {
     showLoading(true);
@@ -476,67 +537,150 @@ function extractPflichtOverview() {
         .finally(() => showLoading(false));
 }
 
-function extractFromChecklistIndex() {
+async function extractFromChecklistIndex() {
     showLoading(true);
+    console.log('Starting checklist extraction...');
 
-    const checklistIndexUrl = `https://lernplattform.mebis.bycs.de/mod/checklist/index.php?id=${COURSE_ID}`;
+    try {
+        const checklistIndexUrl = `https://lernplattform.mebis.bycs.de/mod/checklist/index.php?id=${COURSE_ID}`;
 
-    fetch(checklistIndexUrl, { credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
-        .then(response => {
-            if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            return response.text();
-        })
-        .then(html => {
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(html, 'text/html');
+        const response = await fetch(checklistIndexUrl, { credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+        if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        
+        const html = await response.text();
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
 
-            const checklistLinks = Array.from(doc.querySelectorAll('a[href*="view.php?id="]'))
-                .filter(link => link.getAttribute('href').startsWith('view.php?id='));
+        const checklistLinks = Array.from(doc.querySelectorAll('a[href*="view.php?id="]'))
+            .filter(link => link.getAttribute('href').startsWith('view.php?id='));
 
-            if (checklistLinks.length === 0) {
-                throw new Error('No checklist links found');
+        console.log(`Found ${checklistLinks.length} checklist links`);
+
+        if (checklistLinks.length === 0) {
+            console.warn('No checklist links found in HTML. Checking for alternative selectors...');
+            const allLinks = Array.from(doc.querySelectorAll('a[href*="view.php"]'));
+            console.log('All view.php links found:', allLinks.length);
+            if (allLinks.length > 0) {
+                console.log('First few links:', allLinks.slice(0, 3).map(l => l.textContent.trim()));
             }
+            throw new Error('No checklist links found');
+        }
 
-            const extractedPromises = checklistLinks.map(link => {
-                const name = link.textContent.trim();
-                const url = `https://lernplattform.mebis.bycs.de/mod/checklist/${link.getAttribute('href')}`;
-                return loadSingleChecklist(url)
-                    .then(data => ({ name, url, ...data }))
-                    .catch(error => ({ name: `${name} (Fehler)`, url, pflichtProgress: 0, gesamtProgress: 0, error: error.message }));
-            });
+        // Optimized parallel loading with concurrency limit
+        const CONCURRENT_LIMIT = 5; // Load max 5 checklists at once
+        const totalChecklists = checklistLinks.length;
+        let completedCount = 0;
 
-            return Promise.all(extractedPromises);
-        })
-        .then(results => {
-            const valid = results.filter(item => !item.error);
-            if (valid.length === 0) throw new Error('All checklist detail loads failed');
-            createCharts(valid);
-            updateChecklistTable(valid);
-        })
-        .catch(err => {
-            console.error('extractFromChecklistIndex error:', err);
-            checklistData = [];
-        })
-        .finally(() => showLoading(false));
+        console.log(`Starting to load ${totalChecklists} checklists with concurrency limit of ${CONCURRENT_LIMIT}`);
+
+        const loadWithProgress = async (link, index) => {
+            const name = link.textContent.trim();
+            const url = `https://lernplattform.mebis.bycs.de/mod/checklist/${link.getAttribute('href')}`;
+            
+            try {
+                const data = await loadSingleChecklist(url);
+                completedCount++;
+                
+                // Update loading indicator with progress
+                updateLoadingProgress(completedCount, totalChecklists);
+                
+                return { name, url, ...data };
+            } catch (error) {
+                completedCount++;
+                console.warn(`Failed to load checklist ${name}:`, error.message);
+                updateLoadingProgress(completedCount, totalChecklists);
+                return { name: `${name} (Fehler)`, url, pflichtProgress: 0, gesamtProgress: 0, error: error.message };
+            }
+        };
+
+        // Process checklists in batches with concurrency limit
+        const results = [];
+        for (let i = 0; i < checklistLinks.length; i += CONCURRENT_LIMIT) {
+            const batch = checklistLinks.slice(i, i + CONCURRENT_LIMIT);
+            const batchPromises = batch.map((link, batchIndex) => loadWithProgress(link, i + batchIndex));
+            const batchResults = await Promise.all(batchPromises);
+            results.push(...batchResults);
+        }
+
+        console.log('All checklist promises resolved:', results.length);
+        const valid = results.filter(item => !item.error);
+        const errors = results.filter(item => item.error);
+        
+        console.log(`Valid checklists: ${valid.length}, Errors: ${errors.length}`);
+        if (errors.length > 0) {
+            console.warn('Checklist loading errors:', errors.map(e => `${e.name}: ${e.error}`));
+        }
+        
+        if (valid.length === 0) {
+            console.error('No valid checklists loaded!');
+            throw new Error('All checklist detail loads failed');
+        }
+        
+        console.log('Creating charts with valid data:', valid);
+        createCharts(valid);
+        updateChecklistTable(valid);
+        
+    } catch (err) {
+        console.error('extractFromChecklistIndex error:', err);
+        checklistData = [];
+        
+        // Show user-friendly error message
+        const sessionInfo = document.getElementById('sessionInfo');
+        if (sessionInfo) {
+            sessionInfo.innerHTML = `<div style="color: #dc3545; padding: 20px; text-align: center;">
+                <strong>Fehler beim Laden der Checklisten:</strong><br>
+                ${err.message}<br>
+                <small>Überprüfen Sie die Netzwerkverbindung und versuchen Sie es erneut.</small>
+            </div>`;
+        }
+    } finally {
+        showLoading(false);
+    }
 }
 
 async function loadSingleChecklist(url) {
-    const response = await fetch(url, { credentials: 'same-origin' });
-    if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
-    const html = await response.text();
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(html, 'text/html');
-    const progressBars = doc.querySelectorAll('.checklist_progress_inner');
+    const TIMEOUT_MS = 10000; // 10 seconds timeout
+    
+    const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Request timeout')), TIMEOUT_MS);
+    });
+    
+    const fetchPromise = fetch(url, { 
+        credentials: 'same-origin',
+        signal: AbortSignal.timeout ? AbortSignal.timeout(TIMEOUT_MS) : undefined
+    }).then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        return response.text();
+    });
+    
+    try {
+        const html = await Promise.race([fetchPromise, timeoutPromise]);
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+        const progressBars = doc.querySelectorAll('.checklist_progress_inner');
 
-    if (progressBars.length >= 2) {
-        const pflichtProgress = parseFloat(progressBars[0].getAttribute('style').match(/width:\s*(\d+(?:\.\d+)?)%/)[1]) || 0;
-        const gesamtProgress = parseFloat(progressBars[1].getAttribute('style').match(/width:\s*(\d+(?:\.\d+)?)%/)[1]) || 0;
-        return { pflichtProgress, gesamtProgress };
-    }
+        if (progressBars.length >= 2) {
+            const pflichtStyle = progressBars[0].getAttribute('style') || '';
+            const gesamtStyle = progressBars[1].getAttribute('style') || '';
+            
+            const pflichtMatch = pflichtStyle.match(/width:\s*(\d+(?:\.\d+)?)%/);
+            const gesamtMatch = gesamtStyle.match(/width:\s*(\d+(?:\.\d+)?)%/);
+            
+            const pflichtProgress = pflichtMatch ? parseFloat(pflichtMatch[1]) : 0;
+            const gesamtProgress = gesamtMatch ? parseFloat(gesamtMatch[1]) : 0;
+            
+            return { pflichtProgress, gesamtProgress };
+        }
 
-    return { pflichtProgress: 0, gesamtProgress: 0 };
+        return { pflichtProgress: 0, gesamtProgress: 0 };
+    } catch (error) {
+        if (error.message === 'Request timeout') {
+            throw new Error('Timeout beim Laden der Checkliste');
+        }
+        throw error;
+    }
 }
 
 function createCharts(data) {
@@ -622,26 +766,26 @@ function animateProgressBar(textElementId, barElementId, targetValue) {
     const textTargetValue = Math.max(0, Math.round(targetValue || 0));
     const barTargetValue = Math.min(100, textTargetValue); // Visual bar capped at 100%
     
-    const currentText = textElement.textContent.replace('%', '') || '0';
-    const currentValue = parseInt(currentText) || 0;
-    const textIncrement = (textTargetValue - currentValue) / 40;
-    const barIncrement = (barTargetValue - Math.min(100, currentValue)) / 40;
+    const initialText = textElement.textContent.replace('%', '') || '0';
+    const initialValue = parseInt(initialText) || 0;
+    const textIncrement = (textTargetValue - initialValue) / 40;
+    const barIncrement = (barTargetValue - Math.min(100, initialValue)) / 40;
 
-    let currentText = currentValue;
-    let currentBar = Math.min(100, currentValue);
+    let currentTextValue = initialValue;
+    let currentBarValue = Math.min(100, initialValue);
     
     const timer = setInterval(() => {
-        currentText += textIncrement;
-        currentBar += barIncrement;
+        currentTextValue += textIncrement;
+        currentBarValue += barIncrement;
         
-        if ((textIncrement > 0 && currentText >= textTargetValue) || (textIncrement < 0 && currentText <= textTargetValue)) {
-            currentText = textTargetValue;
-            currentBar = barTargetValue;
+        if ((textIncrement > 0 && currentTextValue >= textTargetValue) || (textIncrement < 0 && currentTextValue <= textTargetValue)) {
+            currentTextValue = textTargetValue;
+            currentBarValue = barTargetValue;
             clearInterval(timer);
         }
 
-        const roundedTextValue = Math.round(currentText);
-        const roundedBarValue = Math.round(currentBar);
+        const roundedTextValue = Math.round(currentTextValue);
+        const roundedBarValue = Math.round(currentBarValue);
         
         // Text can show over 100%
         textElement.textContent = roundedTextValue + '%';
