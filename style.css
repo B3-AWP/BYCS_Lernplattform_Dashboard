@@ -31,6 +31,25 @@
     --radius-lg: 12px;
     --radius-full: 9999px;
 
+    /* Chart Farben */
+    --chart-primary-start: #667eea;
+    --chart-primary-end: #764ba2;
+    --chart-success-start: #28a745;
+    --chart-success-end: #20c997;
+    --chart-warning-start: #ffc107;
+    --chart-warning-end: #fd7e14;
+    --chart-danger-start: #dc3545;
+    --chart-danger-end: #e83e8c;
+    --chart-info-start: #17a2b8;
+    --chart-info-end: #6f42c1;
+    
+    /* Chart Gradients */
+    --chart-gradient-primary: linear-gradient(135deg, var(--chart-primary-start) 0%, var(--chart-primary-end) 100%);
+    --chart-gradient-success: linear-gradient(135deg, var(--chart-success-start) 0%, var(--chart-success-end) 100%);
+    --chart-gradient-warning: linear-gradient(135deg, var(--chart-warning-start) 0%, var(--chart-warning-end) 100%);
+    --chart-gradient-danger: linear-gradient(135deg, var(--chart-danger-start) 0%, var(--chart-danger-end) 100%);
+    --chart-gradient-info: linear-gradient(135deg, var(--chart-info-start) 0%, var(--chart-info-end) 100%);
+
     /* Fonts */
     --font-base: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     --font-size-base: 14px;
@@ -1140,4 +1159,149 @@ h3 {
     .tab-text {
         display: none;
     }
+}
+
+/* Layout utility classes */
+.relative-container {
+    position: relative;
+}
+
+.card-container {
+    background: #FFFFFF;
+    padding: 10px;
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+    margin-bottom: var(--spacing-md);
+    border: 1px solid var(--border-color);
+}
+
+.nav-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 4px;
+}
+
+.nav-left {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.reference-container {
+    background: #FFFFFF;
+    border-radius: var(--radius-md);
+    margin-bottom: var(--spacing-md);
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border-color);
+}
+
+.reference-controls {
+    padding: 10px;
+    border-top: 1px solid var(--border-color);
+}
+
+.controls-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.track-selection-container {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.slider-label {
+    font-weight: 600;
+    color: #374151;
+    min-width: 80px;
+}
+
+.slider-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.slider-value {
+    font-size: 0.875rem;
+    color: #6b7280;
+}
+
+.slider-value.min {
+    min-width: 10px;
+}
+
+.slider-value.max {
+    min-width: 20px;
+}
+
+.reference-slider {
+    flex: 1;
+    height: 6px;
+    background: #e5e7eb;
+    border-radius: 3px;
+    outline: none;
+    cursor: pointer;
+}
+
+.current-week-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.primary-icon {
+    color: #4f46e5;
+}
+
+.stats-grid {
+    display: grid;
+}
+
+.hidden {
+    display: none;
+}
+
+.loading-overlay {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 1000;
+    background: rgba(255,255,255,0.9);
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+}
+
+.filter-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.chart-full-width {
+    grid-column: 1 / -1;
+}
+
+.progress-fill-zero {
+    width: 0%;
+}
+
+.svg-hidden {
+    position: absolute;
+    width: 0;
+    height: 0;
+    overflow: hidden;
+}
+
+.ring-transition {
+    transition: stroke-dashoffset 0.8s ease-in-out;
 }

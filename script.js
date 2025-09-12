@@ -430,21 +430,6 @@ function setReferenceWeek(weekNumber) {
 const COURSE_ID = '2036416';
 
 
-// Farbpalette für bessere Visualisierung
-const colorPalette = {
-    primary: ['#667eea', '#764ba2'],
-    success: ['#28a745', '#20c997'],
-    warning: ['#ffc107', '#fd7e14'],
-    danger: ['#dc3545', '#e83e8c'],
-    info: ['#17a2b8', '#6f42c1'],
-    gradients: [
-        'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        'linear-gradient(135deg, #28a745 0%, #20c997 100%)',
-        'linear-gradient(135deg, #ffc107 0%, #fd7e14 100%)',
-        'linear-gradient(135deg, #dc3545 0%, #e83e8c 100%)',
-        'linear-gradient(135deg, #17a2b8 0%, #6f42c1 100%)'
-    ]
-};
 
 
 
