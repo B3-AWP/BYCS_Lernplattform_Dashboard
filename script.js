@@ -947,23 +947,36 @@ function updatePflichtStats() {
     const referencePflichtProgress = calculateReferenceProgress(completedPflicht, totalPflicht);
 
     const gradedItems = window.pflichtData.filter(item => {
-        const grade = item.grade;
-        return grade && grade !== '-' && grade !== 'Unbekannt' && !isNaN(parseFloat(grade.replace(',', '.')));
+        return getGradeValueForCalculation(item) !== null;
     });
 
-    let averageGrade = '-';
+    let averageGradeDisplay = '-';
     if (gradedItems.length > 0) {
-        const totalGrade = gradedItems.reduce((sum, item) => sum + parseFloat(item.grade.replace(',', '.')), 0);
-        averageGrade = (totalGrade / gradedItems.length).toFixed(1).replace('.', ',');
+        // Calculate average percentage using mixed grading system
+        const totalPercentage = gradedItems.reduce((sum, item) => {
+            return sum + getGradeValueForCalculation(item);
+        }, 0);
+        const averagePercentage = totalPercentage / gradedItems.length;
+        
+        // Calculate IHK grade from average percentage
+        const ihkGradeInfo = calculateIHKGrade(averagePercentage);
+        let tendencyText = '';
+        if (ihkGradeInfo.tendency === '+') tendencyText = '+';
+        else if (ihkGradeInfo.tendency === '-') tendencyText = '-';
+        
+        averageGradeDisplay = `${ihkGradeInfo.grade}${tendencyText} (${Math.round(averagePercentage)}%)`;
     }
 
     const averageGradeElement = document.getElementById('pflichtAverageGrade');
     if (averageGradeElement) {
-        averageGradeElement.textContent = averageGrade;
-        if (averageGrade !== '-') {
-            const numGrade = parseFloat(averageGrade.replace(',', '.'));
-            const color = getGradeColor(averageGrade);
-            averageGradeElement.style.color = color.replace('color: ', '').replace(';', '');
+        averageGradeElement.textContent = averageGradeDisplay;
+        if (averageGradeDisplay !== '-') {
+            // Extract grade number for color calculation
+            const gradeMatch = averageGradeDisplay.match(/^(\d)/);
+            if (gradeMatch) {
+                const gradeColor = getGradeColorFromNumber(parseInt(gradeMatch[1]));
+                averageGradeElement.style.color = gradeColor;
+            }
         }
     }
 
@@ -1603,15 +1616,6 @@ function applyPflichtFilters() {
                 return grade !== '-' && grade !== 'Unbekannt' && grade.trim() !== '';
             } else if (gradeFilter === 'ungraded') {
                 return grade === '-' || grade === 'Unbekannt' || grade.trim() === '';
-            } else if (gradeFilter === 'excellent') {
-                const numGrade = parseFloat(grade.replace(',', '.'));
-                return !isNaN(numGrade) && numGrade <= 1.5;
-            } else if (gradeFilter === 'good') {
-                const numGrade = parseFloat(grade.replace(',', '.'));
-                return !isNaN(numGrade) && numGrade <= 2.5;
-            } else if (gradeFilter === 'satisfactory') {
-                const numGrade = parseFloat(grade.replace(',', '.'));
-                return !isNaN(numGrade) && numGrade <= 3.5;
             }
             return true;
         });
@@ -1631,33 +1635,6 @@ function applyPflichtFilters() {
                 return a.name.localeCompare(b.name, 'de');
             });
             break;
-        case 'status-pending':
-            filteredData.sort((a, b) => {
-                if (a.completionStatus === 'Zu erledigen' && b.completionStatus !== 'Zu erledigen') return -1;
-                if (a.completionStatus !== 'Zu erledigen' && b.completionStatus === 'Zu erledigen') return 1;
-                return a.name.localeCompare(b.name, 'de');
-            });
-            break;
-        case 'grade-best':
-            filteredData.sort((a, b) => {
-                const gradeA = parseFloat(a.grade.replace(',', '.'));
-                const gradeB = parseFloat(b.grade.replace(',', '.'));
-                if (isNaN(gradeA) && isNaN(gradeB)) return 0;
-                if (isNaN(gradeA)) return 1;
-                if (isNaN(gradeB)) return -1;
-                return gradeA - gradeB;
-            });
-            break;
-        case 'grade-worst':
-            filteredData.sort((a, b) => {
-                const gradeA = parseFloat(a.grade.replace(',', '.'));
-                const gradeB = parseFloat(b.grade.replace(',', '.'));
-                if (isNaN(gradeA) && isNaN(gradeB)) return 0;
-                if (isNaN(gradeA)) return -1;
-                if (isNaN(gradeB)) return 1;
-                return gradeB - gradeA;
-            });
-            break;
         default:
             filteredData.sort((a, b) => a.name.localeCompare(b.name, 'de'));
     }
@@ -1674,42 +1651,161 @@ function updatePflichtTable(data) {
     html += '<th onclick="sortPflichtTableByColumn(1)" class="sortable-header" style="cursor: pointer;">Typ <span class="sort-icon"><svg width="12" height="12"><use href="#icon-sort-both"></use></svg></span></th>';
     html += '<th onclick="sortPflichtTableByColumn(2)" class="sortable-header" style="cursor: pointer;">Status <span class="sort-icon"><svg width="12" height="12"><use href="#icon-sort-both"></use></svg></span></th>';
     html += '<th onclick="sortPflichtTableByColumn(3)" class="sortable-header" style="cursor: pointer;">Abgabe <span class="sort-icon"><svg width="12" height="12"><use href="#icon-sort-both"></use></svg></span></th>';
-    html += '<th onclick="sortPflichtTableByColumn(4)" class="sortable-header" style="cursor: pointer;">Note <span class="sort-icon"><svg width="12" height="12"><use href="#icon-sort-both"></use></svg></span></th>';
+    html += '<th onclick="sortPflichtTableByColumn(4)" class="sortable-header" style="cursor: pointer;">Bewertung <span class="sort-icon"><svg width="12" height="12"><use href="#icon-sort-both"></use></svg></span></th>';
     html += '</tr></thead><tbody id="pflichtTableBody">';
 
     data.forEach((item, index) => {
         const statusColor = item.completionStatus === 'Erledigt' ? getCssVariable('--success-color') : getCssVariable('--warning-color');
         const gradeColor = getGradeColor(item.grade);
+        
+        // Display grade based on type (stars for assignments, percentage for quiz)
+        const gradeDisplay = displayGradeForTable(item);
+
+        const typeBadgeStyle = item.type === 'Quiz' 
+            ? 'display: flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 6px; font-size: 0.8em; font-weight: 500; background: #e3f2fd; color: #1976d2; border: 1px solid #bbdefb;'
+            : 'display: flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 6px; font-size: 0.8em; font-weight: 500; background: #f3e5f5; color: #7b1fa2; border: 1px solid #e1bee7;';
+            
+        const typeIcon = item.type === 'Quiz' 
+            ? '<svg width="12" height="12"><use href="#icon-quiz"></use></svg>'
+            : '<svg width="12" height="12"><use href="#icon-assignment"></use></svg>';
 
         html += `<tr data-name="${item.name.toLowerCase()}" data-type="${item.type.toLowerCase()}" data-status="${item.completionStatus.toLowerCase()}" data-grade="${item.grade}">
             <td><a href="${item.url}" target="_blank" title="${item.name}">${item.name}</a></td>
-            <td><span class="type-badge" style="padding: 2px 8px; border-radius: ${getCssVariable('--radius-sm')}; font-size: 0.8em; background: ${item.type === 'Quiz' ? '#e3f2fd' : '#f3e5f5'}; color: ${item.type === 'Quiz' ? getCssVariable('--primary-color') : getCssVariable('--secondary-color')};">${item.type}</span></td>
+            <td><span class="type-badge" style="${typeBadgeStyle}">${typeIcon}${item.type}</span></td>
             <td><span style="color: ${statusColor}; font-weight: 600;">${item.completionStatus}</span></td>
             <td>${item.submissionStatus}</td>
-            <td><strong style="${gradeColor}">${item.grade}</strong></td>
+            <td><strong style="${gradeColor}">${gradeDisplay}</strong></td>
         </tr>`;
     });
 
     html += '</tbody></table>';
+    
+    // Add legend for star system
+    html += `
+    <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; border: 1px solid #e9ecef;">
+        <h5 style="margin: 0 0 12px 0; color: #495057; font-size: 1rem;">Bewertungslegende</h5>
+        <div style="margin-bottom: 15px; padding: 8px; background: #e9ecef; border-radius: 4px; font-size: 0.85rem;">
+            <strong>Hinweis:</strong> Aufgaben werden mit Sternen bewertet, Quizzes zeigen die erreichte Prozentzahl.
+        </div>
+        <div style="display: grid; gap: 8px; font-size: 0.9rem; line-height: 1.4;">
+            <div style="display: flex; align-items: flex-start; gap: 8px;">
+                <strong style="color: ${getCssVariable('--danger-color')}; min-width: 15px;">*</strong>
+                <div>
+                    <strong>Nicht akzeptabel (0%)</strong><br>
+                    <span style="color: #6c757d;">Die Abgabe entspricht nicht den Mindestanforderungen.</span>
+                </div>
+            </div>
+            <div style="display: flex; align-items: flex-start; gap: 8px;">
+                <strong style="color: ${getCssVariable('--warning-color')}; min-width: 15px;">**</strong>
+                <div>
+                    <strong>Verbesserungsbedarf (70%)</strong><br>
+                    <span style="color: #6c757d;">Es gibt wesentliche Verbesserungsmöglichkeiten. Lassen Sie uns gemeinsam an den Grundlagen arbeiten, um Ihre Fähigkeiten zu stärken!</span>
+                </div>
+            </div>
+            <div style="display: flex; align-items: flex-start; gap: 8px;">
+                <strong style="color: ${getCssVariable('--info-color')}; min-width: 15px;">***</strong>
+                <div>
+                    <strong>Solide Umsetzung (100%)</strong><br>
+                    <span style="color: #6c757d;">Gute Arbeit! An einigen Stellen könnte die Abgabe jedoch optimiert werden. Nutzen Sie die Gelegenheit, um zu lernen und zu wachsen!</span>
+                </div>
+            </div>
+            <div style="display: flex; align-items: flex-start; gap: 8px;">
+                <strong style="color: ${getCssVariable('--success-color')}; min-width: 15px;">****</strong>
+                <div>
+                    <strong>Exzellent (130%)</strong><br>
+                    <span style="color: #6c757d;">Ihre Abgabe ist herausragend! Sie haben eine effiziente Lösung entwickelt. Weiter so!</span>
+                </div>
+            </div>
+        </div>
+    </div>`;
+    
     document.getElementById('pflichtSessionInfo').innerHTML = html;
 
     window.currentPflichtTableData = data;
 }
 
 
-function getGradeColor(grade) {
+// Star-based grading system for Pflichtaufgaben
+function convertStarsToPercentage(stars) {
+    const starMapping = {
+        1: 0,
+        2: 70, 
+        3: 100,
+        4: 130
+    };
+    return starMapping[stars] || 0;
+}
+
+function displayStarsFromGrade(grade) {
+    if (grade === '-' || grade === 'Unbekannt' || grade === '') return '-';
+    
+    const numGrade = parseFloat(grade.replace(',', '.'));
+    if (isNaN(numGrade) || numGrade < 1 || numGrade > 4) return '-';
+    
+    const roundedGrade = Math.round(numGrade);
+    return '*'.repeat(roundedGrade);
+}
+
+function getGradeValueForCalculation(item) {
+    // Quiz types use actual percentage, assignments use star conversion
+    if (item.type === 'Quiz') {
+        const grade = item.grade;
+        if (!grade || grade === '-' || grade === 'Unbekannt') return null;
+        
+        const numGrade = parseFloat(grade.replace(',', '.'));
+        if (isNaN(numGrade)) return null;
+        
+        // For Quiz, the grade is already a percentage (0-100)
+        return Math.max(0, Math.min(100, numGrade));
+    } else {
+        // For Aufgabe, convert stars to percentage
+        const grade = item.grade;
+        if (!grade || grade === '-' || grade === 'Unbekannt') return null;
+        
+        const numGrade = parseFloat(grade.replace(',', '.'));
+        if (isNaN(numGrade) || numGrade < 1 || numGrade > 4) return null;
+        
+        return convertStarsToPercentage(numGrade);
+    }
+}
+
+function displayGradeForTable(item) {
+    if (item.type === 'Quiz') {
+        // Quiz shows percentage
+        const grade = item.grade;
+        if (!grade || grade === '-' || grade === 'Unbekannt') return '-';
+        
+        const numGrade = parseFloat(grade.replace(',', '.'));
+        if (isNaN(numGrade)) return '-';
+        
+        return `${Math.round(numGrade)}%`;
+    } else {
+        // Aufgabe shows stars
+        return displayStarsFromGrade(item.grade);
+    }
+}
+
+function getGradeColorFromNumber(gradeNum) {
     const successColor = getCssVariable('--success-color');
     const infoColor = getCssVariable('--info-color');
     const warningColor = getCssVariable('--warning-color');
     const dangerColor = getCssVariable('--danger-color');
 
+    if (gradeNum <= 2) return successColor;     // Grade 1-2 = good
+    if (gradeNum <= 4) return warningColor;     // Grade 3-4 = acceptable  
+    return dangerColor;                         // Grade 5-6 = poor
+}
+
+function getGradeColor(grade) {
     if (grade === '-' || grade === 'Unbekannt') return 'color: #666;';
     const numGrade = parseFloat(grade.replace(',', '.'));
     if (isNaN(numGrade)) return 'color: #666;';
-    if (numGrade <= 1.5) return `color: ${successColor};`;
-    if (numGrade <= 2.5) return `color: ${infoColor};`;
-    if (numGrade <= 3.5) return `color: ${warningColor};`;
-    return `color: ${dangerColor};`;
+    
+    // Star-based color mapping for star display
+    if (numGrade <= 1.5) return `color: ${getCssVariable('--danger-color')};`;  // 1 star = worst
+    if (numGrade <= 2.5) return `color: ${getCssVariable('--warning-color')};`; // 2 stars = poor
+    if (numGrade <= 3.5) return `color: ${getCssVariable('--info-color')};`;    // 3 stars = good  
+    return `color: ${getCssVariable('--success-color')};`;                      // 4 stars = excellent
 }
 
 function sortPflichtTableByColumn(columnIndex) {
@@ -1740,15 +1836,22 @@ function sortPflichtTableByColumn(columnIndex) {
                 valueA = a.submissionStatus.toLowerCase();
                 valueB = b.submissionStatus.toLowerCase();
                 break;
-            case 4: // Grade
-                valueA = parseFloat(a.grade.replace(',', '.'));
-                valueB = parseFloat(b.grade.replace(',', '.'));
-                if (isNaN(gradeA) && isNaN(gradeB)) return 0;
-                if (isNaN(gradeA)) return 1;
-                if (isNaN(gradeB)) return -1;
-                return gradeA - gradeB;
+            case 4: // Grade - use percentage values for proper sorting
+                // Convert grades to percentage values for fair comparison
+                const percentageA = getGradeValueForCalculation(a);
+                const percentageB = getGradeValueForCalculation(b);
+                
+                // Handle null/undefined values (ungraded items go to end)
+                if (percentageA === null && percentageB === null) return 0;
+                if (percentageA === null) return ascending ? 1 : -1;
+                if (percentageB === null) return ascending ? -1 : 1;
+                
+                // Sort by percentage value
+                return ascending ? percentageA - percentageB : percentageB - percentageA;
             default:
-                return 0;
+                valueA = a.name.toLowerCase();
+                valueB = b.name.toLowerCase();
+                break;
         }
 
         if (valueA < valueB) return ascending ? -1 : 1;
