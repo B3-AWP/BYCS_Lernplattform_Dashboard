@@ -1249,19 +1249,16 @@ function updateChecklistTable(filteredData) {
         const originalPflichtPercent = item.pflichtProgress !== undefined ? item.pflichtProgress : 0;
         const originalGesamtPercent = item.gesamtProgress !== undefined ? item.gesamtProgress : 0;
         
-        // Referenzwochen-adjustierte Werte berechnen
-        const referencePflichtPercent = calculateReferenceProgressFromSinglePercentage(originalPflichtPercent);
-        const referenceGesamtPercent = calculateReferenceProgressFromSinglePercentage(originalGesamtPercent);
-        
+        // Immer die tatsächlichen Prozentwerte anzeigen (keine Referenzwochen-Berechnung)
         const pflichtDisplay = item.pflichtProgress !== undefined ? 
-            `${currentReferenceWeek === TOTAL_WEEKS ? Math.round(referencePflichtPercent) : Math.ceil(referencePflichtPercent)}%` : 'n/a';
+            `${Math.round(originalPflichtPercent)}%` : 'n/a';
         const gesamtDisplay = item.gesamtProgress !== undefined ? 
-            `${currentReferenceWeek === TOTAL_WEEKS ? Math.round(referenceGesamtPercent) : Math.ceil(referenceGesamtPercent)}%` : 'n/a';
+            `${Math.round(originalGesamtPercent)}%` : 'n/a';
 
-        html += `<tr data-name="${item.name.toLowerCase()}" data-pflicht="${referencePflichtPercent}" data-gesamt="${referenceGesamtPercent}">
+        html += `<tr data-name="${item.name.toLowerCase()}" data-pflicht="${originalPflichtPercent}" data-gesamt="${originalGesamtPercent}">
             <td><a href="${item.url}" target="_blank">${item.name}</a></td>
-            <td><strong class="progress-cell" data-value="${referencePflichtPercent}">${pflichtDisplay}</strong></td>
-            <td><strong class="progress-cell" data-value="${referenceGesamtPercent}">${gesamtDisplay}</strong></td>
+            <td><strong class="progress-cell" data-value="${originalPflichtPercent}">${pflichtDisplay}</strong></td>
+            <td><strong class="progress-cell" data-value="${originalGesamtPercent}">${gesamtDisplay}</strong></td>
         </tr>`;
     });
 
