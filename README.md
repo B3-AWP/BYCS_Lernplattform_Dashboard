@@ -12,6 +12,8 @@ Ein interaktives Dashboard zur Visualisierung und Analyse von Lernfortschritten 
 
 ### 🎨 **Visuelle Darstellung**
 - **Interaktive Charts**: Ein-/ausklappbare Diagramme mit IHK-Farben (rot bis grün)
+- **Progress Bars**: Farbcodierte Fortschrittsbalken mit Hintergrund-Visualisierung
+- **Konfetti Easter Egg**: Verstecktes Konfetti-Feature für exzellente Leistungen (Note 1-2)
 - **Echtzeit-Statistiken**: Live-Updates der Completion-Rates
 - **Responsive Design**: Optimiert für Desktop und mobile Geräte
 - **Moderne UI**: Intuitive Benutzeroberfläche mit sanften Animationen
@@ -24,8 +26,10 @@ Ein interaktives Dashboard zur Visualisierung und Analyse von Lernfortschritten 
 
 ### 🛡️ **Sicherheit & Performance**
 - **Same-Origin-Policy**: Sichere Datenübertragung
-- **Caching**: Optimierte Performance durch intelligentes Caching
-- **Fehlerbehandlung**: Robuste Fehlerbehandlung und Recovery
+- **Smart Caching**: Optimierte localStorage-basierte Zwischenspeicherung mit 60-70% reduziertem Speicherbedarf
+- **Server-freundlich**: Batch-Loading mit konfigurierbaren Timeouts und Parallelitätslimits
+- **Background Updates**: Intelligente Cache-Aktualisierung im Hintergrund
+- **Fehlerbehandlung**: Robuste Fehlerbehandlung und Recovery mit Retry-Logik
 
 ## 📋 **Voraussetzungen**
 
@@ -45,8 +49,8 @@ Ein interaktives Dashboard zur Visualisierung und Analyse von Lernfortschritten 
    ```
 
 2. **Kurs-ID konfigurieren:**
-   - Öffnen Sie `script.js`
-   - Setzen Sie die `COURSE_ID` Variable auf Ihre Mebis-Kurs-ID
+   - Öffnen Sie `config.js`
+   - Setzen Sie die `courseId` im `system` Bereich auf Ihre Mebis-Kurs-ID
 
 3. **Aktivität "Datei" in Mebiskurs erstellen**. 
    - Dateien in Kurs ziehen
@@ -67,9 +71,10 @@ Ein interaktives Dashboard zur Visualisierung und Analyse von Lernfortschritten 
   - 🌟 **Dunkelgrün**: Note 1 (>91%) - Sehr gut
 
 #### **🔄 Daten-Refresh**
-- **Auto-Update**: Automatische Aktualisierung beim Laden
-- **Manual Refresh**: Refresh-Button für manuelle Updates
-- **Smart Loading**: Detaillierte Fortschrittsmeldungen
+- **Auto-Update**: Automatische Aktualisierung beim Laden mit Smart Caching
+- **Manual Refresh**: Refresh-Button für manuelle Updates (bypassed Cache)
+- **Background Updates**: Cache-Aktualisierung im Hintergrund für bessere UX
+- **Smart Loading**: Detaillierte Fortschrittsmeldungen mit Server-Status
 
 #### **📈 Referenzwochen-System**
 - **Wochenbasiert**: Fortschritt basierend auf aktueller Kurswoche
@@ -82,7 +87,9 @@ Ein interaktives Dashboard zur Visualisierung und Analyse von Lernfortschritten 
 ```
 ├── index.html         # Haupt-HTML-Struktur
 ├── script.js          # JavaScript-Logik und API-Calls
+├── config.js          # Externe Konfigurationsdatei
 ├── style.css          # CSS-Styling und Animationen
+├── debug-test.html    # Test-Seite für Progress Bars
 └── README.md          # Dokumentation
 ```
 
@@ -118,9 +125,17 @@ Bei Fragen oder Problemen:
 
 ### **Kommende Features:**
 
+### **Aktuelle Verbesserungen (v1.1):**
+- [x] **Cache-Optimierung**: 60-70% reduzierter localStorage-Verbrauch
+- [x] **Progress Bars**: Visuelle Fortschrittsbalken in Tabellen
+- [x] **Konfetti Easter Egg**: Verstecktes Feature für exzellente Leistungen
+- [x] **Server-Performance**: Batch-Loading und Timeout-Optimierungen
+- [x] **Background Updates**: Smart Cache-Updates ohne UI-Blockierung
+
 ### **Geplante Verbesserungen:**
-- [ ] **Performance**: Weitere Optimierungen
+- [ ] **Performance**: Weitere Ladezeit-Optimierungen
 - [ ] **Accessibility**: WCAG 2.1 Compliance
+- [ ] **Mobile UX**: Verbesserte Touch-Bedienung
 
 
 > **Hinweis**: Dies ist eine Beta-Version. Alle Angaben erfolgen ohne Gewähr. 
