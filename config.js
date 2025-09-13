@@ -1,0 +1,130 @@
+// ================================
+// EXTERNE KONFIGURATIONSDATEI
+// ================================
+//
+// Diese Datei kann als Alternative zur integrierten CONFIG-Konstante verwendet werden.
+// Um diese zu verwenden:
+// 1. Füge <script src="config.js"></script> vor script.js in index.html hinzu
+// 2. Ersetze CONFIG durch EXTERNAL_CONFIG im script.js
+//
+// Vorteile der externen Konfiguration:
+// - Noch einfachere Wartung ohne Code-Durchsuchung
+// - Schnelle Anpassungen ohne script.js zu öffnen
+// - Bessere Versionskontrolle für reine Konfigurationsänderungen
+//
+
+const EXTERNAL_CONFIG = {
+    // IHK-Notensystem - Schwellenwerte und Farben
+    grades: {
+        1: { name: 'sehr gut', threshold: 91, color: '#1e7e34', description: 'Dunkelgrün - Note 1 (sehr gut)' },
+        2: { name: 'gut', threshold: 81, color: '#28a745', description: 'Grün - Note 2 (gut)' },
+        3: { name: 'befriedigend', threshold: 67, color: '#7cb342', description: 'Hellgrün - Note 3 (befriedigend)' },
+        4: { name: 'ausreichend', threshold: 50, color: '#ffc107', description: 'Gelb - Note 4 (ausreichend)' },
+        5: { name: 'mangelhaft', threshold: 30, color: '#fd7e14', description: 'Orange - Note 5 (mangelhaft)' },
+        6: { name: 'ungenügend', threshold: 0, color: '#dc3545', description: 'Rot - Note 6 (ungenügend)' }
+    },
+
+    // Loading-Texte und Fortschrittsmeldungen
+    loading: {
+        main: 'Lade Dashboard...',
+        sub: 'Initialisiere System...',
+        steps: {
+            1: { initial: '○ System initialisiert', completed: '✓ System initialisiert' },
+            2: { initial: '○ Schiene wird erkannt...', completed: '✓ Schiene erkannt' },
+            3: { initial: '○ Checklisten werden geladen...', completed: '✓ Checklisten geladen' },
+            4: { initial: '○ Pflichtaufgaben werden geladen...', completed: '✓ Pflichtaufgaben geladen' }
+        },
+        progress: {
+            detectTrack: 'Erkenne Schiene...',
+            detectTrackSub: 'Analysiere Mebis-Kurs...',
+            loadChecklists: 'Lade Checklisten...',
+            loadChecklistsSub: 'Verbinde mit Mebis...',
+            loadPflicht: 'Lade Pflichtaufgaben...',
+            loadPflichtSub: 'Analysiere Aufgaben und Quizzes...'
+        }
+    },
+
+    // UI-Texte für Benutzeroberfläche
+    ui: {
+        toggleChart: {
+            show: 'Diagramm anzeigen',
+            hide: 'Diagramm ausblenden'
+        },
+        trackDetection: {
+            noRelevantClass: 'Keine relevante Klasse in Mebis-Kurs-Tabs gefunden',
+            buttonsEnabled: 'Track buttons enabled - user can select Schiene manually',
+            buttonsDisabled: 'Track buttons disabled - no Schiene could be determined',
+            selectionHidden: 'Track selection hidden - automatic detection successful',
+            selectionShown: 'Track selection shown - manual selection required'
+        },
+        standardMode: '✓ Standard-Modus aktiviert'
+    },
+
+    // Debug- und Konsolen-Ausgaben
+    debug: {
+        startingExtraction: 'Starting checklist extraction...',
+        allLinksFound: 'All view.php links found:',
+        firstFewLinks: 'First few links:',
+        allPromisesResolved: 'All checklist promises resolved:',
+        creatingCharts: 'Creating charts with valid data:'
+    },
+
+    // Konfetti-System
+    confetti: {
+        colors: {
+            gold: '#FFD700',
+            silver: '#C0C0C0'
+        },
+        messages: {
+            grade1: 'Goldenes Konfetti für Note 1',
+            grade2: 'Silbernes Konfetti für Note 2'
+        }
+    },
+
+    // System-Konfiguration
+    system: {
+        courseId: '2036416',
+        concurrentLimit: 5, // Load max 5 checklists at once
+        timeoutMs: 10000    // 10 seconds timeout
+    },
+
+    // Schienen-basierte Schulwochen-Konfiguration
+    trackSchedules: {
+        "Schiene1": [
+            { week: 1, start: "2025-09-15", end: "2025-09-19" },
+            { week: 2, start: "2025-09-22", end: "2025-09-26" },
+            { week: 3, start: "2025-10-20", end: "2025-10-24" },
+            { week: 4, start: "2025-10-27", end: "2025-10-31" },
+            { week: 5, start: "2025-12-08", end: "2025-12-12" },
+            { week: 6, start: "2026-02-23", end: "2026-02-27" },
+            { week: 7, start: "2026-03-02", end: "2026-03-06" },
+            { week: 8, start: "2026-04-13", end: "2026-04-17" },
+            { week: 9, start: "2026-04-20", end: "2026-04-24" }
+        ],
+        "Schiene3": [
+            { week: 1, start: "2025-10-06", end: "2025-10-10" },
+            { week: 2, start: "2025-10-13", end: "2025-10-17" },
+            { week: 3, start: "2025-11-24", end: "2025-11-28" },
+            { week: 4, start: "2025-12-01", end: "2025-12-05" },
+            { week: 5, start: "2026-01-07", end: "2026-01-09" },
+            { week: 6, start: "2026-01-12", end: "2026-01-16" },
+            { week: 7, start: "2026-03-09", end: "2026-03-13" },
+            { week: 8, start: "2026-03-16", end: "2026-03-20" },
+            { week: 9, start: "2026-03-23", end: "2026-03-27" }
+        ]
+    },
+
+    // Klassen-zu-Schiene Zuordnung
+    classToTrack: {
+        "IFA12A": "Schiene1",
+        "IFA12C": "Schiene1",
+        "IFA12E": "Schiene1",
+        "IFA12B": "Schiene3",
+        "IFA12D": "Schiene3"
+    }
+};
+
+// Globale Verfügbarkeit sicherstellen
+if (typeof window !== 'undefined') {
+    window.EXTERNAL_CONFIG = EXTERNAL_CONFIG;
+}

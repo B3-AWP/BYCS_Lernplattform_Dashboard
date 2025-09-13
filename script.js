@@ -1,95 +1,16 @@
 // ================================
-// KONFIGURATION - Zentrale Verwaltung aller Texte, Werte und Einstellungen
+// EXTERNE KONFIGURATION
 // ================================
-//
-// Diese Konfiguration zentralisiert alle Texte, Grenzwerte und UI-Elemente
-// des Dashboards. Änderungen können hier einfach vorgenommen werden, ohne
-// den gesamten Code durchsuchen zu müssen.
-//
-// Verwendung:
-// - CONFIG.grades: IHK-Notensystem mit Schwellenwerten und Farben
-// - CONFIG.loading: Alle Loading-Texte und Fortschrittsmeldungen
-// - CONFIG.ui: UI-Texte für Buttons, Toggle-Elemente etc.
-// - CONFIG.debug: Debug- und Konsolen-Ausgaben
-// - CONFIG.confetti: Konfetti-System Konfiguration
-//
-const CONFIG = {
-    // IHK-Notensystem
-    grades: {
-        1: { name: 'sehr gut', threshold: 91, color: '#1e7e34', description: 'Dunkelgrün - Note 1 (sehr gut)' },
-        2: { name: 'gut', threshold: 81, color: '#28a745', description: 'Grün - Note 2 (gut)' },
-        3: { name: 'befriedigend', threshold: 67, color: '#7cb342', description: 'Hellgrün - Note 3 (befriedigend)' },
-        4: { name: 'ausreichend', threshold: 50, color: '#ffc107', description: 'Gelb - Note 4 (ausreichend)' },
-        5: { name: 'mangelhaft', threshold: 30, color: '#fd7e14', description: 'Orange - Note 5 (mangelhaft)' },
-        6: { name: 'ungenügend', threshold: 0, color: '#dc3545', description: 'Rot - Note 6 (ungenügend)' }
-    },
-
-    // Loading-Texte
-    loading: {
-        main: 'Lade Dashboard...',
-        sub: 'Initialisiere System...',
-        steps: {
-            1: { initial: '○ System initialisiert', completed: '✓ System initialisiert' },
-            2: { initial: '○ Schiene wird erkannt...', completed: '✓ Schiene erkannt' },
-            3: { initial: '○ Checklisten werden geladen...', completed: '✓ Checklisten geladen' },
-            4: { initial: '○ Pflichtaufgaben werden geladen...', completed: '✓ Pflichtaufgaben geladen' }
-        },
-        progress: {
-            detectTrack: 'Erkenne Schiene...',
-            detectTrackSub: 'Analysiere Mebis-Kurs...',
-            loadChecklists: 'Lade Checklisten...',
-            loadChecklistsSub: 'Verbinde mit Mebis...',
-            loadPflicht: 'Lade Pflichtaufgaben...',
-            loadPflichtSub: 'Analysiere Aufgaben und Quizzes...'
-        }
-    },
-
-    // UI-Texte
-    ui: {
-        toggleChart: {
-            show: 'Diagramm anzeigen',
-            hide: 'Diagramm verbergen'
-        },
-        trackDetection: {
-            noRelevantClass: 'Keine relevante Klasse in Mebis-Kurs-Tabs gefunden',
-            buttonsEnabled: 'Track buttons enabled - user can select Schiene manually',
-            buttonsDisabled: 'Track buttons disabled - no Schiene could be determined',
-            selectionHidden: 'Track selection hidden - automatic detection successful',
-            selectionShown: 'Track selection shown - manual selection required'
-        },
-        standardMode: '✓ Standard-Modus aktiviert'
-    },
-
-    // Debug-Meldungen
-    debug: {
-        startingExtraction: 'Starting checklist extraction...',
-        allLinksFound: 'All view.php links found:',
-        firstFewLinks: 'First few links:',
-        allPromisesResolved: 'All checklist promises resolved:',
-        creatingCharts: 'Creating charts with valid data:'
-    },
-
-    // Konfetti-System
-    confetti: {
-        colors: {
-            gold: '#FFD700',
-            silver: '#C0C0C0'
-        },
-        messages: {
-            grade1: 'Goldenes Konfetti für Note 1',
-            grade2: 'Silbernes Konfetti für Note 2'
-        }
-    }
-};
+// Die Konfiguration wird aus config.js geladen (EXTERNAL_CONFIG)
 
 // Hilfsfunktionen für Konfiguration
 function getGradeByPercentage(percentage) {
-    const grades = Object.values(CONFIG.grades).sort((a, b) => b.threshold - a.threshold);
-    return grades.find(grade => percentage >= grade.threshold) || CONFIG.grades[6];
+    const grades = Object.values(EXTERNAL_CONFIG.grades).sort((a, b) => b.threshold - a.threshold);
+    return grades.find(grade => percentage >= grade.threshold) || EXTERNAL_CONFIG.grades[6];
 }
 
 function getGradeNumber(percentage) {
-    for (let [gradeNum, gradeInfo] of Object.entries(CONFIG.grades)) {
+    for (let [gradeNum, gradeInfo] of Object.entries(EXTERNAL_CONFIG.grades)) {
         if (percentage >= gradeInfo.threshold) {
             return parseInt(gradeNum);
         }
@@ -102,19 +23,19 @@ function initializeLoadingTexts() {
     // Setze Loading-Overlay Texte
     const mainText = document.getElementById('loadingMainText');
     const subText = document.getElementById('loadingSubText');
-    if (mainText) mainText.textContent = CONFIG.loading.main;
-    if (subText) subText.textContent = CONFIG.loading.sub;
-    
+    if (mainText) mainText.textContent = EXTERNAL_CONFIG.loading.main;
+    if (subText) subText.textContent = EXTERNAL_CONFIG.loading.sub;
+
     // Setze Progress Steps Texte
     const step1 = document.getElementById('step1');
     const step2 = document.getElementById('step2');
     const step3 = document.getElementById('step3');
     const step4 = document.getElementById('step4');
-    
-    if (step1) step1.textContent = CONFIG.loading.steps[1].initial;
-    if (step2) step2.textContent = CONFIG.loading.steps[2].initial;
-    if (step3) step3.textContent = CONFIG.loading.steps[3].initial;
-    if (step4) step4.textContent = CONFIG.loading.steps[4].initial;
+
+    if (step1) step1.textContent = EXTERNAL_CONFIG.loading.steps[1].initial;
+    if (step2) step2.textContent = EXTERNAL_CONFIG.loading.steps[2].initial;
+    if (step3) step3.textContent = EXTERNAL_CONFIG.loading.steps[3].initial;
+    if (step4) step4.textContent = EXTERNAL_CONFIG.loading.steps[4].initial;
 }
 
 // ================================
@@ -130,39 +51,9 @@ let historicalData = [];
 let TOTAL_WEEKS = 9; // Default, wird später aktualisiert
 let currentReferenceWeek = 9; // Standard: Letzte Woche (100% der Zeit)
 
-// Schienen-basierte Schulwochen-Konfiguration
-const TRACK_SCHEDULES = {
-  "Schiene1": [
-    { week: 1, start: "2025-09-15", end: "2025-09-19" },
-    { week: 2, start: "2025-09-22", end: "2025-09-26" },
-    { week: 3, start: "2025-10-20", end: "2025-10-24" },
-    { week: 4, start: "2025-10-27", end: "2025-10-31" },
-    { week: 5, start: "2025-12-08", end: "2025-12-12" },
-    { week: 6, start: "2026-02-23", end: "2026-02-27" },
-    { week: 7, start: "2026-03-02", end: "2026-03-06" },
-    { week: 8, start: "2026-04-13", end: "2026-04-17" },
-    { week: 9, start: "2026-04-20", end: "2026-04-24" }
-  ],
-  "Schiene3": [
-    { week: 1, start: "2025-10-06", end: "2025-10-10" },
-    { week: 2, start: "2025-10-13", end: "2025-10-17" },
-    { week: 3, start: "2025-11-24", end: "2025-11-28" },
-    { week: 4, start: "2025-12-01", end: "2025-12-05" },
-    { week: 5, start: "2026-01-07", end: "2026-01-09" },
-    { week: 6, start: "2026-01-12", end: "2026-01-16" },
-    { week: 7, start: "2026-03-09", end: "2026-03-13" },
-    { week: 8, start: "2026-03-16", end: "2026-03-20" },
-    { week: 9, start: "2026-03-23", end: "2026-03-27" }
-  ]
-};
-
-const CLASS_TO_TRACK = {
-  "IFA12A": "Schiene1",
-  "IFA12C": "Schiene1", 
-  "IFA12E": "Schiene1",
-  "IFA12B": "Schiene3",
-  "IFA12D": "Schiene3"
-};
+// Verwende Konfiguration aus config.js
+const TRACK_SCHEDULES = EXTERNAL_CONFIG.trackSchedules;
+const CLASS_TO_TRACK = EXTERNAL_CONFIG.classToTrack;
 
 // Berechne maximale Wochenanzahl aus allen Schienen
 function calculateTotalWeeks() {
@@ -315,7 +206,7 @@ async function detectUserClass() {
     }
   }
   
-  console.log(CONFIG.ui.trackDetection.noRelevantClass);
+  console.log(EXTERNAL_CONFIG.ui.trackDetection.noRelevantClass);
   return null;
 }
 
@@ -367,7 +258,7 @@ function initializeReferenceWeek() {
   }
   
   // Versuche automatische Erkennung
-  updateDashboardLoadingProgress(1, CONFIG.loading.progress.detectTrack, CONFIG.loading.progress.detectTrackSub);
+  updateDashboardLoadingProgress(1, EXTERNAL_CONFIG.loading.progress.detectTrack, EXTERNAL_CONFIG.loading.progress.detectTrackSub);
   detectUserClass().then(detectedClass => {
     if (detectedClass) {
       localStorage.setItem('userClass', detectedClass);
@@ -397,7 +288,7 @@ function initializeReferenceWeek() {
         const step2 = document.getElementById('step2');
         if (step2) {
           step2.className = 'progress-step completed';
-          step2.innerHTML = CONFIG.ui.standardMode;
+          step2.innerHTML = EXTERNAL_CONFIG.ui.standardMode;
         }
       }, 300);
       console.log(`Keine Klasse erkannt - verwende Standard (${totalWeeks} Wochen). Schienen-Auswahl verfügbar.`);
@@ -467,7 +358,7 @@ function enableTrackButtons() {
     btn.classList.remove('inactive');
     btn.classList.add('inactive'); // Default to inactive until selected
   });
-  console.log(CONFIG.ui.trackDetection.buttonsEnabled);
+  console.log(EXTERNAL_CONFIG.ui.trackDetection.buttonsEnabled);
 }
 
 function disableTrackButtons() {
@@ -476,14 +367,14 @@ function disableTrackButtons() {
     btn.disabled = true;
     btn.classList.remove('active', 'inactive');
   });
-  console.log(CONFIG.ui.trackDetection.buttonsDisabled);
+  console.log(EXTERNAL_CONFIG.ui.trackDetection.buttonsDisabled);
 }
 
 function hideTrackSelection() {
   const trackContainer = document.getElementById('trackSelectionContainer');
   if (trackContainer) {
     trackContainer.style.display = 'none';
-    console.log(CONFIG.ui.trackDetection.selectionHidden);
+    console.log(EXTERNAL_CONFIG.ui.trackDetection.selectionHidden);
   }
 }
 
@@ -491,7 +382,7 @@ function showTrackSelection() {
   const trackContainer = document.getElementById('trackSelectionContainer');
   if (trackContainer) {
     trackContainer.style.display = 'flex';
-    console.log(CONFIG.ui.trackDetection.selectionShown);
+    console.log(EXTERNAL_CONFIG.ui.trackDetection.selectionShown);
   }
 }
 
@@ -582,8 +473,8 @@ function setReferenceWeek(weekNumber) {
 
 
 
-// zentrale Course ID (ein Ort für die ID)
-const COURSE_ID = '2036416';
+// zentrale Course ID (aus Konfiguration)
+const COURSE_ID = EXTERNAL_CONFIG.system.courseId;
 
 
 
@@ -745,19 +636,19 @@ function resetLoadingProgress() {
     
     if (step1) {
         step1.className = 'progress-step completed';
-        step1.innerHTML = CONFIG.loading.steps[1].completed;
+        step1.innerHTML = EXTERNAL_CONFIG.loading.steps[1].completed;
     }
     if (step2) {
         step2.className = 'progress-step pending';
-        step2.innerHTML = CONFIG.loading.steps[2].initial;
+        step2.innerHTML = EXTERNAL_CONFIG.loading.steps[2].initial;
     }
     if (step3) {
         step3.className = 'progress-step pending';
-        step3.innerHTML = CONFIG.loading.steps[3].initial;
+        step3.innerHTML = EXTERNAL_CONFIG.loading.steps[3].initial;
     }
     if (step4) {
         step4.className = 'progress-step pending';
-        step4.innerHTML = CONFIG.loading.steps[4].initial;
+        step4.innerHTML = EXTERNAL_CONFIG.loading.steps[4].initial;
     }
 }
 
@@ -800,7 +691,7 @@ function updateLoadingProgress(completed, total) {
 
 function extractPflichtOverview() {
     showLoading(true);
-    updateDashboardLoadingProgress(3, CONFIG.loading.progress.loadPflicht, CONFIG.loading.progress.loadPflichtSub);
+    updateDashboardLoadingProgress(3, EXTERNAL_CONFIG.loading.progress.loadPflicht, EXTERNAL_CONFIG.loading.progress.loadPflichtSub);
 
     const assignmentOverviewUrl = `https://lernplattform.mebis.bycs.de/course/overview.php?id=${COURSE_ID}&expand[]=assign#assign_overview_collapsible`;
     const quizOverviewUrl = `https://lernplattform.mebis.bycs.de/course/overview.php?id=${COURSE_ID}&expand[]=quiz#quiz_overview_collapsible`;
@@ -832,8 +723,8 @@ function extractPflichtOverview() {
 
 async function extractFromChecklistIndex() {
     showLoading(true);
-    updateDashboardLoadingProgress(2, CONFIG.loading.progress.loadChecklists, CONFIG.loading.progress.loadChecklistsSub);
-    console.log(CONFIG.debug.startingExtraction);
+    updateDashboardLoadingProgress(2, EXTERNAL_CONFIG.loading.progress.loadChecklists, EXTERNAL_CONFIG.loading.progress.loadChecklistsSub);
+    console.log(EXTERNAL_CONFIG.debug.startingExtraction);
 
     try {
         const checklistIndexUrl = `https://lernplattform.mebis.bycs.de/mod/checklist/index.php?id=${COURSE_ID}`;
@@ -863,15 +754,15 @@ async function extractFromChecklistIndex() {
         if (checklistLinks.length === 0) {
             console.warn('No checklist links found in HTML. Checking for alternative selectors...');
             const allLinks = Array.from(doc.querySelectorAll('a[href*="view.php"]'));
-            console.log(CONFIG.debug.allLinksFound, allLinks.length);
+            console.log(EXTERNAL_CONFIG.debug.allLinksFound, allLinks.length);
             if (allLinks.length > 0) {
-                console.log(CONFIG.debug.firstFewLinks, allLinks.slice(0, 3).map(l => l.textContent.trim()));
+                console.log(EXTERNAL_CONFIG.debug.firstFewLinks, allLinks.slice(0, 3).map(l => l.textContent.trim()));
             }
             throw new Error('No checklist links found');
         }
 
         // Optimized parallel loading with concurrency limit
-        const CONCURRENT_LIMIT = 5; // Load max 5 checklists at once
+        const CONCURRENT_LIMIT = EXTERNAL_CONFIG.system.concurrentLimit; // Load max checklists at once
         const totalChecklists = checklistLinks.length;
         let completedCount = 0;
 
@@ -906,7 +797,7 @@ async function extractFromChecklistIndex() {
             results.push(...batchResults);
         }
 
-        console.log(CONFIG.debug.allPromisesResolved, results.length);
+        console.log(EXTERNAL_CONFIG.debug.allPromisesResolved, results.length);
         const valid = results.filter(item => !item.error);
         const errors = results.filter(item => item.error);
         
@@ -920,7 +811,7 @@ async function extractFromChecklistIndex() {
             throw new Error('All checklist detail loads failed');
         }
         
-        console.log(CONFIG.debug.creatingCharts, valid);
+        console.log(EXTERNAL_CONFIG.debug.creatingCharts, valid);
         createCharts(valid);
         updateChecklistTable(valid);
         
@@ -943,7 +834,7 @@ async function extractFromChecklistIndex() {
 }
 
 async function loadSingleChecklist(url) {
-    const TIMEOUT_MS = 10000; // 10 seconds timeout
+    const TIMEOUT_MS = EXTERNAL_CONFIG.system.timeoutMs; // timeout from config
     
     const timeoutPromise = new Promise((_, reject) => {
         setTimeout(() => reject(new Error('Request timeout')), TIMEOUT_MS);
@@ -2204,7 +2095,7 @@ function toggleChart(chartId) {
         content.classList.remove('collapsed');
         content.classList.add('expanded');
         toggle.classList.add('expanded');
-        toggle.querySelector('span').textContent = CONFIG.ui.toggleChart.hide;
+        toggle.querySelector('span').textContent = EXTERNAL_CONFIG.ui.toggleChart.hide;
         
         // Trigger chart resize after expansion animation
         setTimeout(() => {
@@ -2220,7 +2111,7 @@ function toggleChart(chartId) {
         content.classList.remove('expanded');
         content.classList.add('collapsed');
         toggle.classList.remove('expanded');
-        toggle.querySelector('span').textContent = CONFIG.ui.toggleChart.show;
+        toggle.querySelector('span').textContent = EXTERNAL_CONFIG.ui.toggleChart.show;
     }
 }
 

@@ -8,6 +8,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
     <script
         src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@2.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <script src="config.js"></script>
     <script src="script.js"></script>
     <link rel="stylesheet" href="style.css">
     <link rel="icon"
@@ -19,14 +20,14 @@
     <div id="dashboardLoadingOverlay" class="dashboard-loading-overlay" style="display: none;">
         <div class="dashboard-loading-content">
             <div class="dashboard-loading-spinner"></div>
-            <div class="dashboard-loading-text" id="loadingMainText">Lade Dashboard...</div>
-            <div class="dashboard-loading-subtext" id="loadingSubText">Initialisiere System...</div>
+            <div class="dashboard-loading-text" id="loadingMainText"></div>
+            <div class="dashboard-loading-subtext" id="loadingSubText"></div>
             <div class="dashboard-loading-progress">
                 <div class="progress-steps" id="loadingSteps">
-                    <div class="progress-step" id="step1">✓ System initialisiert</div>
-                    <div class="progress-step pending" id="step2">○ Schiene wird erkannt...</div>
-                    <div class="progress-step pending" id="step3">○ Checklisten werden geladen...</div>
-                    <div class="progress-step pending" id="step4">○ Pflichtaufgaben werden geladen...</div>
+                    <div class="progress-step" id="step1"></div>
+                    <div class="progress-step pending" id="step2"></div>
+                    <div class="progress-step pending" id="step3"></div>
+                    <div class="progress-step pending" id="step4"></div>
                 </div>
             </div>
         </div>
@@ -317,7 +318,7 @@ Beta-Version. Angaben ohne Gewähr.
         <div class="config-section">
             <h4><svg class="h2-icon pflicht" aria-hidden="true" width="18" height="18" focusable="false">
                     <use href="#icon-pflicht"></use>
-                </svg>Checklist-Übersicht</h4>
+                </svg>Checkliste-Übersicht</h4>
             <div id="sessionInfo"></div>
         </div>
     </div>
