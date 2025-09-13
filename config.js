@@ -38,9 +38,11 @@ const EXTERNAL_CONFIG = {
             detectTrack: 'Erkenne Schiene...',
             detectTrackSub: 'Analysiere Mebis-Kurs...',
             loadChecklists: 'Lade Checklisten...',
-            loadChecklistsSub: 'Verbinde mit Mebis...',
+            loadChecklistsSub: 'Verbinde mit Mebis-Server...',
             loadPflicht: 'Lade Pflichtaufgaben...',
-            loadPflichtSub: 'Analysiere Aufgaben und Quizzes...'
+            loadPflichtSub: 'Analysiere Aufgaben und Quizzes...',
+            serverSlow: '⚠️ Mebis-Server langsam - lade mit verfügbaren Daten fort',
+            serverTimeout: '🔄 Einige Checklisten übersprungen (Server-Timeouts)'
         }
     },
 
@@ -81,11 +83,14 @@ const EXTERNAL_CONFIG = {
         }
     },
 
-    // System-Konfiguration
+    // System-Konfiguration - Server-freundliche Einstellungen
     system: {
         courseId: '2036416',
-        concurrentLimit: 5, // Load max 5 checklists at once
-        timeoutMs: 10000    // 10 seconds timeout
+        concurrentLimit: 8,      // Moderate Parallelität (Server-schonend)
+        timeoutMs: 6000,         // 6 seconds timeout (mehr Zeit für Server)
+        retryTimeoutMs: 10000,   // 10 seconds on retry (noch mehr Zeit)
+        cacheExpiryMs: 300000,   // 5 minutes cache (300000ms)
+        batchDelay: 500          // 500ms Pause zwischen Batches
     },
 
     // Schienen-basierte Schulwochen-Konfiguration

@@ -51,6 +51,145 @@ let historicalData = [];
 let TOTAL_WEEKS = 9; // Default, wird später aktualisiert
 let currentReferenceWeek = 9; // Standard: Letzte Woche (100% der Zeit)
 
+// ================================
+// SMART CACHING SYSTEM (PERSISTENT)
+// ================================
+
+function isCacheValid(cacheEntry) {
+    if (!cacheEntry || !cacheEntry.data || !cacheEntry.timestamp) return false;
+    const age = Date.now() - cacheEntry.timestamp;
+    return age < EXTERNAL_CONFIG.system.cacheExpiryMs;
+}
+
+function getCachedData(type) {
+    try {
+        const cacheKey = `mebis_cache_${type}`;
+        const cacheString = localStorage.getItem(cacheKey);
+        if (!cacheString) return null;
+
+        const cacheEntry = JSON.parse(cacheString);
+        if (!isCacheValid(cacheEntry)) return null;
+
+        // Konvertiere optimierte Struktur zurück zu erwarteter Struktur
+        if (type === 'checklists' && cacheEntry.version === '1.1') {
+            return cacheEntry.data.map(item => ({
+                name: item.name,
+                url: item.url,
+                pflichtProgress: item.pflicht,
+                gesamtProgress: item.gesamt
+            }));
+        } else if (type === 'pflicht' && cacheEntry.version === '1.1') {
+            return cacheEntry.data; // Bereits in korrekter Struktur
+        }
+
+        // Fallback für alte Cache-Versionen
+        return cacheEntry.data;
+    } catch (error) {
+        console.warn(`Cache-Lesefehler für ${type}:`, error);
+        return null;
+    }
+}
+
+function setCachedData(type, data) {
+    try {
+        // Optimierte Datenstruktur - nur relevante Daten speichern
+        let optimizedData;
+
+        if (type === 'checklists') {
+            // Nur die essentiellen Daten für Checklisten speichern
+            optimizedData = data
+                .filter(item => !item.error) // Keine Fehler-Einträge
+                .map(item => ({
+                    name: item.name.length > 40 ? item.name.substring(0, 37) + '...' : item.name,
+                    pflicht: Math.round(item.pflichtProgress * 10) / 10, // 1 Dezimalstelle
+                    gesamt: Math.round(item.gesamtProgress * 10) / 10,   // 1 Dezimalstelle
+                    url: item.url // Für Links nötig
+                }));
+        } else if (type === 'pflicht') {
+            // Pflichtaufgaben - nur relevante Felder
+            optimizedData = data.map(item => ({
+                name: item.name?.length > 30 ? item.name.substring(0, 27) + '...' : item.name,
+                grade: item.grade,
+                points: item.points,
+                maxPoints: item.maxPoints,
+                status: item.status
+            }));
+        } else {
+            // Fallback: Original Daten
+            optimizedData = data;
+        }
+
+        const cacheEntry = {
+            data: optimizedData,
+            timestamp: Date.now(),
+            version: '1.1', // Neue optimierte Version
+            originalCount: data.length
+        };
+
+        const cacheKey = `mebis_cache_${type}`;
+        const cacheString = JSON.stringify(cacheEntry);
+
+        localStorage.setItem(cacheKey, cacheString);
+
+        const sizeKB = Math.round(cacheString.length / 1024 * 100) / 100;
+        console.log(`💾 ${type} Cache gespeichert: ${optimizedData.length}/${data.length} Einträge (${sizeKB}KB)`);
+
+    } catch (error) {
+        console.warn(`Cache-Speicherfehler für ${type}:`, error);
+        // Fallback: Versuche mit weniger Daten
+        if (error.name === 'QuotaExceededError') {
+            console.warn('localStorage voll - Cache übersprungen');
+        }
+    }
+}
+
+function clearCache(type = null) {
+    try {
+        if (type) {
+            localStorage.removeItem(`mebis_cache_${type}`);
+            console.log(`🗑️ Cache für ${type} gelöscht`);
+        } else {
+            // Alle mebis caches löschen
+            Object.keys(localStorage).forEach(key => {
+                if (key.startsWith('mebis_cache_')) {
+                    localStorage.removeItem(key);
+                }
+            });
+            console.log('🗑️ Alle Caches gelöscht');
+        }
+    } catch (error) {
+        console.warn('Cache-Löschfehler:', error);
+    }
+}
+
+function showCacheNotification(type, isBackground = false) {
+    const message = isBackground
+        ? `📡 ${type === 'checklists' ? 'Checklisten' : 'Pflichtaufgaben'} werden im Hintergrund aktualisiert...`
+        : `💾 ${type === 'checklists' ? 'Checklisten' : 'Pflichtaufgaben'} aus Cache geladen`;
+
+    console.log(message);
+
+    // Optional: Toast-Benachrichtigung (dezent)
+    if (isBackground) {
+        const toast = document.createElement('div');
+        toast.style.cssText = `
+            position: fixed; top: 20px; right: 20px;
+            background: rgba(0,102,204,0.9); color: white;
+            padding: 10px 15px; border-radius: 8px;
+            font-size: 14px; z-index: 10000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            transition: opacity 0.3s ease;
+        `;
+        toast.textContent = message;
+        document.body.appendChild(toast);
+
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            setTimeout(() => document.body.removeChild(toast), 300);
+        }, 3000);
+    }
+}
+
 // Verwende Konfiguration aus config.js
 const TRACK_SCHEDULES = EXTERNAL_CONFIG.trackSchedules;
 const CLASS_TO_TRACK = EXTERNAL_CONFIG.classToTrack;
@@ -226,13 +365,12 @@ function initializeReferenceWeek() {
     hideTrackSelection(); // Verstecke Schienen-Auswahl bei erfolgreicher Erkennung
     preselectTrack(savedTrack);
     updateDashboardLoadingProgress(1, 'Schiene erkannt', `${savedTrack} (${totalWeeks} Wochen) - Woche ${currentWeek}`);
-    setTimeout(() => {
-      const step2 = document.getElementById('step2');
-      if (step2) {
-        step2.className = 'progress-step completed';
-        step2.innerHTML = `✓ ${savedTrack} identifiziert (${totalWeeks} Wochen)`;
-      }
-    }, 300);
+    // Sofortige UI-Updates für bessere Performance
+    const step2 = document.getElementById('step2');
+    if (step2) {
+      step2.className = 'progress-step completed';
+      step2.innerHTML = `✓ ${savedTrack} identifiziert (${totalWeeks} Wochen)`;
+    }
     console.log(`Gespeicherte Schulwoche ${currentWeek} für ${savedTrack}`);
     return;
   }
@@ -246,13 +384,12 @@ function initializeReferenceWeek() {
     hideTrackSelection(); // Verstecke Schienen-Auswahl bei erfolgreicher Erkennung
     preselectTrack(track);
     updateDashboardLoadingProgress(1, 'Klasse erkannt', `${savedClass} → ${track} (${totalWeeks} Wochen)`);
-    setTimeout(() => {
-      const step2 = document.getElementById('step2');
-      if (step2) {
-        step2.className = 'progress-step completed';
-        step2.innerHTML = `✓ ${savedClass} → ${track} identifiziert`;
-      }
-    }, 300);
+    // Sofortige UI-Updates für bessere Performance
+    const step2 = document.getElementById('step2');
+    if (step2) {
+      step2.className = 'progress-step completed';
+      step2.innerHTML = `✓ ${savedClass} → ${track} identifiziert`;
+    }
     console.log(`Automatische Schulwoche ${currentWeek} für Klasse ${savedClass} (${track})`);
     return;
   }
@@ -269,13 +406,12 @@ function initializeReferenceWeek() {
       hideTrackSelection(); // Verstecke Schienen-Auswahl bei erfolgreicher automatischer Erkennung
       preselectTrack(track);
       updateDashboardLoadingProgress(1, 'Schiene erkannt!', `${detectedClass} → ${track} (${totalWeeks} Wochen)`);
-      setTimeout(() => {
-        const step2 = document.getElementById('step2');
-        if (step2) {
-          step2.className = 'progress-step completed';
-          step2.innerHTML = `✓ ${detectedClass} → ${track} identifiziert`;
-        }
-      }, 300);
+      // Sofortige UI-Updates für bessere Performance
+      const step2 = document.getElementById('step2');
+      if (step2) {
+        step2.className = 'progress-step completed';
+        step2.innerHTML = `✓ ${detectedClass} → ${track} identifiziert`;
+      }
       console.log(`Automatische Schulwoche ${currentWeek} für erkannte Klasse ${detectedClass} (${track})`);
     } else {
       // Fallback: Standard verwenden, aber Buttons aktiviert lassen für manuelle Auswahl
@@ -284,13 +420,12 @@ function initializeReferenceWeek() {
       showTrackSelection(); // Zeige Schienen-Auswahl wenn keine automatische Erkennung möglich
       enableTrackButtons();
       updateDashboardLoadingProgress(1, 'Standard-Modus', 'Manuelle Schienen-Auswahl verfügbar');
-      setTimeout(() => {
-        const step2 = document.getElementById('step2');
-        if (step2) {
-          step2.className = 'progress-step completed';
-          step2.innerHTML = EXTERNAL_CONFIG.ui.standardMode;
-        }
-      }, 300);
+      // Sofortige UI-Updates für bessere Performance
+      const step2 = document.getElementById('step2');
+      if (step2) {
+        step2.className = 'progress-step completed';
+        step2.innerHTML = EXTERNAL_CONFIG.ui.standardMode;
+      }
       console.log(`Keine Klasse erkannt - verwende Standard (${totalWeeks} Wochen). Schienen-Auswahl verfügbar.`);
     }
   });
@@ -689,30 +824,48 @@ function updateLoadingProgress(completed, total) {
 }
 
 
-function extractPflichtOverview() {
+function extractPflichtOverview(useCache = true) {
+    // Prüfe Cache zuerst
+    const cachedData = useCache ? getCachedData('pflicht') : null;
+    if (cachedData) {
+        showCacheNotification('pflicht');
+        window.pflichtData = cachedData;
+        updatePflichtStats();
+
+        // Background update starten
+        setTimeout(() => {
+            showCacheNotification('pflicht', true);
+            extractPflichtOverview(false); // ohne Cache
+        }, 100);
+
+        return Promise.resolve();
+    }
+
     showLoading(true);
     updateDashboardLoadingProgress(3, EXTERNAL_CONFIG.loading.progress.loadPflicht, EXTERNAL_CONFIG.loading.progress.loadPflichtSub);
 
     const assignmentOverviewUrl = `https://lernplattform.mebis.bycs.de/course/overview.php?id=${COURSE_ID}&expand[]=assign#assign_overview_collapsible`;
     const quizOverviewUrl = `https://lernplattform.mebis.bycs.de/course/overview.php?id=${COURSE_ID}&expand[]=quiz#quiz_overview_collapsible`;
 
-    fetchData(assignmentOverviewUrl, quizOverviewUrl)
+    return fetchData(assignmentOverviewUrl, quizOverviewUrl)
         .then(data => {
+            // Cache die erfolgreichen Daten
+            setCachedData('pflicht', data);
+
             window.pflichtData = data;
             updatePflichtTable(data);
             createPflichtCharts(data);
             updatePflichtStats();
             const pfSection = document.getElementById('pflichtFilterSection');
             if (pfSection) pfSection.style.display = 'block';
-            
+
             updateDashboardLoadingProgress(3, `${data.length} Pflichtaufgaben geladen`, 'Aufgaben und Quizzes analysiert');
-            setTimeout(() => {
-                const step4 = document.getElementById('step4');
-                if (step4) {
-                    step4.className = 'progress-step completed';
-                    step4.innerHTML = `✓ ${data.length} Pflichtaufgaben identifiziert`;
-                }
-            }, 300);
+            // Sofortige UI-Updates für bessere Performance
+            const step4 = document.getElementById('step4');
+            if (step4) {
+                step4.className = 'progress-step completed';
+                step4.innerHTML = `✓ ${data.length} Pflichtaufgaben identifiziert`;
+            }
         })
         .catch(err => {
             console.error('extractPflichtOverview error:', err);
@@ -721,7 +874,23 @@ function extractPflichtOverview() {
         .finally(() => showLoading(false));
 }
 
-async function extractFromChecklistIndex() {
+async function extractFromChecklistIndex(useCache = true) {
+    // Prüfe Cache zuerst
+    const cachedData = useCache ? getCachedData('checklists') : null;
+    if (cachedData) {
+        showCacheNotification('checklists');
+        createCharts(cachedData);
+        updateChecklistTable(cachedData);
+
+        // Background update starten
+        setTimeout(() => {
+            showCacheNotification('checklists', true);
+            extractFromChecklistIndex(false); // ohne Cache
+        }, 100);
+
+        return;
+    }
+
     showLoading(true);
     updateDashboardLoadingProgress(2, EXTERNAL_CONFIG.loading.progress.loadChecklists, EXTERNAL_CONFIG.loading.progress.loadChecklistsSub);
     console.log(EXTERNAL_CONFIG.debug.startingExtraction);
@@ -743,13 +912,12 @@ async function extractFromChecklistIndex() {
         document.getElementById('totalCount').textContent = checklistLinks.length;
         
         updateDashboardLoadingProgress(2, `${checklistLinks.length} Checklisten gefunden`, 'Lade Details...');
-        setTimeout(() => {
-            const step3 = document.getElementById('step3');
-            if (step3) {
-                step3.className = 'progress-step completed';
-                step3.innerHTML = `✓ ${checklistLinks.length} Checklisten gefunden`;
-            }
-        }, 300);
+        // Sofortige UI-Updates für bessere Performance
+        const step3 = document.getElementById('step3');
+        if (step3) {
+            step3.className = 'progress-step completed';
+            step3.innerHTML = `✓ ${checklistLinks.length} Checklisten gefunden`;
+        }
 
         if (checklistLinks.length === 0) {
             console.warn('No checklist links found in HTML. Checking for alternative selectors...');
@@ -768,53 +936,86 @@ async function extractFromChecklistIndex() {
 
         console.log(`Starting to load ${totalChecklists} checklists with concurrency limit of ${CONCURRENT_LIMIT}`);
 
+        let timeoutCount = 0;
+        const maxTimeouts = 12; // Weniger restriktiv - mehr Versuche
+
         const loadWithProgress = async (link, index) => {
             const name = link.textContent.trim();
             const url = `https://lernplattform.mebis.bycs.de/mod/checklist/${link.getAttribute('href')}`;
-            
+
+            // Fail-Fast: Skip bei zu vielen Timeouts
+            if (timeoutCount >= maxTimeouts) {
+                completedCount++;
+                updateLoadingProgress(completedCount, totalChecklists);
+                return { name: `${name} (Übersprungen)`, url, pflichtProgress: 0, gesamtProgress: 0, error: "Server überlastet - übersprungen" };
+            }
+
             try {
                 const data = await loadSingleChecklist(url);
                 completedCount++;
-                
+
                 // Update loading indicator with progress
                 updateLoadingProgress(completedCount, totalChecklists);
-                
+
                 return { name, url, ...data };
             } catch (error) {
                 completedCount++;
+                if (error.message.includes('Timeout')) {
+                    timeoutCount++;
+                }
                 console.warn(`Failed to load checklist ${name}:`, error.message);
                 updateLoadingProgress(completedCount, totalChecklists);
                 return { name: `${name} (Fehler)`, url, pflichtProgress: 0, gesamtProgress: 0, error: error.message };
             }
         };
 
-        // Process checklists in batches with concurrency limit
+        // Process checklists in batches with concurrency limit + server-friendly delays
         const results = [];
         for (let i = 0; i < checklistLinks.length; i += CONCURRENT_LIMIT) {
             const batch = checklistLinks.slice(i, i + CONCURRENT_LIMIT);
             const batchPromises = batch.map((link, batchIndex) => loadWithProgress(link, i + batchIndex));
             const batchResults = await Promise.all(batchPromises);
             results.push(...batchResults);
+
+            // Kurze Pause zwischen Batches um Server zu schonen (außer letzter Batch)
+            if (i + CONCURRENT_LIMIT < checklistLinks.length) {
+                const delay = EXTERNAL_CONFIG.system.batchDelay || 500;
+                console.log(`Batch ${Math.ceil((i + CONCURRENT_LIMIT) / CONCURRENT_LIMIT)} von ${Math.ceil(checklistLinks.length / CONCURRENT_LIMIT)} geladen, Pause: ${delay}ms`);
+                await new Promise(resolve => setTimeout(resolve, delay));
+            }
         }
 
         console.log(EXTERNAL_CONFIG.debug.allPromisesResolved, results.length);
         const valid = results.filter(item => !item.error);
         const errors = results.filter(item => item.error);
-        
+
         console.log(`Valid checklists: ${valid.length}, Errors: ${errors.length}`);
         if (errors.length > 0) {
             console.warn('Checklist loading errors:', errors.map(e => `${e.name}: ${e.error}`));
         }
-        
+
+        // Minimum Data Check: Sogar bei wenigen Daten fortfahren
         if (valid.length === 0) {
             console.error('No valid checklists loaded!');
             throw new Error('All checklist detail loads failed');
         }
+
+        // Performance-Info für User
+        if (errors.length > valid.length) {
+            console.warn(`⚠️ Server-Performance schlecht: ${errors.length} Fehler von ${results.length} Checklisten`);
+            updateDashboardLoadingProgress(2, EXTERNAL_CONFIG.loading.progress.serverSlow, `${valid.length}/${results.length} Checklisten verfügbar`);
+        } else if (errors.length > 0) {
+            updateDashboardLoadingProgress(2, EXTERNAL_CONFIG.loading.progress.serverTimeout, `${errors.length} Checklisten übersprungen`);
+        }
         
         console.log(EXTERNAL_CONFIG.debug.creatingCharts, valid);
+
+        // Cache die erfolgreichen Daten
+        setCachedData('checklists', valid);
+
         createCharts(valid);
         updateChecklistTable(valid);
-        
+
     } catch (err) {
         console.error('extractFromChecklistIndex error:', err);
         checklistData = [];
@@ -833,14 +1034,15 @@ async function extractFromChecklistIndex() {
     }
 }
 
-async function loadSingleChecklist(url) {
-    const TIMEOUT_MS = EXTERNAL_CONFIG.system.timeoutMs; // timeout from config
-    
+async function loadSingleChecklist(url, retryCount = 0) {
+    const isRetry = retryCount > 0;
+    const TIMEOUT_MS = isRetry ? EXTERNAL_CONFIG.system.retryTimeoutMs : EXTERNAL_CONFIG.system.timeoutMs;
+
     const timeoutPromise = new Promise((_, reject) => {
         setTimeout(() => reject(new Error('Request timeout')), TIMEOUT_MS);
     });
-    
-    const fetchPromise = fetch(url, { 
+
+    const fetchPromise = fetch(url, {
         credentials: 'same-origin',
         signal: AbortSignal.timeout ? AbortSignal.timeout(TIMEOUT_MS) : undefined
     }).then(response => {
@@ -849,7 +1051,7 @@ async function loadSingleChecklist(url) {
         }
         return response.text();
     });
-    
+
     try {
         const html = await Promise.race([fetchPromise, timeoutPromise]);
         const parser = new DOMParser();
@@ -859,20 +1061,26 @@ async function loadSingleChecklist(url) {
         if (progressBars.length >= 2) {
             const pflichtStyle = progressBars[0].getAttribute('style') || '';
             const gesamtStyle = progressBars[1].getAttribute('style') || '';
-            
+
             const pflichtMatch = pflichtStyle.match(/width:\s*(\d+(?:\.\d+)?)%/);
             const gesamtMatch = gesamtStyle.match(/width:\s*(\d+(?:\.\d+)?)%/);
-            
+
             const pflichtProgress = pflichtMatch ? parseFloat(pflichtMatch[1]) : 0;
             const gesamtProgress = gesamtMatch ? parseFloat(gesamtMatch[1]) : 0;
-            
+
             return { pflichtProgress, gesamtProgress };
         }
 
         return { pflichtProgress: 0, gesamtProgress: 0 };
     } catch (error) {
+        // Retry logic: Bei erstem Timeout retry mit längerem Timeout
+        if (error.message === 'Request timeout' && retryCount === 0) {
+            console.warn(`Timeout für ${url}, versuche erneut mit ${EXTERNAL_CONFIG.system.retryTimeoutMs}ms...`);
+            return await loadSingleChecklist(url, 1);
+        }
+
         if (error.message === 'Request timeout') {
-            throw new Error('Timeout beim Laden der Checkliste');
+            throw new Error(`Timeout beim Laden der Checkliste (${TIMEOUT_MS}ms)`);
         }
         throw error;
     }
@@ -2254,12 +2462,13 @@ window.addEventListener('DOMContentLoaded', () => {
     // Initialisiere Konfetti Easter Egg
     setupConfettiEasterEgg();
 
+    // Cache-Management für Debug/Development
+    window.clearMebisCache = clearCache; // Funktion global verfügbar machen
+
     showTab('home');
 
-    const sliderDelay = 5000;
-    setTimeout(() => {
-        initSliders();
-    }, sliderDelay);
+    // Sofortige Initialisierung der Slider für bessere Performance
+    initSliders();
 
     // Automatische Referenzwochen-Initialisierung
     initializeReferenceWeek();
@@ -2268,8 +2477,13 @@ window.addEventListener('DOMContentLoaded', () => {
     window.dashboardLoadingStartTime = Date.now();
     showDashboardLoading(true);
 
-    extractFromChecklistIndex();
-    extractPflichtOverview();
+    // Parallel data loading für bessere Performance
+    Promise.all([
+        extractFromChecklistIndex(),
+        extractPflichtOverview()
+    ]).catch(error => {
+        console.error('Fehler beim parallelen Laden der Daten:', error);
+    });
 
     // RefreshBtn Event Handler
     const refreshBtn = document.getElementById('refreshBtn');
@@ -2282,11 +2496,12 @@ window.addEventListener('DOMContentLoaded', () => {
                 setRefreshButtonLoading(true);
                 window.dashboardLoadingStartTime = Date.now();
                 showDashboardLoading(true);
-                // if (activeTab === 'checklists') {
-                    await extractFromChecklistIndex();
-                // } else {
-                    await extractPflichtOverview();
-                // }
+
+                // Force refresh - keine Cache-Nutzung bei manueller Aktualisierung
+                await Promise.all([
+                    extractFromChecklistIndex(false), // false = kein Cache
+                    extractPflichtOverview(false)     // false = kein Cache
+                ]);
             } catch (e) {
                 console.error('Refresh fehlgeschlagen:', e);
             } finally {
