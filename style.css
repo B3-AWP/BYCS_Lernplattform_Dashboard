@@ -92,7 +92,7 @@ body {
 
 .filter-section {
     background: var(--light-color);
-    padding: var(--spacing-md);
+    padding: var(--spacing-sm);
     border-radius: var(--radius-md) var(--radius-md) 0 0;
     border: 1px solid var(--border-color);
     border-bottom: none;
@@ -600,8 +600,9 @@ body {
 
 .info-table th, .info-table td {
     border: 1px solid #ddd;
-    padding: var(--spacing-sm);
+    padding: 5px 1px 5px 1px;
     text-align: left;
+    font-size: var(--font-size-sm);
 }
 
 .info-table th {
@@ -677,7 +678,7 @@ h1 {
 
 .filter-controls {
     display: flex;
-    gap: var(--spacing-lg);
+    gap: var(--spacing-sm);
     flex-wrap: wrap;
     align-items: flex-start;
     font-size: var(--font-size-sm);
@@ -761,12 +762,12 @@ h1 {
 .single-slider-container {
     display: flex;
     align-items: center;
-    gap: var(--spacing-md);
+    /* gap: var(--spacing-md); */
     margin-bottom: var(--spacing-sm);
 }
 
 .single-range {
-    width: 120px;
+    width: 75px;
     height: 10px;
     -webkit-appearance: none;
     appearance: none;
