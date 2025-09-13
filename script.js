@@ -2115,11 +2115,145 @@ function toggleChart(chartId) {
     }
 }
 
+// ================================
+// KONFETTI EASTER EGG SYSTEM
+// ================================
+
+// Session tracking für Konfetti (einmalig pro Session)
+let confettiTriggered = false;
+
+function createConfetti(type = 'gold') {
+    if (confettiTriggered) {
+        console.log('Konfetti bereits ausgelöst in dieser Session');
+        return false;
+    }
+
+    confettiTriggered = true;
+    console.log(`${EXTERNAL_CONFIG.confetti.messages[type === 'gold' ? 'grade1' : 'grade2']}`);
+
+    const confettiContainer = document.createElement('div');
+    confettiContainer.className = 'confetti';
+    confettiContainer.style.position = 'fixed';
+    confettiContainer.style.top = '0';
+    confettiContainer.style.left = '0';
+    confettiContainer.style.width = '100%';
+    confettiContainer.style.height = '100vh';
+    confettiContainer.style.pointerEvents = 'none';
+    confettiContainer.style.zIndex = '9999';
+    document.body.appendChild(confettiContainer);
+
+    // Erstelle 80 Konfetti-Stücke für eindrucksvollen Effekt
+    for (let i = 0; i < 80; i++) {
+        setTimeout(() => {
+            const piece = document.createElement('div');
+            piece.className = 'confetti-piece';
+
+            // Wähle zufällige Farbvariation
+            const colorVariation = Math.floor(Math.random() * 5) + 1;
+            piece.classList.add(`confetti-${type}-${colorVariation}`);
+
+            // Zufällige horizontale Position
+            piece.style.left = Math.random() * 100 + '%';
+
+            // Zufällige Größe für Variation
+            const size = Math.random() * 4 + 6; // 6-10px
+            piece.style.width = size + 'px';
+            piece.style.height = size + 'px';
+
+            // Zufällige Animationsdauer
+            const duration = Math.random() * 1 + 2.5; // 2.5-3.5s
+            piece.style.animationDuration = duration + 's';
+
+            // Zufällige Delay für natürlicheren Effekt
+            const delay = Math.random() * 200;
+            piece.style.animationDelay = delay + 'ms';
+
+            confettiContainer.appendChild(piece);
+        }, i * 20); // Kleine Verzögerung zwischen Konfetti-Stücken
+    }
+
+    // Cleanup nach Animation
+    setTimeout(() => {
+        if (document.body.contains(confettiContainer)) {
+            document.body.removeChild(confettiContainer);
+        }
+    }, 5000);
+
+    return true; // Erfolgreich ausgelöst
+}
+
+function getConfettiTypeFromGrade(percentage) {
+    const grade = getGradeNumber(percentage);
+
+    if (grade === 1) return 'gold';    // Note 1 (≥91%)
+    if (grade === 2) return 'silver';  // Note 2 (≥81%)
+    return null; // Keine anderen Noten lösen Konfetti aus
+}
+
+function setupConfettiEasterEgg() {
+    // IHK Grade Card Click Handler
+    const ihkGradeCard = document.getElementById('ihkGradeText');
+    const pflichtGradeCard = document.getElementById('pflichtAverageGrade');
+
+    if (ihkGradeCard) {
+        // Füge Easter Egg Klasse für Hover-Effekt hinzu
+        ihkGradeCard.parentElement.classList.add('easter-egg-card');
+
+        ihkGradeCard.addEventListener('click', (e) => {
+            e.preventDefault();
+
+            // Hole aktuellen IHK Grade Wert
+            const gradeText = ihkGradeCard.textContent;
+            const percentageMatch = gradeText.match(/(\d+)%/);
+
+            if (percentageMatch) {
+                const percentage = parseInt(percentageMatch[1]);
+                const confettiType = getConfettiTypeFromGrade(percentage);
+
+                if (confettiType) {
+                    createConfetti(confettiType);
+                }
+            }
+        });
+    }
+
+    if (pflichtGradeCard) {
+        // Füge Easter Egg Klasse für Hover-Effekt hinzu
+        pflichtGradeCard.parentElement.classList.add('easter-egg-card');
+
+        pflichtGradeCard.addEventListener('click', (e) => {
+            e.preventDefault();
+
+            // Hole aktuellen Pflicht Grade (Note als Zahl)
+            const gradeText = pflichtGradeCard.textContent;
+
+            // Parse Note (z.B. "1,2" oder "2,0")
+            const gradeMatch = gradeText.match(/(\d),?(\d)?/);
+            if (gradeMatch) {
+                const grade = parseInt(gradeMatch[1]);
+
+                // Konvertiere Note zu Prozent für Konfetti-Bestimmung
+                let percentage = 0;
+                if (grade === 1) percentage = 95; // Note 1 → Gold
+                else if (grade === 2) percentage = 85; // Note 2 → Silber
+
+                const confettiType = getConfettiTypeFromGrade(percentage);
+                if (confettiType) {
+                    createConfetti(confettiType);
+                }
+            }
+        });
+    }
+}
+
 // Event Listeners
 window.addEventListener('DOMContentLoaded', () => {
     // Initialisiere UI-Texte aus Konfiguration
     initializeLoadingTexts();
-    
+
+    // Initialisiere Konfetti Easter Egg
+    setupConfettiEasterEgg();
+
     showTab('home');
 
     const sliderDelay = 5000;

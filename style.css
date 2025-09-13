@@ -665,6 +665,96 @@ body {
     opacity: 0.3;
 }
 
+/* Konfetti Easter Egg Animation */
+.confetti {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100vh;
+    z-index: 9999;
+    pointer-events: none;
+    opacity: 1;
+}
+
+.confetti-piece {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    position: absolute;
+    top: -30px;
+    animation: confetti-fall 4s ease-out forwards;
+    box-shadow: 0 0 6px rgba(255, 215, 0, 0.5);
+}
+
+@keyframes confetti-fall {
+    0% {
+        opacity: 1;
+        transform: translateY(-30px) rotateX(0deg) rotateY(0deg) scale(1);
+    }
+    10% {
+        opacity: 1;
+        transform: translateY(10vh) rotateX(180deg) rotateY(90deg) scale(1.2);
+    }
+    50% {
+        opacity: 0.8;
+        transform: translateY(50vh) rotateX(360deg) rotateY(270deg) scale(1);
+    }
+    100% {
+        opacity: 0;
+        transform: translateY(110vh) rotateX(720deg) rotateY(540deg) scale(0.5);
+    }
+}
+
+/* Gold confetti variations - lebendiger und glänzender */
+.confetti-gold-1 {
+    background: linear-gradient(135deg, #FFD700, #FFA500);
+    box-shadow: 0 0 8px rgba(255, 215, 0, 0.7);
+}
+.confetti-gold-2 {
+    background: linear-gradient(135deg, #FFDC00, #FF8C00);
+    box-shadow: 0 0 8px rgba(255, 220, 0, 0.7);
+}
+.confetti-gold-3 {
+    background: linear-gradient(135deg, #FFEB3B, #FF6F00);
+    box-shadow: 0 0 8px rgba(255, 235, 59, 0.7);
+}
+.confetti-gold-4 {
+    background: linear-gradient(135deg, #FFC107, #E65100);
+    box-shadow: 0 0 8px rgba(255, 193, 7, 0.7);
+}
+.confetti-gold-5 {
+    background: linear-gradient(135deg, #FFAB00, #FF3D00);
+    box-shadow: 0 0 8px rgba(255, 171, 0, 0.7);
+}
+
+/* Silver confetti variations - glänzender und metallischer */
+.confetti-silver-1 {
+    background: linear-gradient(135deg, #E8E8E8, #B0B0B0);
+    box-shadow: 0 0 8px rgba(224, 224, 224, 0.7);
+}
+.confetti-silver-2 {
+    background: linear-gradient(135deg, #F5F5F5, #9E9E9E);
+    box-shadow: 0 0 8px rgba(245, 245, 245, 0.7);
+}
+.confetti-silver-3 {
+    background: linear-gradient(135deg, #EEEEEE, #757575);
+    box-shadow: 0 0 8px rgba(238, 238, 238, 0.7);
+}
+.confetti-silver-4 {
+    background: linear-gradient(135deg, #E0E0E0, #616161);
+    box-shadow: 0 0 8px rgba(224, 224, 224, 0.7);
+}
+.confetti-silver-5 {
+    background: linear-gradient(135deg, #D5D5D5, #424242);
+    box-shadow: 0 0 8px rgba(213, 213, 213, 0.7);
+}
+
+/* Clickable easter egg - no visual hints to keep it secret */
+.easter-egg-card {
+    /* Kein cursor: pointer oder hover-Effekte für geheimes Easter Egg */
+}
+
 .progress-indicator {
     display: inline-block;
     width: 60px;
