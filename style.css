@@ -640,6 +640,31 @@ body {
     transition: all 0.2s ease;
 }
 
+/* Progress cell with background progress bar */
+.progress-cell {
+    position: relative;
+    padding: 8px 12px !important;
+    color: var(--dark-color);
+    font-weight: 600;
+    text-align: center;
+    z-index: 2;
+    overflow: hidden;
+}
+
+.progress-cell::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: var(--progress-width, 0%);
+    background: var(--progress-color, var(--success-color));
+    border-radius: 0;
+    transition: width 0.8s ease-in-out;
+    z-index: -1;
+    opacity: 0.3;
+}
+
 .progress-indicator {
     display: inline-block;
     width: 60px;
