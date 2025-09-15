@@ -793,12 +793,16 @@ function checkAndHideDashboardLoading() {
         // Show completion message
         const totalItems = checklistData.length + window.pflichtData.length;
         updateDashboardLoadingProgress(4, 'Dashboard bereit!', `${totalItems} Elemente erfolgreich geladen`);
-        
+
+        // Update overview statistics now that both datasets are loaded
+        updateStatistics();
+        updatePflichtStats();
+
         // Ensure loading is visible for at least 1.5 seconds for better UX
         const loadingStartTime = window.dashboardLoadingStartTime || 0;
         const elapsed = Date.now() - loadingStartTime;
         const minLoadingTime = 1500; // 1.5 seconds
-        
+
         setTimeout(() => {
             showDashboardLoading(false);
         }, Math.max(500, minLoadingTime - elapsed)); // At least 500ms to show completion
