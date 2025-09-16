@@ -835,6 +835,7 @@ function extractPflichtOverview(useCache = true) {
         showCacheNotification('pflicht');
         window.pflichtData = cachedData;
         updatePflichtStats();
+        showBothStatsRows(); // Stelle sicher, dass die Stats-Reihen angezeigt werden
 
         // Background update starten
         setTimeout(() => {
@@ -1258,36 +1259,60 @@ function updateCombinedStats(completed, total, referencePercentage = null) {
     const percentageElement = document.getElementById('completionPercentage');
     const ringElement = document.getElementById('completionRing');
 
-    if (!completedElement || !totalElement || !percentageElement || !ringElement) return;
+    if (!completedElement || !totalElement || !percentageElement || !ringElement) {
+        // Retry after a short delay if elements are not ready yet
+        setTimeout(() => updateCombinedStats(completed, total, referencePercentage), 100);
+        return;
+    }
 
     // Bei letzter Woche: Original-Total anzeigen, sonst erwartete Anzahl
-    const expectedTotal = currentReferenceWeek === TOTAL_WEEKS ? 
-        total : 
+    const expectedTotal = currentReferenceWeek === TOTAL_WEEKS ?
+        total :
         Math.ceil((total / TOTAL_WEEKS) * currentReferenceWeek);
 
-    animateNumber('completedCount', completed);
-    totalElement.textContent = expectedTotal;
-
-    // Warte bis Animation abgeschlossen ist, dann berechne Prozentsatz basierend auf tatsächlich angezeigten Werten
-    setTimeout(() => {
-        const displayedCompleted = parseInt(completedElement.textContent) || 0;
-        const displayedTotal = parseInt(totalElement.textContent) || 0;
-        const percentage = displayedTotal > 0 ? Math.round((displayedCompleted / displayedTotal) * 100) : 0;
-        
+    // Funktion für Ring-Update
+    const updateRing = (percentage) => {
         const circumference = 2 * Math.PI * 25;
-        // For ring visual: cap at 100% (full circle), but text can show over 100%
         const visualPercentage = Math.min(100, percentage);
         const offset = circumference - (visualPercentage / 100) * circumference;
 
         ringElement.style.strokeDashoffset = offset;
-        // Text can show over 100%
         percentageElement.textContent = percentage + '%';
 
-        // Use actual percentage for color (even >100%)
         const color = percentage >= 100 ? '#10b981' : getProgressColor(percentage);
         ringElement.style.stroke = color;
         percentageElement.style.color = color;
-    }, 400);
+    };
+
+    // Berechne sofort den korrekten Prozentsatz für initiale Anzeige
+    const immediatePercentage = expectedTotal > 0 ? Math.round((completed / expectedTotal) * 100) : 0;
+
+    // Ring und Text sofort mit korrektem Wert setzen
+    updateRing(immediatePercentage);
+
+    // Prüfe ob Animation nötig ist
+    const currentDisplayed = parseInt(completedElement.textContent) || 0;
+    const needsAnimation = currentDisplayed !== completed;
+
+    if (needsAnimation) {
+        animateNumber('completedCount', completed);
+
+        // Warte bis Animation abgeschlossen ist (30 * 50ms + Buffer), dann berechne Prozentsatz basierend auf tatsächlich angezeigten Werten
+        setTimeout(() => {
+            const displayedCompleted = parseInt(completedElement.textContent) || 0;
+            const displayedTotal = parseInt(totalElement.textContent) || 0;
+            const percentage = displayedTotal > 0 ? Math.round((displayedCompleted / displayedTotal) * 100) : 0;
+
+            // Nur updaten wenn sich der Prozentsatz geändert hat
+            if (percentage !== immediatePercentage) {
+                updateRing(percentage);
+            }
+        }, 1600);
+    } else {
+        completedElement.textContent = completed;
+    }
+
+    totalElement.textContent = expectedTotal;
 }
 
 function updatePflichtStats() {
@@ -1347,36 +1372,54 @@ function updatePflichtCombinedStats(completed, total, referencePercentage = null
     const percentageElement = document.getElementById('pflichtCompletionPercentage');
     const ringElement = document.getElementById('pflichtCompletionRing');
 
-    if (!completedElement || !totalElement || !percentageElement || !ringElement) return;
+    if (!completedElement || !totalElement || !percentageElement || !ringElement) {
+        // Retry after a short delay if elements are not ready yet
+        setTimeout(() => updatePflichtCombinedStats(completed, total, referencePercentage), 100);
+        return;
+    }
 
     // Bei letzter Woche: Original-Total anzeigen, sonst erwartete Anzahl
-    const expectedTotal = currentReferenceWeek === TOTAL_WEEKS ? 
-        total : 
+    const expectedTotal = currentReferenceWeek === TOTAL_WEEKS ?
+        total :
         Math.ceil((total / TOTAL_WEEKS) * currentReferenceWeek);
 
-    animateNumber('pflichtCompletedCount', completed);
-    totalElement.textContent = expectedTotal;
-
-    // Warte bis Animation abgeschlossen ist, dann berechne Prozentsatz basierend auf tatsächlich angezeigten Werten
-    setTimeout(() => {
-        const displayedCompleted = parseInt(completedElement.textContent) || 0;
-        const displayedTotal = parseInt(totalElement.textContent) || 0;
-        const percentage = displayedTotal > 0 ? Math.round((displayedCompleted / displayedTotal) * 100) : 0;
-        
+    // Funktion für Ring-Update
+    const updateRing = (percentage) => {
         const circumference = 2 * Math.PI * 25;
-        // For ring visual: cap at 100% (full circle), but text can show over 100%
         const visualPercentage = Math.min(100, percentage);
         const offset = circumference - (visualPercentage / 100) * circumference;
 
         ringElement.style.strokeDashoffset = offset;
-        // Text can show over 100%
         percentageElement.textContent = percentage + '%';
 
-        // Use actual percentage for color (even >100%)
         const color = percentage >= 100 ? '#10b981' : getProgressColor(percentage);
         ringElement.style.stroke = color;
         percentageElement.style.color = color;
-    }, 400);
+    };
+
+    // Berechne sofort den korrekten Prozentsatz für initiale Anzeige
+    const immediatePercentage = expectedTotal > 0 ? Math.round((completed / expectedTotal) * 100) : 0;
+
+    // Ring und Text sofort mit korrektem Wert setzen
+    updateRing(immediatePercentage);
+
+    // Completed-Wert nur animieren, wenn er sich tatsächlich geändert hat (nicht bei Reference Week Changes)
+    const currentCompleted = parseInt(completedElement.textContent) || 0;
+    if (currentCompleted !== completed) {
+        animateNumber('pflichtCompletedCount', completed);
+    } else {
+        completedElement.textContent = completed; // Stelle sicher, dass der korrekte Wert angezeigt wird
+    }
+    totalElement.textContent = expectedTotal;
+
+    // Warte bis Animation abgeschlossen ist (30 * 50ms + Buffer), dann berechne Prozentsatz basierend auf tatsächlich angezeigten Werten
+    setTimeout(() => {
+        const displayedCompleted = parseInt(completedElement.textContent) || 0;
+        const displayedTotal = parseInt(totalElement.textContent) || 0;
+        const percentage = displayedTotal > 0 ? Math.round((displayedCompleted / displayedTotal) * 100) : 0;
+
+        updateRing(percentage);
+    }, 1600);
 }
 
 let currentPflichtAvg = 0;
