@@ -1064,6 +1064,7 @@ async function loadSingleChecklist(url, retryCount = 0) {
         const progressBars = doc.querySelectorAll('.checklist_progress_inner');
 
         if (progressBars.length >= 2) {
+            // Checkliste hat Pflichtelemente UND Alle Elemente
             const pflichtStyle = progressBars[0].getAttribute('style') || '';
             const gesamtStyle = progressBars[1].getAttribute('style') || '';
 
@@ -1074,6 +1075,13 @@ async function loadSingleChecklist(url, retryCount = 0) {
             const gesamtProgress = gesamtMatch ? parseFloat(gesamtMatch[1]) : 0;
 
             return { pflichtProgress, gesamtProgress };
+        } else if (progressBars.length === 1) {
+            // Checkliste hat NUR "Alle Elemente" (keine Pflichtelemente)
+            const gesamtStyle = progressBars[0].getAttribute('style') || '';
+            const gesamtMatch = gesamtStyle.match(/width:\s*(\d+(?:\.\d+)?)%/);
+            const gesamtProgress = gesamtMatch ? parseFloat(gesamtMatch[1]) : 0;
+
+            return { pflichtProgress: null, gesamtProgress }; // null = keine Pflichtelemente vorhanden
         }
 
         return { pflichtProgress: 0, gesamtProgress: 0 };
@@ -1112,10 +1120,16 @@ function updateStatistics() {
     const totalChecklists = validChecklists.length;
 
     if (totalChecklists > 0) {
+        // Nur Checklisten MIT Pflichtelementen für Pflicht-Durchschnitt berücksichtigen
+        const checklistsWithPflicht = validChecklists.filter(item => item.pflichtProgress !== null);
+        const pflichtCount = checklistsWithPflicht.length;
+
         // Ursprüngliche Werte berechnen
-        const avgPflicht = validChecklists.reduce((sum, item) => sum + (item.pflichtProgress || 0), 0) / totalChecklists;
+        const avgPflicht = pflichtCount > 0
+            ? checklistsWithPflicht.reduce((sum, item) => sum + (item.pflichtProgress || 0), 0) / pflichtCount
+            : 0;
         const avgGesamt = validChecklists.reduce((sum, item) => sum + (item.gesamtProgress || 0), 0) / totalChecklists;
-        const completed = validChecklists.filter(item => item.pflichtProgress >= 100).length;
+        const completed = checklistsWithPflicht.filter(item => item.pflichtProgress >= 100).length;
         
         // Referenzwochen-adjustierte Werte berechnen
         const referenceAvgPflicht = calculateReferenceProgressFromPercentage(avgPflicht, totalChecklists);
@@ -1707,21 +1721,26 @@ function updateChecklistTable(filteredData) {
     html += '<tbody id="checklistTableBody">';
 
     filteredData.forEach((item, index) => {
-        const originalPflichtPercent = item.pflichtProgress !== undefined ? item.pflichtProgress : 0;
+        // Unterscheide zwischen null (nicht vorhanden) und undefined/0 (vorhanden aber 0%)
+        const hasPflicht = item.pflichtProgress !== null;
+        const originalPflichtPercent = hasPflicht ? (item.pflichtProgress || 0) : null;
         const originalGesamtPercent = item.gesamtProgress !== undefined ? item.gesamtProgress : 0;
-        
+
         // Immer die tatsächlichen Prozentwerte anzeigen (keine Referenzwochen-Berechnung)
-        const pflichtDisplay = item.pflichtProgress !== undefined ? 
-            `${Math.round(originalPflichtPercent)}%` : 'n/a';
-        const gesamtDisplay = item.gesamtProgress !== undefined ? 
+        const pflichtDisplay = hasPflicht ?
+            `${Math.round(originalPflichtPercent)}%` : '-';
+        const gesamtDisplay = item.gesamtProgress !== undefined ?
             `${Math.round(originalGesamtPercent)}%` : 'n/a';
 
-        const pflichtColor = getProgressColor(originalPflichtPercent);
+        const pflichtColor = hasPflicht ? getProgressColor(originalPflichtPercent) : '#e9ecef';
         const gesamtColor = getProgressColor(originalGesamtPercent);
 
-        html += `<tr data-name="${item.name.toLowerCase()}" data-pflicht="${originalPflichtPercent}" data-gesamt="${originalGesamtPercent}">
+        const pflichtWidth = hasPflicht ? originalPflichtPercent : 0;
+        const pflichtValue = hasPflicht ? originalPflichtPercent : -1; // -1 für Sortierung
+
+        html += `<tr data-name="${item.name.toLowerCase()}" data-pflicht="${pflichtValue}" data-gesamt="${originalGesamtPercent}">
             <td><a href="${item.url}" target="_blank">${item.name}</a></td>
-            <td><strong class="progress-cell" data-value="${originalPflichtPercent}" style="--progress-width: ${originalPflichtPercent}%; --progress-color: ${pflichtColor};">${pflichtDisplay}</strong></td>
+            <td><strong class="progress-cell${hasPflicht ? '' : ' no-progress'}" data-value="${pflichtValue}" style="--progress-width: ${pflichtWidth}%; --progress-color: ${pflichtColor};">${pflichtDisplay}</strong></td>
             <td><strong class="progress-cell" data-value="${originalGesamtPercent}" style="--progress-width: ${originalGesamtPercent}%; --progress-color: ${gesamtColor};">${gesamtDisplay}</strong></td>
         </tr>`;
     });
@@ -1809,7 +1828,7 @@ function initCharts() {
 
 function updateCharts() {
     if (!checklistData.length) return;
-    
+
     // Ensure charts are initialized
     if (!detailPflichtChart || !detailGesamtChart) {
         console.log('Charts not initialized, initializing now...');
@@ -1818,23 +1837,25 @@ function updateCharts() {
     }
 
     const validChecklists = checklistData.filter(item => !item.error);
-    const shortNames = validChecklists.map(item => item.name.length > 15 ? item.name.substring(0, 15) + '...' : item.name);
 
-    // Immer ursprüngliche Werte verwenden (keine Referenzwochen-Berechnung für Charts)
-    const originalPflichtData = validChecklists.map(item => item.pflichtProgress || 0);
-    const originalGesamtData = validChecklists.map(item => item.gesamtProgress || 0);
-    
-    // Use IHK grade-based colors for both charts
-    const pflichtColors = originalPflichtData.map(item => getIHKGradeColor(item));
-    const gesamtColors = originalGesamtData.map(item => getIHKGradeColor(item));
+    // Für Pflicht-Chart: Nur Checklisten MIT Pflichtelementen
+    const checklistsWithPflicht = validChecklists.filter(item => item.pflichtProgress !== null);
+    const pflichtNames = checklistsWithPflicht.map(item => item.name.length > 15 ? item.name.substring(0, 15) + '...' : item.name);
+    const pflichtData = checklistsWithPflicht.map(item => item.pflichtProgress || 0);
+    const pflichtColors = pflichtData.map(item => getIHKGradeColor(item));
 
-    detailPflichtChart.data.labels = shortNames;
-    detailPflichtChart.data.datasets[0].data = originalPflichtData;
+    // Für Gesamt-Chart: Alle Checklisten
+    const gesamtNames = validChecklists.map(item => item.name.length > 15 ? item.name.substring(0, 15) + '...' : item.name);
+    const gesamtData = validChecklists.map(item => item.gesamtProgress || 0);
+    const gesamtColors = gesamtData.map(item => getIHKGradeColor(item));
+
+    detailPflichtChart.data.labels = pflichtNames;
+    detailPflichtChart.data.datasets[0].data = pflichtData;
     detailPflichtChart.data.datasets[0].backgroundColor = pflichtColors;
     detailPflichtChart.update();
 
-    detailGesamtChart.data.labels = shortNames;
-    detailGesamtChart.data.datasets[0].data = originalGesamtData;
+    detailGesamtChart.data.labels = gesamtNames;
+    detailGesamtChart.data.datasets[0].data = gesamtData;
     detailGesamtChart.data.datasets[0].backgroundColor = gesamtColors;
     detailGesamtChart.update();
 }
