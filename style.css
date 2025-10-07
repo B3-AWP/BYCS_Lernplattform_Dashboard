@@ -347,6 +347,29 @@ body {
     opacity: 0.5;
 }
 
+/* Stat card loading overlay */
+.stat-card-loading {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: var(--radius-md);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+}
+
+.stat-card-loading .spinner {
+    width: 32px;
+    height: 32px;
+    border-width: 3px;
+    margin: 0;
+}
+
 .stats-group.loading .stats-group-title {
     opacity: 0.3;
 }

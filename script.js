@@ -716,6 +716,15 @@ function showLoading(show) {
     document.getElementById('loadingIndicator').style.display = show ? 'block' : 'none';
 }
 
+function showChecklistStatsLoading(show) {
+    const loadingOverlay = document.getElementById('checklistStatsLoading');
+    const statsContent = document.getElementById('checklistStatsContent');
+    if (loadingOverlay && statsContent) {
+        loadingOverlay.style.display = show ? 'flex' : 'none';
+        statsContent.style.opacity = show ? '0.3' : '1';
+    }
+}
+
 function showDashboardLoading(show) {
     // Show/hide fullscreen loading overlay
     const overlay = document.getElementById('dashboardLoadingOverlay');
@@ -880,12 +889,16 @@ function extractPflichtOverview(useCache = true) {
 }
 
 async function extractFromChecklistIndex(useCache = true) {
+    // Zeige Loading-Overlay für Checklisten-Stats
+    showChecklistStatsLoading(true);
+
     // Prüfe Cache zuerst
     const cachedData = useCache ? getCachedData('checklists') : null;
     if (cachedData) {
         showCacheNotification('checklists');
         createCharts(cachedData);
         updateChecklistTable(cachedData);
+        showChecklistStatsLoading(false); // Verstecke Loading nach Cache-Load
 
         // Background update starten
         setTimeout(() => {
@@ -914,8 +927,8 @@ async function extractFromChecklistIndex(useCache = true) {
             .filter(link => link.getAttribute('href').startsWith('view.php?id='));
 
         console.log(`Found ${checklistLinks.length} checklist links`);
-        document.getElementById('totalCount').textContent = checklistLinks.length;
-        
+        // NICHT vorzeitig totalCount setzen - wird in updateStatistics() korrekt gesetzt
+
         updateDashboardLoadingProgress(2, `${checklistLinks.length} Checklisten gefunden`, 'Lade Details...');
         // Sofortige UI-Updates für bessere Performance
         const step3 = document.getElementById('step3');
@@ -1147,9 +1160,12 @@ function updateStatistics() {
 
         updateCombinedStats(completed, pflichtCount, referenceCompleted);
         updateProgressDisplay(
-            currentReferenceWeek === TOTAL_WEEKS ? Math.round(referenceAvgPflicht) : Math.ceil(referenceAvgPflicht), 
+            currentReferenceWeek === TOTAL_WEEKS ? Math.round(referenceAvgPflicht) : Math.ceil(referenceAvgPflicht),
             currentReferenceWeek === TOTAL_WEEKS ? Math.round(referenceAvgGesamt) : Math.ceil(referenceAvgGesamt)
         );
+
+        // Verstecke Loading-Overlay wenn alle Daten geladen sind
+        showChecklistStatsLoading(false);
     }
 }
 

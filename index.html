@@ -120,8 +120,12 @@ Beta-Version. Angaben ohne Gewähr.
                     Checklisten Übersicht
                 </div>
                 <div class="stats-row stats-grid" id="statsRow">
-                <div class="stat-card combined-stats-card">
-                    <div class="combined-stats-content">
+                <div class="stat-card combined-stats-card" style="position: relative;">
+                    <div class="stat-card-loading" id="checklistStatsLoading" style="display: none;">
+                        <div class="spinner"></div>
+                        <div style="margin-top: 8px; font-size: 12px; color: #6c757d;">Lade Checklisten...</div>
+                    </div>
+                    <div class="combined-stats-content" id="checklistStatsContent">
                         <div class="completion-overview">
                             <div class="completion-main">
                                 <span class="completion-count" id="completedCount">0</span>
