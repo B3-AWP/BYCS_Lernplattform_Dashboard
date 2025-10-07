@@ -2189,12 +2189,15 @@ function convertStarsToPercentage(stars) {
 
 function displayStarsFromGrade(grade) {
     if (grade === '-' || grade === 'Unbekannt' || grade === '') return '-';
-    
+
     const numGrade = parseFloat(grade.replace(',', '.'));
     if (isNaN(numGrade) || numGrade < 1 || numGrade > 4) return '-';
-    
+
     const roundedGrade = Math.round(numGrade);
-    return '*'.repeat(roundedGrade);
+    const stars = '*'.repeat(roundedGrade);
+    const percentage = convertStarsToPercentage(roundedGrade);
+
+    return `${stars} (${percentage}%)`;
 }
 
 function getGradeValueForCalculation(item) {
