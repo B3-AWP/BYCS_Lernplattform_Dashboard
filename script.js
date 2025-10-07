@@ -1132,19 +1132,20 @@ function updateStatistics() {
         const completed = checklistsWithPflicht.filter(item => item.pflichtProgress >= 100).length;
         
         // Referenzwochen-adjustierte Werte berechnen
-        const referenceAvgPflicht = calculateReferenceProgressFromPercentage(avgPflicht, totalChecklists);
+        const referenceAvgPflicht = calculateReferenceProgressFromPercentage(avgPflicht, pflichtCount);
         const referenceAvgGesamt = calculateReferenceProgressFromPercentage(avgGesamt, totalChecklists);
-        const referenceCompleted = calculateReferenceProgress(completed, totalChecklists);
-        
-        console.log('Statistics Update:', { 
-            totalChecklists, 
+        const referenceCompleted = calculateReferenceProgress(completed, pflichtCount);
+
+        console.log('Statistics Update:', {
+            totalChecklists,
+            checklistsWithPflicht: pflichtCount,
             originalAvg: { pflicht: avgPflicht, gesamt: avgGesamt },
             referenceAvg: { pflicht: referenceAvgPflicht, gesamt: referenceAvgGesamt },
             completed: completed,
             referenceWeek: currentReferenceWeek
         });
-        
-        updateCombinedStats(completed, totalChecklists, referenceCompleted);
+
+        updateCombinedStats(completed, pflichtCount, referenceCompleted);
         updateProgressDisplay(
             currentReferenceWeek === TOTAL_WEEKS ? Math.round(referenceAvgPflicht) : Math.ceil(referenceAvgPflicht), 
             currentReferenceWeek === TOTAL_WEEKS ? Math.round(referenceAvgGesamt) : Math.ceil(referenceAvgGesamt)
