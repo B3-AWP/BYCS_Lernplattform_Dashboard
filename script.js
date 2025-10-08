@@ -1191,6 +1191,9 @@ function updateProgressBar(color, value) {
     progressBar.style.width = `${value}%`;
 }
 
+// Global object to store active animation timers
+const activeProgressBarTimers = {};
+
 function animateProgressBar(textElementId, barElementId, targetValue) {
     const textElement = document.getElementById(textElementId);
     const barElement = document.getElementById(barElementId);
@@ -1200,6 +1203,13 @@ function animateProgressBar(textElementId, barElementId, targetValue) {
         return;
     }
 
+    // Clear any existing timer for this progress bar
+    const timerId = `${textElementId}_${barElementId}`;
+    if (activeProgressBarTimers[timerId]) {
+        clearInterval(activeProgressBarTimers[timerId]);
+        delete activeProgressBarTimers[timerId];
+    }
+
     const successColor = getCssVariable('--success-color');
     const warningColor = getCssVariable('--warning-color');
     const dangerColor = getCssVariable('--danger-color');
@@ -1207,7 +1217,7 @@ function animateProgressBar(textElementId, barElementId, targetValue) {
     // Allow text to show values over 100%, but cap bar width at 100%
     const textTargetValue = Math.max(0, Math.round(targetValue || 0));
     const barTargetValue = Math.min(100, textTargetValue); // Visual bar capped at 100%
-    
+
     const initialText = textElement.textContent.replace('%', '') || '0';
     const initialValue = parseInt(initialText) || 0;
     const textIncrement = (textTargetValue - initialValue) / 40;
@@ -1215,7 +1225,7 @@ function animateProgressBar(textElementId, barElementId, targetValue) {
 
     let currentTextValue = initialValue;
     let currentBarValue = Math.min(100, initialValue);
-    
+
     const timer = setInterval(() => {
         currentTextValue += textIncrement;
         currentBarValue += barIncrement;
@@ -1224,6 +1234,7 @@ function animateProgressBar(textElementId, barElementId, targetValue) {
             currentTextValue = textTargetValue;
             currentBarValue = barTargetValue;
             clearInterval(timer);
+            delete activeProgressBarTimers[timerId];
         }
 
         const roundedTextValue = Math.round(currentTextValue);
@@ -1257,6 +1268,9 @@ function animateProgressBar(textElementId, barElementId, targetValue) {
         textElement.style.color = textColor;
         barElement.style.background = barColor;
     }, 40);
+
+    // Store the timer reference
+    activeProgressBarTimers[timerId] = timer;
 }
 
 
