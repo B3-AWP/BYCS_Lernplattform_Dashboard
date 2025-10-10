@@ -862,23 +862,26 @@ function extractPflichtOverview(useCache = true) {
     const quizOverviewUrl = `https://lernplattform.mebis.bycs.de/course/overview.php?id=${COURSE_ID}&expand[]=quiz#quiz_overview_collapsible`;
 
     return fetchData(assignmentOverviewUrl, quizOverviewUrl)
-        .then(data => {
-            // Cache die erfolgreichen Daten
-            setCachedData('pflicht', data);
+        .then(async data => {
+            // Erweitere die Daten mit Assignment-Details
+            const enrichedData = await enrichPflichtDataWithDetails(data);
 
-            window.pflichtData = data;
-            updatePflichtTable(data);
-            createPflichtCharts(data);
+            // Cache die erfolgreichen Daten
+            setCachedData('pflicht', enrichedData);
+
+            window.pflichtData = enrichedData;
+            updatePflichtTable(enrichedData);
+            createPflichtCharts(enrichedData);
             updatePflichtStats();
             const pfSection = document.getElementById('pflichtFilterSection');
             if (pfSection) pfSection.style.display = 'block';
 
-            updateDashboardLoadingProgress(3, `${data.length} Pflichtaufgaben geladen`, 'Aufgaben und Quizzes analysiert');
+            updateDashboardLoadingProgress(3, `${enrichedData.length} Pflichtaufgaben geladen`, 'Aufgaben und Quizzes analysiert');
             // Sofortige UI-Updates für bessere Performance
             const step4 = document.getElementById('step4');
             if (step4) {
                 step4.className = 'progress-step completed';
-                step4.innerHTML = `✓ ${data.length} Pflichtaufgaben identifiziert`;
+                step4.innerHTML = `✓ ${enrichedData.length} Pflichtaufgaben identifiziert`;
             }
         })
         .catch(err => {
@@ -1367,7 +1370,12 @@ function updatePflichtStats() {
     }
 
     const totalPflicht = window.pflichtData.length;
-    const completedPflicht = window.pflichtData.filter(item => item.completionStatus === 'Erledigt').length;
+    // Bewertet und Abgegeben zählen als "erledigt"
+    const completedPflicht = window.pflichtData.filter(item =>
+        item.completionStatus === 'Bewertet' ||
+        item.completionStatus === 'Abgegeben' ||
+        item.completionStatus === 'Erledigt'
+    ).length;
     
     // Referenzwochen-adjustierte Werte berechnen
     const referencePflichtProgress = calculateReferenceProgress(completedPflicht, totalPflicht);
@@ -1924,7 +1932,7 @@ function showTab(tab) {
 }
 
 function createPflichtCharts(data) {
-    const statusCounts = { 'Erledigt': 0, 'Zu erledigen': 0 };
+    const statusCounts = { 'Bewertet': 0, 'Abgegeben': 0, 'Zu erledigen': 0 };
     const grades = [];
     data.forEach(item => {
         statusCounts[item.completionStatus] = (statusCounts[item.completionStatus] || 0) + 1;
@@ -2038,6 +2046,114 @@ const submissionStatus = submissionCell ?
     return [...assignmentData, ...quizData].sort((a, b) => a.name.localeCompare(b.name, 'de'));
 }
 
+// Funktion zum Abrufen von Assignment-Details und Ermittlung des echten Status
+async function fetchAssignmentDetails(url) {
+    try {
+        const response = await fetch(url, { credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+        if (!response.ok) {
+            return null;
+        }
+
+        const html = await response.text();
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+
+        // Finde die submissionsummarytable
+        const summaryTable = doc.querySelector('.submissionsummarytable table');
+        if (!summaryTable) {
+            return null;
+        }
+
+        const details = {
+            isGroupAssignment: false,
+            groupName: null,
+            submissionStatus: null,
+            gradingStatus: null,
+            actualStatus: 'Zu erledigen'
+        };
+
+        // Parse die Tabelle
+        const rows = summaryTable.querySelectorAll('tr');
+        rows.forEach(row => {
+            const headerCell = row.querySelector('th');
+            const dataCell = row.querySelector('td');
+
+            if (headerCell && dataCell) {
+                const header = headerCell.textContent.trim();
+                const value = dataCell.textContent.trim();
+
+                if (header === 'Gruppe') {
+                    details.isGroupAssignment = true;
+                    details.groupName = value;
+                } else if (header === 'Abgabestatus') {
+                    details.submissionStatus = value;
+                } else if (header === 'Bewertungsstatus') {
+                    details.gradingStatus = value;
+                }
+            }
+        });
+
+        // Ermittle den tatsächlichen Status basierend auf Bewertungsstatus
+        // Priorität: Bewertet > Abgegeben > Zu erledigen
+        if (details.gradingStatus && details.gradingStatus.includes('Bewertet')) {
+            details.actualStatus = 'Bewertet';
+        } else if (details.submissionStatus && details.submissionStatus.includes('Zur Bewertung abgegeben')) {
+            details.actualStatus = 'Abgegeben';
+        } else {
+            details.actualStatus = 'Zu erledigen';
+        }
+
+        return details;
+    } catch (error) {
+        console.error('Fehler beim Abrufen der Assignment-Details:', error);
+        return null;
+    }
+}
+
+// Erweitere die fetchData-Funktion, um Details für Assignments abzurufen
+async function enrichPflichtDataWithDetails(pflichtData) {
+    const enrichedData = [];
+
+    for (const item of pflichtData) {
+        const enrichedItem = { ...item };
+
+        // Für Assignments Details abrufen
+        if (item.type === 'Aufgabe' && item.url) {
+            const details = await fetchAssignmentDetails(item.url);
+            if (details) {
+                enrichedItem.isGroupAssignment = details.isGroupAssignment;
+                enrichedItem.groupName = details.groupName;
+                enrichedItem.detailedSubmissionStatus = details.submissionStatus;
+                enrichedItem.gradingStatus = details.gradingStatus;
+                enrichedItem.actualStatus = details.actualStatus;
+
+                // Überschreibe den completionStatus mit dem tatsächlichen Status
+                enrichedItem.completionStatus = details.actualStatus;
+            } else {
+                enrichedItem.isGroupAssignment = false;
+                enrichedItem.actualStatus = item.completionStatus;
+            }
+        } else if (item.type === 'Quiz') {
+            // Für Quizzes: Wenn eine Bewertung existiert, Status auf "Bewertet" setzen
+            enrichedItem.isGroupAssignment = false;
+
+            if (item.grade && item.grade !== '-' && item.grade !== 'Unbekannt' && item.grade !== '') {
+                enrichedItem.completionStatus = 'Bewertet';
+                enrichedItem.actualStatus = 'Bewertet';
+            } else {
+                enrichedItem.actualStatus = item.completionStatus;
+            }
+        } else {
+            enrichedItem.isGroupAssignment = false;
+            enrichedItem.actualStatus = item.completionStatus;
+        }
+
+        enrichedData.push(enrichedItem);
+    }
+
+    return enrichedData;
+}
+
 function setRefreshButtonLoading(isLoading) {
     const btn = document.getElementById('refreshBtn');
     if (!btn) return;
@@ -2064,7 +2180,12 @@ function applyPflichtFilters() {
 
     if (statusFilter !== 'all') {
         if (statusFilter === 'completed') {
-            filteredData = filteredData.filter(item => item.completionStatus === 'Erledigt');
+            // Bewertet und Abgegeben zählen als "erledigt"
+            filteredData = filteredData.filter(item =>
+                item.completionStatus === 'Bewertet' ||
+                item.completionStatus === 'Abgegeben' ||
+                item.completionStatus === 'Erledigt'
+            );
         } else if (statusFilter === 'pending') {
             filteredData = filteredData.filter(item => item.completionStatus === 'Zu erledigen');
         }
@@ -2115,30 +2236,42 @@ function updatePflichtTable(data) {
     html += '<th onclick="sortPflichtTableByColumn(0)" class="sortable-header" style="cursor: pointer;">Name <span class="sort-icon"><svg width="12" height="12"><use href="#icon-sort-both"></use></svg></span></th>';
     html += '<th onclick="sortPflichtTableByColumn(1)" class="sortable-header" style="cursor: pointer;">Typ <span class="sort-icon"><svg width="12" height="12"><use href="#icon-sort-both"></use></svg></span></th>';
     html += '<th onclick="sortPflichtTableByColumn(2)" class="sortable-header" style="cursor: pointer;">Status <span class="sort-icon"><svg width="12" height="12"><use href="#icon-sort-both"></use></svg></span></th>';
-    html += '<th onclick="sortPflichtTableByColumn(3)" class="sortable-header" style="cursor: pointer;">Abgabe <span class="sort-icon"><svg width="12" height="12"><use href="#icon-sort-both"></use></svg></span></th>';
+    html += '<th onclick="sortPflichtTableByColumn(3)" class="sortable-header" style="cursor: pointer;">Gruppenabgabe <span class="sort-icon"><svg width="12" height="12"><use href="#icon-sort-both"></use></svg></span></th>';
     html += '<th onclick="sortPflichtTableByColumn(4)" class="sortable-header" style="cursor: pointer;">Bewertung <span class="sort-icon"><svg width="12" height="12"><use href="#icon-sort-both"></use></svg></span></th>';
     html += '</tr></thead><tbody id="pflichtTableBody">';
 
     data.forEach((item, index) => {
-        const statusColor = item.completionStatus === 'Erledigt' ? getCssVariable('--success-color') : getCssVariable('--warning-color');
+        // Status Farben: Bewertet (grün), Abgegeben (blau), Zu erledigen (orange)
+        let statusColor = getCssVariable('--warning-color');
+        let statusText = item.completionStatus;
+
+        if (item.completionStatus === 'Bewertet') {
+            statusColor = getCssVariable('--success-color');
+        } else if (item.completionStatus === 'Abgegeben') {
+            statusColor = getCssVariable('--info-color');
+        }
+
         const gradeColor = getGradeColor(item.grade);
-        
+
         // Display grade based on type (stars for assignments, percentage for quiz)
         const gradeDisplay = displayGradeForTable(item);
 
-        const typeBadgeStyle = item.type === 'Quiz' 
+        const typeBadgeStyle = item.type === 'Quiz'
             ? 'display: flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 6px; font-size: 0.8em; font-weight: 500; background: #e3f2fd; color: #1976d2; border: 1px solid #bbdefb;'
             : 'display: flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 6px; font-size: 0.8em; font-weight: 500; background: #f3e5f5; color: #7b1fa2; border: 1px solid #e1bee7;';
-            
-        const typeIcon = item.type === 'Quiz' 
+
+        const typeIcon = item.type === 'Quiz'
             ? '<svg width="12" height="12"><use href="#icon-quiz"></use></svg>'
             : '<svg width="12" height="12"><use href="#icon-assignment"></use></svg>';
 
-        html += `<tr data-name="${item.name.toLowerCase()}" data-type="${item.type.toLowerCase()}" data-status="${item.completionStatus.toLowerCase()}" data-grade="${item.grade}">
+        // Gruppenabgabe Spalte
+        const groupAssignment = item.isGroupAssignment ? 'Ja' : 'Nein';
+
+        html += `<tr data-name="${item.name.toLowerCase()}" data-type="${item.type.toLowerCase()}" data-status="${statusText.toLowerCase()}" data-grade="${item.grade}">
             <td><a href="${item.url}" target="_blank" title="${item.name}">${item.name}</a></td>
             <td><span class="type-badge" style="${typeBadgeStyle}">${typeIcon}${item.type}</span></td>
-            <td><span style="color: ${statusColor}; font-weight: 600;">${item.completionStatus}</span></td>
-            <td>${item.submissionStatus}</td>
+            <td><span style="color: ${statusColor}; font-weight: 600;">${statusText}</span></td>
+            <td>${groupAssignment}</td>
             <td><strong style="${gradeColor}">${gradeDisplay}</strong></td>
         </tr>`;
     });
