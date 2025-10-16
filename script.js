@@ -1778,9 +1778,9 @@ function updateChecklistTable(filteredData) {
         const pflichtValue = hasPflicht ? originalPflichtPercent : -1; // -1 für Sortierung
 
         html += `<tr data-name="${item.name.toLowerCase()}" data-pflicht="${pflichtValue}" data-gesamt="${originalGesamtPercent}">
-            <td><a href="${item.url}" target="_blank">${item.name}</a></td>
-            <td><strong class="progress-cell${hasPflicht ? '' : ' no-progress'}" data-value="${pflichtValue}" style="--progress-width: ${pflichtWidth}%; --progress-color: ${pflichtColor};">${pflichtDisplay}</strong></td>
-            <td><strong class="progress-cell" data-value="${originalGesamtPercent}" style="--progress-width: ${originalGesamtPercent}%; --progress-color: ${gesamtColor};">${gesamtDisplay}</strong></td>
+            <td data-label="Name"><a href="${item.url}" target="_blank">${item.name}</a></td>
+            <td data-label="Pflicht %"><strong class="progress-cell${hasPflicht ? '' : ' no-progress'}" data-value="${pflichtValue}" style="--progress-width: ${pflichtWidth}%; --progress-color: ${pflichtColor};">${pflichtDisplay}</strong></td>
+            <td data-label="Gesamt %"><strong class="progress-cell" data-value="${originalGesamtPercent}" style="--progress-width: ${originalGesamtPercent}%; --progress-color: ${gesamtColor};">${gesamtDisplay}</strong></td>
         </tr>`;
     });
 
@@ -1929,6 +1929,17 @@ function showTab(tab) {
             buttonElement.classList.toggle('inactive', buttonId !== `tab${tab.charAt(0).toUpperCase() + tab.slice(1)}`);
         }
     });
+
+    // Update active tab heading
+    const headingElement = document.getElementById('activeTabHeading');
+    if (headingElement) {
+        const headingTexts = {
+            'home': 'Übersicht',
+            'checklists': 'Checklisten',
+            'pflicht': 'Pflichtaufgaben'
+        };
+        headingElement.textContent = headingTexts[tab] || 'Übersicht';
+    }
 }
 
 function createPflichtCharts(data) {
@@ -2268,11 +2279,11 @@ function updatePflichtTable(data) {
         const groupAssignment = item.isGroupAssignment ? 'Ja' : 'Nein';
 
         html += `<tr data-name="${item.name.toLowerCase()}" data-type="${item.type.toLowerCase()}" data-status="${statusText.toLowerCase()}" data-grade="${item.grade}">
-            <td><a href="${item.url}" target="_blank" title="${item.name}">${item.name}</a></td>
-            <td><span class="type-badge" style="${typeBadgeStyle}">${typeIcon}${item.type}</span></td>
-            <td><span style="color: ${statusColor}; font-weight: 600;">${statusText}</span></td>
-            <td>${groupAssignment}</td>
-            <td><strong style="${gradeColor}">${gradeDisplay}</strong></td>
+            <td data-label="Name"><a href="${item.url}" target="_blank" title="${item.name}">${item.name}</a></td>
+            <td data-label="Typ"><span class="type-badge" style="${typeBadgeStyle}">${typeIcon}${item.type}</span></td>
+            <td data-label="Status"><span style="color: ${statusColor}; font-weight: 600;">${statusText}</span></td>
+            <td data-label="Gruppenabgabe">${groupAssignment}</td>
+            <td data-label="Bewertung"><strong style="${gradeColor}">${gradeDisplay}</strong></td>
         </tr>`;
     });
 

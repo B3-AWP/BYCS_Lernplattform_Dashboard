@@ -623,7 +623,7 @@ body {
 
 .info-table th, .info-table td {
     border: 1px solid #ddd;
-    padding: 5px 1px 5px 1px;
+    padding: 8px 6px;
     text-align: left;
     font-size: var(--font-size-sm);
 }
@@ -872,13 +872,10 @@ h1 {
     .stats-row {
         grid-template-columns: repeat(2, 1fr);
     }
-    h1 {
+    /* h1 {
         font-size: var(--font-size-xxl);
-    }
-    .filter-controls {
-        flex-direction: column;
-        align-items: stretch;
-    }
+    } */
+
 }
 
 @media (max-width: 499px) {
@@ -893,6 +890,10 @@ h1 {
     }
     h1 {
         font-size: 1.6rem;
+    }
+        .filter-controls {
+        flex-direction: column;
+        align-items: stretch;
     }
 }
 
@@ -1503,9 +1504,24 @@ h3 {
     color: #fff;
 }
 
+/* Active tab heading - hidden by default, shown when tab text is hidden */
+.active-tab-heading {
+    display: none;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--primary-color);
+    margin: 0 0 12px 0;
+    text-align: center;
+}
+
 @media (max-width: 420px) {
     .tab-text {
         display: none;
+    }
+
+    /* Show active tab heading when tab text is hidden */
+    .active-tab-heading {
+        display: block;
     }
 }
 
@@ -1681,4 +1697,387 @@ h3 {
 
 .stats-group-title svg {
     opacity: 0.7;
+}
+
+/* ========================================
+   RESPONSIVE TABLE STYLES - MOBILE OPTIMIZED
+   ======================================== */
+
+/* Mobile: Convert table to card layout at 768px and below */
+@media (max-width: 768px) {
+    /* Hide table header on mobile */
+    .info-table thead {
+        display: none;
+    }
+
+    /* Make each row a card */
+    .info-table tbody tr {
+        display: block;
+        margin-bottom: 16px;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-sm);
+        background: white;
+        padding: 12px;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .info-table tbody tr:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+    }
+
+    /* Make each cell a row within the card */
+    .info-table tbody td {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 0;
+        border: none;
+        border-bottom: 1px solid var(--border-color);
+        text-align: right;
+    }
+
+    .info-table tbody td:last-child {
+        border-bottom: none;
+    }
+
+    /* Add labels before each cell using data attributes */
+    .info-table tbody td::before {
+        content: attr(data-label);
+        font-weight: 600;
+        color: var(--text-color);
+        text-align: left;
+        flex: 0 0 40%;
+        font-size: 0.85rem;
+    }
+
+    /* Make links and content align properly */
+    .info-table tbody td a {
+        flex: 1;
+        text-align: right;
+        word-break: break-word;
+    }
+
+    /* Type badge should remain inline */
+    .info-table tbody td .type-badge {
+        flex-shrink: 0;
+    }
+}
+
+/* Extra small screens - further optimize */
+@media (max-width: 480px) {
+    .info-table tbody tr {
+        padding: 10px;
+        margin-bottom: 12px;
+    }
+
+    .info-table tbody td {
+        padding: 6px 0;
+        font-size: 0.85rem;
+    }
+
+    .info-table tbody td::before {
+        font-size: 0.8rem;
+        flex: 0 0 45%;
+    }
+
+    /* Make type badges smaller */
+    .info-table tbody td .type-badge {
+        padding: 2px 6px;
+        font-size: 0.75em;
+    }
+
+    .info-table tbody td .type-badge svg {
+        width: 10px;
+        height: 10px;
+    }
+}
+
+/* ========================================
+   TOUCH OPTIMIZATIONS
+   ======================================== */
+
+/* Improved touch targets for all interactive elements */
+@media (max-width: 768px) {
+    /* Minimum touch target size 44x44px (Apple HIG) */
+    .nav-btn {
+        min-height: 44px;
+        padding: 12px 16px;
+        gap: 10px;
+    }
+
+    /* Larger track buttons */
+    .track-btn {
+        min-height: 44px;
+        min-width: 44px;
+        padding: 10px 14px;
+    }
+
+    /* Current week button */
+    .current-week-btn {
+        min-height: 44px;
+        padding: 10px 14px;
+    }
+
+    /* Chart toggle buttons */
+    .chart-toggle {
+        min-height: 44px;
+        padding: 12px;
+    }
+
+    /* Sortable table headers */
+    .info-table th.sortable-header {
+        padding: 12px 8px;
+    }
+
+    /* Better spacing for radio buttons */
+    .progress-toggle input[type="radio"] {
+        width: 20px;
+        height: 20px;
+    }
+
+    .progress-toggle label {
+        padding: 8px;
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+    }
+}
+
+/* Slider and filter optimizations for smaller screens */
+@media (max-width: 499px) {
+    /* Better slider thumb size for touch */
+    .reference-slider::-webkit-slider-thumb,
+    .single-range::-webkit-slider-thumb {
+        width: 32px;
+        height: 32px;
+        border-width: 4px;
+    }
+
+    .reference-slider::-moz-range-thumb,
+    .single-range::-moz-range-thumb {
+        width: 32px;
+        height: 32px;
+        border-width: 4px;
+    }
+
+    /* Larger slider track for easier dragging */
+    .reference-slider,
+    .single-range {
+        height: 12px;
+    }
+
+    /* Filter controls spacing */
+    .filter-controls select,
+    .filter-controls input {
+        min-height: 44px;
+        padding: 12px 16px;
+        font-size: 16px; /* Prevents zoom on iOS */
+    }
+}
+
+/* Extra touch optimization for very small screens */
+@media (max-width: 480px) {
+    body {
+        /* Prevent double-tap zoom */
+        touch-action: manipulation;
+    }
+
+    /* Slightly smaller but still accessible buttons */
+    .nav-btn {
+        padding: 10px 12px;
+        font-size: 0.9rem;
+    }
+
+    /* More padding for easier tapping */
+    .filter-section {
+        padding: 16px;
+    }
+
+    .config-section {
+        padding: 16px;
+    }
+
+    /* Larger gap between nav buttons */
+    .nav-container {
+        gap: 8px;
+    }
+
+    .nav-left {
+        gap: 8px;
+    }
+}
+
+/* ========================================
+   CHART RESPONSIVE OPTIMIZATIONS
+   ======================================== */
+
+@media (max-width: 768px) {
+    /* Adjust chart containers for mobile */
+    .chart-container {
+        height: auto;
+        min-height: 250px;
+        padding: 16px;
+    }
+
+    .chart-container canvas {
+        max-height: 300px !important;
+    }
+
+    /* Collapsible chart content */
+    .chart-content.expanded {
+        max-height: 400px;
+    }
+
+    .chart-content canvas {
+        max-height: 350px !important;
+    }
+
+    /* Chart header text wrapping */
+    .chart-header h2 {
+        font-size: 1rem;
+        line-height: 1.3;
+    }
+
+    /* Chart toggle text */
+    .chart-toggle span {
+        font-size: 0.85rem;
+    }
+
+    /* Loading overlay for charts */
+    .chart-container .loading {
+        padding: 16px;
+    }
+}
+
+@media (max-width: 480px) {
+    /* Smaller charts on very small screens */
+    .chart-container {
+        min-height: 200px;
+        padding: 12px;
+    }
+
+    .chart-container canvas {
+        max-height: 220px !important;
+    }
+
+    .chart-content.expanded {
+        max-height: 300px;
+    }
+
+    .chart-content canvas {
+        max-height: 280px !important;
+    }
+
+    /* Compact chart headers */
+    .chart-header {
+        padding: 10px 12px;
+    }
+
+    .chart-header h2 {
+        font-size: 0.9rem;
+    }
+
+    .chart-toggle {
+        padding: 8px;
+    }
+
+    .chart-toggle span {
+        display: none; /* Hide text, show only icon */
+    }
+
+    .chart-toggle-icon {
+        margin: 0;
+    }
+}
+
+/* ========================================
+   MOBILE NAVIGATION IMPROVEMENTS
+   ======================================== */
+
+@media (max-width: 768px) {
+    /* Stack navigation vertically on mobile if needed */
+    .nav-container {
+        flex-wrap: wrap;
+    }
+
+    /* Ensure nav buttons don't get too cramped */
+    .nav-btn {
+        flex-shrink: 0;
+    }
+
+    /* Beta version text adjustment */
+    .card-container {
+        padding: 12px;
+    }
+}
+
+@media (max-width: 600px) {
+    /* Full width buttons on small screens */
+    .nav-container {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .nav-left {
+        width: 100%;
+        justify-content: space-around;
+    }
+
+    .nav-btn {
+        flex: 1;
+        justify-content: center;
+    }
+
+    #refreshBtn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* ========================================
+   LEGEND AND INFO BOX RESPONSIVE
+   ======================================== */
+
+@media (max-width: 768px) {
+    /* Bewertungslegende responsive */
+    .config-section h5 {
+        font-size: 0.95rem;
+    }
+
+    .config-section > div {
+        font-size: 0.85rem;
+    }
+
+    /* Info box adjustments */
+    .info-box {
+        padding: 12px;
+    }
+
+    .info-box .title {
+        font-size: 0.95rem;
+    }
+
+    .info-box .description {
+        font-size: 0.85rem;
+    }
+}
+
+@media (max-width: 480px) {
+    /* Compact legend on very small screens */
+    .config-section > div > div {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+        padding: 8px;
+    }
+
+    .config-section strong {
+        font-size: 0.8rem;
+    }
+
+    .config-section span {
+        font-size: 0.75rem;
+    }
 }
