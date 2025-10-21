@@ -340,6 +340,15 @@
                 </svg>Filter & Optionen - Pflichtaufgaben</h3>
             <div class="filter-controls">
                 <div class="filter-group">
+                    <label>Aufgabenart:</label>
+                    <select id="pflichtRequirementFilter" onchange="applyPflichtFilters()">
+                        <option value="pflicht">Nur Pflichtaufgaben</option>
+                        <option value="all">Alle Aufgaben</option>
+                        <option value="optional">Nur optionale Aufgaben</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
                     <label>Status:</label>
                     <select id="pflichtStatusFilter" onchange="applyPflichtFilters()">
                         <option value="all">Alle anzeigen</option>

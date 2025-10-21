@@ -112,7 +112,8 @@ function setCachedData(type, data) {
                 grade: item.grade,
                 points: item.points,
                 maxPoints: item.maxPoints,
-                status: item.status
+                status: item.status,
+                isPflicht: item.isPflicht // Neu: isPflicht-Attribut cachen
             }));
         } else {
             // Fallback: Original Daten
@@ -876,12 +877,16 @@ function extractPflichtOverview(useCache = true) {
             const pfSection = document.getElementById('pflichtFilterSection');
             if (pfSection) pfSection.style.display = 'block';
 
-            updateDashboardLoadingProgress(3, `${enrichedData.length} Pflichtaufgaben geladen`, 'Aufgaben und Quizzes analysiert');
+            // Zähle Pflicht- und optionale Aufgaben separat
+            const pflichtCount = enrichedData.filter(item => item.isPflicht).length;
+            const optionalCount = enrichedData.length - pflichtCount;
+
+            updateDashboardLoadingProgress(3, `${enrichedData.length} Aufgaben geladen (${pflichtCount} Pflicht, ${optionalCount} Optional)`, 'Aufgaben und Quizzes analysiert');
             // Sofortige UI-Updates für bessere Performance
             const step4 = document.getElementById('step4');
             if (step4) {
                 step4.className = 'progress-step completed';
-                step4.innerHTML = `✓ ${enrichedData.length} Pflichtaufgaben identifiziert`;
+                step4.innerHTML = `✓ ${enrichedData.length} Aufgaben (${pflichtCount} Pflicht, ${optionalCount} Optional)`;
             }
         })
         .catch(err => {
@@ -1369,18 +1374,21 @@ function updatePflichtStats() {
         return;
     }
 
-    const totalPflicht = window.pflichtData.length;
+    // Nur Pflichtaufgaben für Statistiken berücksichtigen
+    const pflichtOnly = window.pflichtData.filter(item => item.isPflicht === true);
+
+    const totalPflicht = pflichtOnly.length;
     // Bewertet und Abgegeben zählen als "erledigt"
-    const completedPflicht = window.pflichtData.filter(item =>
+    const completedPflicht = pflichtOnly.filter(item =>
         item.completionStatus === 'Bewertet' ||
         item.completionStatus === 'Abgegeben' ||
         item.completionStatus === 'Erledigt'
     ).length;
-    
+
     // Referenzwochen-adjustierte Werte berechnen
     const referencePflichtProgress = calculateReferenceProgress(completedPflicht, totalPflicht);
 
-    const gradedItems = window.pflichtData.filter(item => {
+    const gradedItems = pflichtOnly.filter(item => {
         return getGradeValueForCalculation(item) !== null;
     });
 
@@ -1973,15 +1981,8 @@ async function fetchData(assignmentOverviewUrl, quizOverviewUrl) {
 
     const assignDoc = parser.parseFromString(assignHtml, 'text/html');
     const assignmentTable = assignDoc.querySelector('#assign_overview .course-overview-table tbody');
-    const assignmentRows = assignmentTable ? Array.from(assignmentTable.querySelectorAll('tr')).filter(row => {
-        const nameCell = row.querySelector('[data-mdl-overview-item="name"]');
-        if (nameCell) {
-            const link = nameCell.querySelector('a.activityname');
-            const visibleText = link ? link.textContent : nameCell.textContent;
-            return visibleText && visibleText.includes('Pflicht');
-        }
-        return false;
-    }) : [];
+    // ALLE Aufgaben laden (nicht nur Pflicht)
+    const assignmentRows = assignmentTable ? Array.from(assignmentTable.querySelectorAll('tr')) : [];
 
     const assignmentData = assignmentRows.map(row => {
         const nameCell = row.querySelector('[data-mdl-overview-item="name"]');
@@ -1991,6 +1992,10 @@ async function fetchData(assignmentOverviewUrl, quizOverviewUrl) {
         const link = nameCell ? nameCell.querySelector('a.activityname') : null;
         const name = link ? link.textContent.trim() : (nameCell ? nameCell.textContent.trim() : 'Unbekannt');
         const url = link ? link.href : '';
+
+        // Prüfe ob Aufgabe als Pflicht markiert ist
+        const isPflicht = name.includes('Pflicht');
+
         let completionStatus = 'Zu erledigen';
         if (completionCell) {
             const completionValue = completionCell.getAttribute('data-mdl-overview-value');
@@ -1998,7 +2003,7 @@ async function fetchData(assignmentOverviewUrl, quizOverviewUrl) {
                 completionStatus = 'Erledigt';
             }
         }
-const submissionStatus = submissionCell ?
+        const submissionStatus = submissionCell ?
             submissionCell.getAttribute('data-mdl-overview-value') || submissionCell.textContent.trim() :
             'Unbekannt';
         const grade = gradeCell ?
@@ -2008,6 +2013,7 @@ const submissionStatus = submissionCell ?
             name,
             url,
             type: 'Aufgabe',
+            isPflicht,
             completionStatus,
             submissionStatus,
             grade
@@ -2016,15 +2022,8 @@ const submissionStatus = submissionCell ?
 
     const quizDoc = parser.parseFromString(quizHtml, 'text/html');
     const quizTable = quizDoc.querySelector('#quiz_overview .course-overview-table tbody');
-    const quizRows = quizTable ? Array.from(quizTable.querySelectorAll('tr')).filter(row => {
-        const nameCell = row.querySelector('[data-mdl-overview-item="name"]');
-        if (nameCell) {
-            const link = nameCell.querySelector('a.activityname');
-            const visibleText = link ? link.textContent : nameCell.textContent;
-            return visibleText && visibleText.includes('Pflicht');
-        }
-        return false;
-    }) : [];
+    // ALLE Quizzes laden (nicht nur Pflicht)
+    const quizRows = quizTable ? Array.from(quizTable.querySelectorAll('tr')) : [];
 
     const quizData = quizRows.map(row => {
         const nameCell = row.querySelector('[data-mdl-overview-item="name"]');
@@ -2033,6 +2032,10 @@ const submissionStatus = submissionCell ?
         const link = nameCell ? nameCell.querySelector('a.activityname') : null;
         const name = link ? link.textContent.trim() : (nameCell ? nameCell.textContent.trim() : 'Unbekannt');
         const url = link ? link.href : '';
+
+        // Prüfe ob Quiz als Pflicht markiert ist
+        const isPflicht = name.includes('Pflicht');
+
         let completionStatus = 'Zu erledigen';
         if (completionCell) {
             const completionValue = completionCell.getAttribute('data-mdl-overview-value');
@@ -2048,6 +2051,7 @@ const submissionStatus = submissionCell ?
             name,
             url,
             type: 'Quiz',
+            isPflicht,
             completionStatus,
             submissionStatus,
             grade
@@ -2182,12 +2186,21 @@ function setRefreshButtonLoading(isLoading) {
 function applyPflichtFilters() {
     if (!window.pflichtData) return;
 
+    const requirementFilter = document.getElementById('pflichtRequirementFilter').value;
     const statusFilter = document.getElementById('pflichtStatusFilter').value;
     const typeFilter = document.getElementById('pflichtTypeFilter').value;
     const gradeFilter = document.getElementById('pflichtGradeFilter').value;
     const sortFilter = document.getElementById('pflichtSortFilter').value;
 
     let filteredData = [...window.pflichtData];
+
+    // Filter nach Pflicht/Optional
+    if (requirementFilter === 'pflicht') {
+        filteredData = filteredData.filter(item => item.isPflicht === true);
+    } else if (requirementFilter === 'optional') {
+        filteredData = filteredData.filter(item => item.isPflicht === false);
+    }
+    // 'all' bedeutet keine Filterung nach isPflicht
 
     if (statusFilter !== 'all') {
         if (statusFilter === 'completed') {
@@ -2241,7 +2254,23 @@ function applyPflichtFilters() {
 }
 
 function updatePflichtTable(data) {
-    let html = '<h4 style="display: flex; align-items: center; gap: 8px;"><svg width="18" height="18"><use href="#icon-books"></use></svg>Pflichtaufgaben-Übersicht</h4>';
+    // Dynamische Überschrift basierend auf dem aktuellen Filter
+    const requirementFilter = document.getElementById('pflichtRequirementFilter')?.value || 'pflicht';
+    let tableTitle = 'Aufgaben-Übersicht';
+    if (requirementFilter === 'pflicht') {
+        tableTitle = 'Pflichtaufgaben-Übersicht';
+    } else if (requirementFilter === 'optional') {
+        tableTitle = 'Optionale Aufgaben-Übersicht';
+    } else {
+        tableTitle = 'Alle Aufgaben-Übersicht';
+    }
+
+    // Zähle Pflicht- und optionale Aufgaben
+    const pflichtCount = data.filter(item => item.isPflicht).length;
+    const optionalCount = data.length - pflichtCount;
+    const countInfo = requirementFilter === 'all' ? ` (${pflichtCount} Pflicht, ${optionalCount} Optional)` : ` (${data.length})`;
+
+    let html = `<h4 style="display: flex; align-items: center; gap: 8px;"><svg width="18" height="18"><use href="#icon-books"></use></svg>${tableTitle}${countInfo}</h4>`;
     html += '<table class="info-table" id="pflichtTable">';
     html += '<thead><tr>';
     html += '<th onclick="sortPflichtTableByColumn(0)" class="sortable-header" style="cursor: pointer;">Name <span class="sort-icon"><svg width="12" height="12"><use href="#icon-sort-both"></use></svg></span></th>';
@@ -2278,8 +2307,16 @@ function updatePflichtTable(data) {
         // Gruppenabgabe Spalte
         const groupAssignment = item.isGroupAssignment ? 'Ja' : 'Nein';
 
-        html += `<tr data-name="${item.name.toLowerCase()}" data-type="${item.type.toLowerCase()}" data-status="${statusText.toLowerCase()}" data-grade="${item.grade}">
-            <td data-label="Name"><a href="${item.url}" target="_blank" title="${item.name}">${item.name}</a></td>
+        // Pflicht/Optional Badge für Name-Spalte
+        const requirementBadge = item.isPflicht
+            ? '<span style="display: inline-block; margin-left: 6px; padding: 2px 6px; border-radius: 4px; font-size: 0.7em; font-weight: 600; background: #e74c3c; color: white;">PFLICHT</span>'
+            : '<span style="display: inline-block; margin-left: 6px; padding: 2px 6px; border-radius: 4px; font-size: 0.7em; font-weight: 600; background: #95a5a6; color: white;">OPTIONAL</span>';
+
+        // Hintergrundfarbe für Zeile (sehr dezent)
+        const rowStyle = item.isPflicht ? '' : 'style="background-color: rgba(149, 165, 166, 0.05);"';
+
+        html += `<tr data-name="${item.name.toLowerCase()}" data-type="${item.type.toLowerCase()}" data-status="${statusText.toLowerCase()}" data-grade="${item.grade}" ${rowStyle}>
+            <td data-label="Name"><a href="${item.url}" target="_blank" title="${item.name}">${item.name}</a>${requirementBadge}</td>
             <td data-label="Typ"><span class="type-badge" style="${typeBadgeStyle}">${typeIcon}${item.type}</span></td>
             <td data-label="Status"><span style="color: ${statusColor}; font-weight: 600;">${statusText}</span></td>
             <td data-label="Gruppenabgabe">${groupAssignment}</td>
