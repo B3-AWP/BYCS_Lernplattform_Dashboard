@@ -93,6 +93,12 @@ const EXTERNAL_CONFIG = {
         batchDelay: 500          // 500ms Pause zwischen Batches
     },
 
+    // Mebis URLs
+    urls: {
+        courseIndex: 'https://lernplattform.mebis.bycs.de/course/view.php?id=2036416',
+        ajaxService: 'https://lernplattform.mebis.bycs.de/lib/ajax/service.php'
+    },
+
     // Schienen-basierte Schulwochen-Konfiguration
     trackSchedules: {
         "Schiene1": [
