@@ -893,6 +893,10 @@ function extractPflichtOverview(useCache = true) {
         .catch(err => {
             console.error('extractPflichtOverview error:', err);
             window.pflichtData = [];
+
+            // Verstecke Loading-Indikator auch im Fehlerfall
+            const loadingIndicator = document.getElementById('pflichtLoadingIndicator');
+            if (loadingIndicator) loadingIndicator.style.display = 'none';
         })
         .finally(() => showLoading(false));
 }
@@ -1949,6 +1953,26 @@ function showTab(tab) {
         };
         headingElement.textContent = headingTexts[tab] || 'Übersicht';
     }
+
+    // Zeige/verstecke Loading-Indikator für Pflichtabgaben-Tab
+    if (tab === 'pflicht') {
+        const loadingIndicator = document.getElementById('pflichtLoadingIndicator');
+        const pflichtFilterSection = document.getElementById('pflichtFilterSection');
+        const pflichtSessionInfo = document.getElementById('pflichtSessionInfo');
+
+        // Prüfe ob Daten bereits geladen sind
+        if (!window.pflichtData || window.pflichtData.length === 0) {
+            // Zeige Loading-Indikator
+            if (loadingIndicator) loadingIndicator.style.display = 'flex';
+            if (pflichtFilterSection) pflichtFilterSection.style.display = 'none';
+            if (pflichtSessionInfo) pflichtSessionInfo.style.display = 'none';
+        } else {
+            // Verstecke Loading-Indikator, zeige Inhalte
+            if (loadingIndicator) loadingIndicator.style.display = 'none';
+            if (pflichtFilterSection) pflichtFilterSection.style.display = 'block';
+            if (pflichtSessionInfo) pflichtSessionInfo.style.display = 'block';
+        }
+    }
 }
 
 function createPflichtCharts(data) {
@@ -2334,6 +2358,15 @@ function applyPflichtFilters() {
 }
 
 function updatePflichtTable(data) {
+    // Verstecke Loading-Indikator und zeige Inhalte
+    const loadingIndicator = document.getElementById('pflichtLoadingIndicator');
+    const pflichtFilterSection = document.getElementById('pflichtFilterSection');
+    const pflichtSessionInfo = document.getElementById('pflichtSessionInfo');
+
+    if (loadingIndicator) loadingIndicator.style.display = 'none';
+    if (pflichtFilterSection) pflichtFilterSection.style.display = 'block';
+    if (pflichtSessionInfo) pflichtSessionInfo.style.display = 'block';
+
     // Dynamische Überschrift basierend auf dem aktuellen Filter
     const requirementFilter = document.getElementById('pflichtRequirementFilter')?.value || 'pflicht';
     let tableTitle = 'Aufgaben-Übersicht';
