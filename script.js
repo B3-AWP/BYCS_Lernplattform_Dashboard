@@ -2287,16 +2287,9 @@ function applyPflichtFilters() {
 
     let filteredData = [...window.pflichtData];
 
-    // Filter nach Pflicht/Optional
-    if (requirementFilter === 'pflicht') {
-        filteredData = filteredData.filter(item => item.isPflicht === true);
-    } else if (requirementFilter === 'optional') {
-        filteredData = filteredData.filter(item => item.isPflicht === false);
-    }
-    // 'all' bedeutet keine Filterung nach isPflicht
-
-    // Ausschluss-Filter für "Alle Aufgaben" - entferne Aufgaben mit bestimmten Strings im Namen
-    if (requirementFilter === 'all' && EXTERNAL_CONFIG.excludeFromOverview && EXTERNAL_CONFIG.excludeFromOverview.length > 0) {
+    // Ausschluss-Filter - entferne Aufgaben mit bestimmten Strings im Namen
+    // Wird IMMER angewendet (für alle Filter-Optionen)
+    if (EXTERNAL_CONFIG.excludeFromOverview && EXTERNAL_CONFIG.excludeFromOverview.length > 0) {
         filteredData = filteredData.filter(item => {
             // Prüfe ob der Name einen der ausgeschlossenen Strings enthält
             return !EXTERNAL_CONFIG.excludeFromOverview.some(excludeString =>
@@ -2304,6 +2297,14 @@ function applyPflichtFilters() {
             );
         });
     }
+
+    // Filter nach Pflicht/Optional
+    if (requirementFilter === 'pflicht') {
+        filteredData = filteredData.filter(item => item.isPflicht === true);
+    } else if (requirementFilter === 'optional') {
+        filteredData = filteredData.filter(item => item.isPflicht === false);
+    }
+    // 'all' bedeutet keine Filterung nach isPflicht
 
     if (statusFilter !== 'all') {
         if (statusFilter === 'completed') {
@@ -2419,36 +2420,57 @@ function updatePflichtTable(data) {
     html += '<th onclick="sortPflichtTableByColumn(0)" class="sortable-header" style="cursor: pointer;">Name <span class="sort-icon"><svg width="12" height="12"><use href="#icon-sort-both"></use></svg></span></th>';
     html += '<th onclick="sortPflichtTableByColumn(1)" class="sortable-header" style="cursor: pointer;">Typ <span class="sort-icon"><svg width="12" height="12"><use href="#icon-sort-both"></use></svg></span></th>';
     html += '<th onclick="sortPflichtTableByColumn(2)" class="sortable-header" style="cursor: pointer;">Status <span class="sort-icon"><svg width="12" height="12"><use href="#icon-sort-both"></use></svg></span></th>';
-    html += '<th onclick="sortPflichtTableByColumn(3)" class="sortable-header" style="cursor: pointer;">Gruppenabgabe <span class="sort-icon"><svg width="12" height="12"><use href="#icon-sort-both"></use></svg></span></th>';
+    html += '<th onclick="sortPflichtTableByColumn(3)" class="sortable-header" style="cursor: pointer;">Abgabeform <span class="sort-icon"><svg width="12" height="12"><use href="#icon-sort-both"></use></svg></span></th>';
     html += '<th onclick="sortPflichtTableByColumn(4)" class="sortable-header" style="cursor: pointer;">Bewertung <span class="sort-icon"><svg width="12" height="12"><use href="#icon-sort-both"></use></svg></span></th>';
     html += '</tr></thead><tbody id="pflichtTableBody">';
 
     data.forEach((item, index) => {
-        // Status Farben: Bewertet (grün), Abgegeben (blau), Zu erledigen (orange)
-        let statusColor = getCssVariable('--warning-color');
+        // Status-Badge: Bewertet (grün), Abgegeben (blau), Zu erledigen (orange)
         let statusText = item.completionStatus;
+        let statusBadgeStyle;
+        let statusIcon;
 
         if (item.completionStatus === 'Bewertet') {
-            statusColor = getCssVariable('--success-color');
+            statusBadgeStyle = 'display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 6px; font-size: 0.8em; font-weight: 500; background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7;';
+            statusIcon = '<svg width="12" height="12" viewBox="0 0 24 24"><path d="M9 16.2l-3.5-3.5-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z" fill="currentColor"/></svg>';
         } else if (item.completionStatus === 'Abgegeben') {
-            statusColor = getCssVariable('--info-color');
+            statusBadgeStyle = 'display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 6px; font-size: 0.8em; font-weight: 500; background: #e3f2fd; color: #1565c0; border: 1px solid #90caf9;';
+            statusIcon = '<svg width="12" height="12" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" fill="currentColor"/></svg>';
+        } else {
+            statusBadgeStyle = 'display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 6px; font-size: 0.8em; font-weight: 500; background: #fff3e0; color: #e65100; border: 1px solid #ffcc80;';
+            statusIcon = '<svg width="12" height="12" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" fill="currentColor"/></svg>';
         }
+
+        const statusBadge = `<span style="${statusBadgeStyle}">${statusIcon}${statusText}</span>`;
 
         const gradeColor = getGradeColor(item.grade);
 
         // Display grade based on type (stars for assignments, percentage for quiz)
         const gradeDisplay = displayGradeForTable(item);
 
+        // Einheitlicher Badge-Style für alle Spalten
+        const baseBadgeStyle = 'display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 6px; font-size: 0.8em; font-weight: 500;';
+
+        // Typ-Badge
         const typeBadgeStyle = item.type === 'Quiz'
-            ? 'display: flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 6px; font-size: 0.8em; font-weight: 500; background: #e3f2fd; color: #1976d2; border: 1px solid #bbdefb;'
-            : 'display: flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 6px; font-size: 0.8em; font-weight: 500; background: #f3e5f5; color: #7b1fa2; border: 1px solid #e1bee7;';
+            ? `${baseBadgeStyle} background: #e3f2fd; color: #1976d2; border: 1px solid #bbdefb;`
+            : `${baseBadgeStyle} background: #f3e5f5; color: #7b1fa2; border: 1px solid #e1bee7;`;
 
         const typeIcon = item.type === 'Quiz'
             ? '<svg width="12" height="12"><use href="#icon-quiz"></use></svg>'
             : '<svg width="12" height="12"><use href="#icon-assignment"></use></svg>';
 
-        // Gruppenabgabe Spalte
-        const groupAssignment = item.isGroupAssignment ? 'Ja' : 'Nein';
+        // Gruppenabgabe-Badge (einheitliche Größe)
+        const groupIcon = item.isGroupAssignment
+            ? '<svg width="12" height="12"><use href="#icon-group"></use></svg>'
+            : '<svg width="12" height="12"><use href="#icon-individual"></use></svg>';
+
+        const groupBadgeStyle = item.isGroupAssignment
+            ? `${baseBadgeStyle} background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7;`
+            : `${baseBadgeStyle} background: #e3f2fd; color: #1565c0; border: 1px solid #90caf9;`;
+
+        const groupText = item.isGroupAssignment ? 'Gruppe' : 'Einzeln';
+        const groupAssignment = `<span style="${groupBadgeStyle}">${groupIcon}${groupText}</span>`;
 
         // Pflicht/Optional Badge für Name-Spalte
         const requirementBadge = item.isPflicht
@@ -2461,8 +2483,8 @@ function updatePflichtTable(data) {
         html += `<tr data-name="${item.name.toLowerCase()}" data-type="${item.type.toLowerCase()}" data-status="${statusText.toLowerCase()}" data-grade="${item.grade}" ${rowStyle}>
             <td data-label="Name"><a href="${item.url}" target="_blank" title="${item.name}">${item.name}</a>${requirementBadge}</td>
             <td data-label="Typ"><span class="type-badge" style="${typeBadgeStyle}">${typeIcon}${item.type}</span></td>
-            <td data-label="Status"><span style="color: ${statusColor}; font-weight: 600;">${statusText}</span></td>
-            <td data-label="Gruppenabgabe">${groupAssignment}</td>
+            <td data-label="Status">${statusBadge}</td>
+            <td data-label="Abgabeform">${groupAssignment}</td>
             <td data-label="Bewertung"><strong style="${gradeColor}">${gradeDisplay}</strong></td>
         </tr>`;
     });
