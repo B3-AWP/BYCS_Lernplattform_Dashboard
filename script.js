@@ -106,7 +106,7 @@ function setCachedData(type, data) {
                     url: item.url // Für Links nötig
                 }));
         } else if (type === 'pflicht') {
-            // Pflichtaufgaben - nur relevante Felder
+            // Pflichtabgaben - nur relevante Felder
             optimizedData = data.map(item => ({
                 name: item.name?.length > 30 ? item.name.substring(0, 27) + '...' : item.name,
                 grade: item.grade,
@@ -165,8 +165,8 @@ function clearCache(type = null) {
 
 function showCacheNotification(type, isBackground = false) {
     const message = isBackground
-        ? `📡 ${type === 'checklists' ? 'Checklisten' : 'Pflichtaufgaben'} werden im Hintergrund aktualisiert...`
-        : `💾 ${type === 'checklists' ? 'Checklisten' : 'Pflichtaufgaben'} aus Cache geladen`;
+        ? `📡 ${type === 'checklists' ? 'Checklisten' : 'Pflichtabgaben'} werden im Hintergrund aktualisiert...`
+        : `💾 ${type === 'checklists' ? 'Checklisten' : 'Pflichtabgaben'} aus Cache geladen`;
 
     console.log(message);
 
@@ -875,16 +875,8 @@ function extractPflichtOverview(useCache = true) {
             const pfSection = document.getElementById('pflichtFilterSection');
             if (pfSection) pfSection.style.display = 'block';
 
-            // Lade Mebis-Sortierung im Hintergrund
-            loadMebisOrder().then(() => {
-                console.log('Mebis-Sortierung geladen und angewendet');
-                // Wende Filter/Sortierung an (das wird die Tabelle mit der richtigen Sortierung erstellen)
-                applyPflichtFilters();
-            }).catch(err => {
-                console.warn('Mebis-Sortierung konnte nicht geladen werden, verwende Standardsortierung', err);
-                // Auch bei Fehler Filter anwenden (verwendet dann originalIndex)
-                applyPflichtFilters();
-            });
+            // Wende Filter/Sortierung an
+            applyPflichtFilters();
 
             // Zähle Pflicht- und optionale Aufgaben separat
             const pflichtCount = enrichedData.filter(item => item.isPflicht).length;
@@ -1383,7 +1375,7 @@ function updatePflichtStats() {
         return;
     }
 
-    // Nur Pflichtaufgaben für Statistiken berücksichtigen
+    // Nur Pflichtabgaben für Statistiken berücksichtigen
     const pflichtOnly = window.pflichtData.filter(item => item.isPflicht === true);
 
     const totalPflicht = pflichtOnly.length;
@@ -1432,7 +1424,7 @@ function updatePflichtStats() {
     }
 
     updatePflichtCombinedStats(completedPflicht, totalPflicht, referencePflichtProgress);
-    updateReferenceWeekLabels(); // Labels auch bei Pflichtaufgaben aktualisieren
+    updateReferenceWeekLabels(); // Labels auch bei Pflichtabgaben aktualisieren
     showBothStatsRows();
 }
 
@@ -1602,11 +1594,11 @@ function generateInsights() {
 
     let pflichtInsight = '';
     if (avgPflicht >= 80) {
-        pflichtInsight = '<svg width="16" height="16" style="vertical-align: text-bottom; margin-right: 4px;"><use href="#icon-success"></use></svg>Ausgezeichneter Fortschritt! Die meisten Pflichtaufgaben sind erfüllt.';
+        pflichtInsight = '<svg width="16" height="16" style="vertical-align: text-bottom; margin-right: 4px;"><use href="#icon-success"></use></svg>Ausgezeichneter Fortschritt! Die meisten Pflichtabgaben sind erfüllt.';
     } else if (avgPflicht >= 50) {
         pflichtInsight = '<svg width="16" height="16" style="vertical-align: text-bottom; margin-right: 4px;"><use href="#icon-warning"></use></svg>Guter Fortschritt, aber es gibt noch Verbesserungspotential.';
     } else {
-        pflichtInsight = '<svg width="16" height="16" style="vertical-align: text-bottom; margin-right: 4px;"><use href="#icon-alert"></use></svg>Mehr Fokus auf Pflichtaufgaben empfohlen.';
+        pflichtInsight = '<svg width="16" height="16" style="vertical-align: text-bottom; margin-right: 4px;"><use href="#icon-alert"></use></svg>Mehr Fokus auf Pflichtabgaben empfohlen.';
     }
 
     let gesamtInsight = '';
@@ -1953,7 +1945,7 @@ function showTab(tab) {
         const headingTexts = {
             'home': 'Übersicht',
             'checklists': 'Checklisten',
-            'pflicht': 'Pflichtaufgaben'
+            'pflicht': 'Pflichtabgaben'
         };
         headingElement.textContent = headingTexts[tab] || 'Übersicht';
     }
@@ -2204,6 +2196,57 @@ function setRefreshButtonLoading(isLoading) {
     }
 }
 
+// Globale Variable zum Tracken des letzten Requirement-Filters
+let lastRequirementFilter = null;
+
+// Funktion zum Aktualisieren der Sortierungs-Optionen basierend auf dem Filter
+function updateSortOptions(requirementFilter) {
+    const sortFilterDropdown = document.getElementById('pflichtSortFilter');
+
+    if (!sortFilterDropdown) return false;
+
+    const currentValue = sortFilterDropdown.value;
+    const filterChanged = lastRequirementFilter !== null && lastRequirementFilter !== requirementFilter;
+
+    // Wenn "Alle Aufgaben": Standard = Nach Typ (type-grouped display)
+    if (requirementFilter === 'all') {
+        // Keine speziellen Optionen mehr - alle Filter zeigen die gleichen Optionen
+        sortFilterDropdown.innerHTML = `
+            <option value="name">Nach Name</option>
+            <option value="type">Nach Typ</option>
+            <option value="status-completed">Erledigte zuerst</option>
+        `;
+
+        // Nur beim WECHSEL auf "Alle Aufgaben" automatisch auf Typ-Sortierung setzen
+        if (filterChanged) {
+            sortFilterDropdown.value = 'type';
+            lastRequirementFilter = requirementFilter;
+            return true; // Signal: Dropdown wurde geändert
+        } else if (currentValue === 'name' || currentValue === 'type' || currentValue === 'status-completed') {
+            sortFilterDropdown.value = currentValue;
+        } else {
+            sortFilterDropdown.value = 'type';
+        }
+    }
+    // Wenn "Nur Pflichtabgaben" oder "Nur optionale": Standard = Name
+    else {
+        sortFilterDropdown.innerHTML = `
+            <option value="name">Nach Name</option>
+            <option value="type">Nach Typ</option>
+            <option value="status-completed">Erledigte zuerst</option>
+        `;
+
+        if (currentValue === 'name' || currentValue === 'type' || currentValue === 'status-completed') {
+            sortFilterDropdown.value = currentValue; // Behalte Auswahl
+        } else {
+            sortFilterDropdown.value = 'name'; // Default
+        }
+    }
+
+    lastRequirementFilter = requirementFilter;
+    return false; // Signal: Dropdown wurde nicht geändert (oder Auswahl beibehalten)
+}
+
 function applyPflichtFilters() {
     if (!window.pflichtData) return;
 
@@ -2211,6 +2254,11 @@ function applyPflichtFilters() {
     const statusFilter = document.getElementById('pflichtStatusFilter').value;
     const typeFilter = document.getElementById('pflichtTypeFilter').value;
     const gradeFilter = document.getElementById('pflichtGradeFilter').value;
+
+    // Aktualisiere Sortierungs-Optionen basierend auf dem Filter
+    updateSortOptions(requirementFilter);
+
+    // Lese sortFilter NACH updateSortOptions(), damit der neue Wert verwendet wird
     const sortFilter = document.getElementById('pflichtSortFilter').value;
 
     let filteredData = [...window.pflichtData];
@@ -2222,6 +2270,16 @@ function applyPflichtFilters() {
         filteredData = filteredData.filter(item => item.isPflicht === false);
     }
     // 'all' bedeutet keine Filterung nach isPflicht
+
+    // Ausschluss-Filter für "Alle Aufgaben" - entferne Aufgaben mit bestimmten Strings im Namen
+    if (requirementFilter === 'all' && EXTERNAL_CONFIG.excludeFromOverview && EXTERNAL_CONFIG.excludeFromOverview.length > 0) {
+        filteredData = filteredData.filter(item => {
+            // Prüfe ob der Name einen der ausgeschlossenen Strings enthält
+            return !EXTERNAL_CONFIG.excludeFromOverview.some(excludeString =>
+                item.name.includes(excludeString)
+            );
+        });
+    }
 
     if (statusFilter !== 'all') {
         if (statusFilter === 'completed') {
@@ -2253,14 +2311,6 @@ function applyPflichtFilters() {
     }
 
     switch(sortFilter) {
-        case 'mebis':
-            // Sortiere nach Kurs-Reihenfolge (Mebis)
-            filteredData.sort((a, b) => {
-                const orderA = a.mebisOrder !== undefined ? a.mebisOrder : 9999;
-                const orderB = b.mebisOrder !== undefined ? b.mebisOrder : 9999;
-                return orderA - orderB;
-            });
-            break;
         case 'name':
             filteredData.sort((a, b) => a.name.localeCompare(b.name, 'de'));
             break;
@@ -2275,12 +2325,8 @@ function applyPflichtFilters() {
             });
             break;
         default:
-            // Default ist die Kurs-Reihenfolge (Mebis)
-            filteredData.sort((a, b) => {
-                const orderA = a.mebisOrder !== undefined ? a.mebisOrder : 9999;
-                const orderB = b.mebisOrder !== undefined ? b.mebisOrder : 9999;
-                return orderA - orderB;
-            });
+            // Default: Nach Name sortieren
+            filteredData.sort((a, b) => a.name.localeCompare(b.name, 'de'));
     }
 
     updatePflichtTable(filteredData);
@@ -2292,7 +2338,7 @@ function updatePflichtTable(data) {
     const requirementFilter = document.getElementById('pflichtRequirementFilter')?.value || 'pflicht';
     let tableTitle = 'Aufgaben-Übersicht';
     if (requirementFilter === 'pflicht') {
-        tableTitle = 'Pflichtaufgaben-Übersicht';
+        tableTitle = 'Pflichtabgaben-Übersicht';
     } else if (requirementFilter === 'optional') {
         tableTitle = 'Optionale Aufgaben-Übersicht';
     } else {
@@ -2305,6 +2351,36 @@ function updatePflichtTable(data) {
     const countInfo = requirementFilter === 'all' ? ` (${pflichtCount} Pflicht, ${optionalCount} Optional)` : ` (${data.length})`;
 
     let html = `<h4 style="display: flex; align-items: center; gap: 8px;"><svg width="18" height="18"><use href="#icon-books"></use></svg>${tableTitle}${countInfo}</h4>`;
+
+    // Info-Banner für "Alle Aufgaben" Ansicht
+    if (requirementFilter === 'all') {
+        html += `
+        <div class="info-banner type-grouped-banner" style="
+            margin: 16px 0;
+            padding: 12px 16px;
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+            border-left: 4px solid #2196f3;
+            border-radius: 8px;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        ">
+            <svg width="24" height="24" style="flex-shrink: 0; margin-top: 2px;" fill="#1976d2">
+                <use href="#icon-info"></use>
+            </svg>
+            <div style="flex: 1;">
+                <div style="font-weight: 600; color: #0d47a1; margin-bottom: 4px; font-size: 0.95em;">
+                    Hinweis zur Darstellung
+                </div>
+                <div style="color: #0d47a1; font-size: 0.9em; line-height: 1.5;">
+                    Die Aufgaben werden nach <strong>Typ gruppiert</strong> dargestellt (erst alle Aufgaben, dann alle Quizzes).
+                    Dies ist die Standard-Darstellung für die Übersicht aller Aufgaben.
+                </div>
+            </div>
+        </div>`;
+    }
+
     html += '<table class="info-table" id="pflichtTable">';
     html += '<thead><tr>';
     html += '<th onclick="sortPflichtTableByColumn(0)" class="sortable-header" style="cursor: pointer;">Name <span class="sort-icon"><svg width="12" height="12"><use href="#icon-sort-both"></use></svg></span></th>';
@@ -2405,7 +2481,7 @@ function updatePflichtTable(data) {
 }
 
 
-// Star-based grading system for Pflichtaufgaben
+// Star-based grading system for Pflichtabgaben
 function convertStarsToPercentage(stars) {
     const starMapping = {
         1: 0,
@@ -2637,216 +2713,6 @@ function toggleChart(chartId) {
         content.classList.add('collapsed');
         toggle.classList.remove('expanded');
         toggle.querySelector('span').textContent = EXTERNAL_CONFIG.ui.toggleChart.show;
-    }
-}
-
-// ================================
-// MEBIS SORTIERUNG API
-// ================================
-
-// Funktion zum Extrahieren des Sesskeys aus der Mebis-Seite
-async function getMebisSesskey() {
-    try {
-        const response = await fetch(EXTERNAL_CONFIG.urls.courseIndex);
-        const html = await response.text();
-
-        // Suche nach sesskey in verschiedenen Formaten
-        const sesskeyMatch = html.match(/sesskey["\']?\s*[:=]\s*["']([^"']+)["']/i) ||
-                           html.match(/M\.cfg\.sesskey\s*=\s*["']([^"']+)["']/i);
-
-        if (sesskeyMatch && sesskeyMatch[1]) {
-            return sesskeyMatch[1];
-        }
-
-        console.warn('Sesskey konnte nicht extrahiert werden');
-        return null;
-    } catch (error) {
-        console.error('Fehler beim Abrufen des Sesskeys:', error);
-        return null;
-    }
-}
-
-// Funktion zum Abrufen der Kursstruktur mit core_course_get_contents
-// Diese API liefert ALLE Aktivitäten (Assignments + Quizzes gemischt) in Kursreihenfolge
-async function getMebisCourseStructure() {
-    console.log('🔍 getMebisCourseStructure() gestartet...');
-    try {
-        const sesskey = await getMebisSesskey();
-        console.log('📌 Sesskey erhalten:', sesskey ? 'JA' : 'NEIN');
-        if (!sesskey) {
-            console.warn('Kein Sesskey verfügbar, verwende Standard-Sortierung');
-            return null;
-        }
-
-        const requestBody = [{
-            index: 0,
-            methodname: "core_course_get_contents",
-            args: {
-                courseid: parseInt(EXTERNAL_CONFIG.system.courseId)
-            }
-        }];
-
-        console.log('📤 Sende API-Request:', requestBody);
-
-        const response = await fetch(`${EXTERNAL_CONFIG.urls.ajaxService}?sesskey=${sesskey}&info=core_course_get_contents`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(requestBody),
-            credentials: 'include'
-        });
-
-        console.log('📥 API Response Status:', response.status, response.statusText);
-
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
-        console.log('📦 API Response Data:', data);
-
-        if (data && data[0]) {
-            if (data[0].error) {
-                console.error('❌ API returned error:', data[0].exception);
-                return null;
-            }
-
-            if (data[0].data) {
-                console.log('✅ Sections gefunden:', data[0].data.length);
-
-                // Extrahiere alle Module (Assignments, Quizzes, etc.) mit ihrer Reihenfolge
-                const orderMap = {};
-                let globalIndex = 0;
-
-                // Iteriere durch alle Sections
-                data[0].data.forEach((section, sectionIdx) => {
-                    console.log(`  Section ${sectionIdx}: "${section.name}", Module: ${section.modules ? section.modules.length : 0}`);
-
-                    if (section.modules && Array.isArray(section.modules)) {
-                        section.modules.forEach(module => {
-                            // Nur Assignments und Quizzes berücksichtigen
-                            if (module.modname === 'assign' || module.modname === 'quiz') {
-                                orderMap[module.id] = globalIndex;
-                                console.log(`    ✓ ${globalIndex}: ${module.modname} - ${module.name} (id: ${module.id})`);
-                                globalIndex++;
-                            }
-                        });
-                    }
-                });
-
-                console.log('✅ Kurs-Struktur erfolgreich abgerufen:', Object.keys(orderMap).length, 'Aktivitäten (Assignments + Quizzes gemischt)');
-                console.log('📊 OrderMap:', orderMap);
-                return orderMap;
-            }
-        }
-
-        console.warn('⚠️ Keine gültigen Daten von core_course_get_contents erhalten');
-        return null;
-    } catch (error) {
-        console.error('❌ Fehler beim Abrufen der Kurs-Struktur:', error);
-        return null;
-    }
-}
-
-// Alternative Funktion: Parse Kursseite direkt (HTML-basiert)
-// Funktioniert ohne API-Zugriff, auch für Schüler
-async function getCourseOrderFromHTML() {
-    console.log('🔍 getCourseOrderFromHTML() gestartet - Parse Kursseite direkt...');
-    try {
-        const courseUrl = EXTERNAL_CONFIG.urls.courseIndex;
-        console.log('📄 Lade Kursseite:', courseUrl);
-
-        const response = await fetch(courseUrl, {
-            credentials: 'include'
-        });
-
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const html = await response.text();
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(html, 'text/html');
-
-        const orderMap = {};
-        let globalIndex = 0;
-
-        // Suche alle Activity-Links in der Kursseite
-        // Moodle verwendet typischerweise: <a class="aalink" href="...mod/assign/view.php?id=XXX">
-        // oder: <a href="...mod/quiz/view.php?id=XXX">
-        const activityLinks = doc.querySelectorAll('a[href*="/mod/assign/view.php"], a[href*="/mod/quiz/view.php"]');
-
-        console.log(`✅ ${activityLinks.length} Activity-Links gefunden`);
-
-        activityLinks.forEach(link => {
-            const href = link.getAttribute('href');
-            const cmidMatch = href.match(/[?&]id=(\d+)/);
-
-            if (cmidMatch) {
-                const cmid = cmidMatch[1];
-                const isAssign = href.includes('/mod/assign/');
-                const isQuiz = href.includes('/mod/quiz/');
-                const name = link.textContent.trim();
-
-                // Vermeide Duplikate (manchmal gibt es mehrere Links zur selben Activity)
-                if (!orderMap[cmid]) {
-                    orderMap[cmid] = globalIndex;
-                    console.log(`  ✓ ${globalIndex}: ${isAssign ? 'assign' : 'quiz'} - ${name} (cmid: ${cmid})`);
-                    globalIndex++;
-                }
-            }
-        });
-
-        console.log('✅ Kurs-Reihenfolge aus HTML extrahiert:', Object.keys(orderMap).length, 'Aktivitäten');
-        console.log('📊 OrderMap:', orderMap);
-        return orderMap;
-
-    } catch (error) {
-        console.error('❌ Fehler beim Parsen der Kursseite:', error);
-        return null;
-    }
-}
-
-// Globale Variable für die Mebis-Sortierung
-let mebisAssignmentOrder = null;
-
-// Funktion zum Laden der Mebis-Sortierung (wird beim Laden aufgerufen)
-async function loadMebisOrder() {
-    // Versuche zuerst API, falls das fehlschlägt, parse HTML
-    console.log('🔄 Lade Kurs-Reihenfolge...');
-
-    mebisAssignmentOrder = await getMebisCourseStructure();
-
-    // Fallback: Wenn API nicht verfügbar, parse HTML direkt
-    if (!mebisAssignmentOrder) {
-        console.log('⚠️ API nicht verfügbar, verwende HTML-Parsing Fallback');
-        mebisAssignmentOrder = await getCourseOrderFromHTML();
-    }
-
-    if (mebisAssignmentOrder) {
-        console.log('✅ OrderMap von Kursseite erhalten:', mebisAssignmentOrder);
-
-        // Aktualisiere die Daten mit der Kurs-Reihenfolge
-        if (window.pflichtData) {
-            window.pflichtData = window.pflichtData.map(item => {
-                const order = mebisAssignmentOrder[item.cmid] !== undefined ? mebisAssignmentOrder[item.cmid] : 9999;
-                console.log(`${item.name} (cmid: ${item.cmid}, type: ${item.type}): mebisOrder = ${order}`);
-                return {
-                    ...item,
-                    mebisOrder: order
-                };
-            });
-
-            // Zeige die ersten 5 Einträge nach Sortierung
-            const preview = [...window.pflichtData]
-                .sort((a, b) => (a.mebisOrder || 9999) - (b.mebisOrder || 9999))
-                .slice(0, 5)
-                .map(item => `${item.mebisOrder}: ${item.name} (${item.type})`);
-            console.log('✅ Preview sortierte Reihenfolge (erste 5):', preview);
-        }
-    } else {
-        console.error('❌ Konnte Kurs-Reihenfolge nicht laden (weder API noch HTML)');
     }
 }
 

@@ -32,14 +32,14 @@ const EXTERNAL_CONFIG = {
             1: { initial: '○ System initialisiert', completed: '✓ System initialisiert' },
             2: { initial: '○ Schiene wird erkannt...', completed: '✓ Schiene erkannt' },
             3: { initial: '○ Checklisten werden geladen...', completed: '✓ Checklisten geladen' },
-            4: { initial: '○ Pflichtaufgaben werden geladen...', completed: '✓ Pflichtaufgaben geladen' }
+            4: { initial: '○ Pflichtabgaben werden geladen...', completed: '✓ Pflichtabgaben geladen' }
         },
         progress: {
             detectTrack: 'Erkenne Schiene...',
             detectTrackSub: 'Analysiere Mebis-Kurs...',
             loadChecklists: 'Lade Checklisten...',
             loadChecklistsSub: 'Verbinde mit Mebis-Server...',
-            loadPflicht: 'Lade Pflichtaufgaben...',
+            loadPflicht: 'Lade Pflichtabgaben...',
             loadPflichtSub: 'Analysiere Aufgaben und Quizzes...',
             serverSlow: '⚠️ Mebis-Server langsam - lade mit verfügbaren Daten fort',
             serverTimeout: '🔄 Einige Checklisten übersprungen (Server-Timeouts)'
@@ -132,7 +132,14 @@ const EXTERNAL_CONFIG = {
         "IFA12E": "Schiene1",
         "IFA12B": "Schiene3",
         "IFA12D": "Schiene3"
-    }
+    },
+
+    // Filter für "Alle Aufgaben-Übersicht"
+    // Aufgaben, die einen dieser Strings im Namen enthalten, werden NICHT angezeigt
+    excludeFromOverview: [
+        "(Leistungsnachweis)",
+        "Review-Talk"
+    ]
 };
 
 // Globale Verfügbarkeit sicherstellen

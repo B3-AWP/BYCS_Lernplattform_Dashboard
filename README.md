@@ -6,7 +6,7 @@ Ein interaktives Dashboard zur Visualisierung und Analyse von Lernfortschritten 
 
 ### 📊 **Fortschritts-Tracking**
 - **Checklisten-Analyse**: Detaillierte Übersicht über alle Kurs-Checklisten
-- **Pflichtaufgaben-Tracking**: Vollständige Überwachung von Assignments und Quizzes
+- **Pflichtabgaben-Tracking**: Vollständige Überwachung von Assignments und Quizzes
 - **IHK-Notensystem**: Automatische Berechnung von IHK-Noten basierend auf Leistungen
 - **Referenzwochen-System**: Fortschrittsbewertung bezogen auf Kurswochen
 
