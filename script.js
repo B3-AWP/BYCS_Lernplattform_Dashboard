@@ -115,6 +115,15 @@ function setCachedData(type, data) {
                 status: item.status,
                 isPflicht: item.isPflicht // Neu: isPflicht-Attribut cachen
             }));
+        } else if (type === 'mitarbeitsnote') {
+            // Mitarbeitsnote optimieren
+            optimizedData = {
+                overall: Math.round(data.overall * 100) / 100,  // 2 Dezimalstellen
+                components: data.components.map(c => ({
+                    name: c.name.length > 50 ? c.name.substring(0, 47) + '...' : c.name,
+                    grade: Math.round(c.grade * 100) / 100
+                }))
+            };
         } else {
             // Fallback: Original Daten
             optimizedData = data;
@@ -901,6 +910,204 @@ function extractPflichtOverview(useCache = true) {
         .finally(() => showLoading(false));
 }
 
+/**
+ * Fetch und parse Mitarbeitsnote vom Grade Report
+ * @param {boolean} useCache - Cache verwenden?
+ * @returns {Promise<Object|null>} Grade-Daten oder null bei Fehler
+ */
+async function fetchMitarbeitsnote(useCache = true) {
+    // 1. Cache prüfen
+    const cachedData = useCache ? getCachedData('mitarbeitsnote') : null;
+    if (cachedData) {
+        console.log('💾 Mitarbeitsnote aus Cache geladen');
+        return cachedData;
+    }
+
+    try {
+        // 2. Fetch Grade Report
+        const courseId = EXTERNAL_CONFIG.system.courseId;
+        const gradeReportUrl = `https://lernplattform.mebis.bycs.de/grade/report/user/index.php?id=${courseId}`;
+
+        const response = await fetch(gradeReportUrl, {
+            credentials: 'same-origin',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        // 3. Parse HTML
+        const html = await response.text();
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+
+        // 4. Category-Klasse aus Config holen
+        const categoryClass = EXTERNAL_CONFIG.assignmentCategories.Mitarbeitsnote_1;
+        const categoryRows = doc.querySelectorAll(`tr.${categoryClass}`);
+
+        if (categoryRows.length === 0) {
+            console.warn(`Keine Zeilen mit Klasse "${categoryClass}" gefunden`);
+            return null;
+        }
+
+        console.log(`✓ ${categoryRows.length} Zeilen mit Klasse "${categoryClass}" gefunden`);
+
+        // 5. Parse Notendaten
+        let overallGrade = null;
+        const components = [];
+
+        categoryRows.forEach((row, index) => {
+            const nameCell = row.querySelector('th.column-itemname');
+            const gradeCell = row.querySelector('td.column-grade');
+
+            if (!nameCell || !gradeCell) {
+                console.log(`⚠️ Zeile ${index}: Keine Name- oder Grade-Zelle gefunden`);
+                return;
+            }
+
+            // Text extrahieren
+            const nameFull = nameCell.textContent.trim();
+            const gradeText = gradeCell.textContent.trim();
+
+            // Name aus gradeitemheader span extrahieren (sauberer)
+            const nameSpan = nameCell.querySelector('.gradeitemheader');
+            const name = nameSpan ? nameSpan.textContent.trim() : nameFull;
+
+            console.log(`📋 Zeile ${index}: Name="${name}", Grade="${gradeText}"`);
+
+            // Note parsen (Format: "82,64" oder "-")
+            let gradeValue = null;
+            if (gradeText && gradeText !== '-' && gradeText !== 'Nicht bewertet') {
+                const numericGrade = parseFloat(gradeText.replace(',', '.'));
+                if (!isNaN(numericGrade)) {
+                    gradeValue = numericGrade;
+                }
+            }
+
+            // Gesamtnote erkennen (flexible Bedingung - prüfe nur auf "Mitarbeitsnote gesamt" im Namen)
+            if (name.includes('Mitarbeitsnote gesamt')) {
+                overallGrade = gradeValue;
+                console.log(`✓ Gesamtnote gefunden: ${gradeValue}`);
+            } else if (gradeValue !== null) {
+                components.push({ name, grade: gradeValue });
+                console.log(`✓ Bestandteil hinzugefügt: ${name} = ${gradeValue}`);
+            }
+        });
+
+        // 6. Validierung
+        if (overallGrade === null) {
+            console.warn('Keine Gesamtnote gefunden');
+            return null;
+        }
+
+        const gradeData = { overall: overallGrade, components };
+
+        // 7. Cache speichern
+        setCachedData('mitarbeitsnote', gradeData);
+        console.log('✓ Mitarbeitsnote erfolgreich geladen:', gradeData);
+
+        return gradeData;
+
+    } catch (error) {
+        console.error('Fehler beim Laden der Mitarbeitsnote:', error);
+        return null;
+    }
+}
+
+/**
+ * Update Mitarbeitsnote Stat-Card mit Daten
+ * @param {Object|null} gradeData - Grade-Daten oder null
+ */
+function updateMitarbeitsnoteCard(gradeData) {
+    const statsGroup = document.getElementById('mitarbeitStatsGroup');
+    const overallGradeEl = document.getElementById('mitarbeitOverallGrade');
+    const componentsContainer = document.getElementById('mitarbeitComponents');
+    const ihkGradeEl = document.getElementById('mitarbeitIHKGrade');
+    const ihkGradeNameEl = document.getElementById('mitarbeitIHKGradeName');
+
+    // Card ausblenden bei fehlenden Daten
+    if (!gradeData || gradeData.overall === null) {
+        if (statsGroup) statsGroup.style.display = 'none';
+        console.log('Mitarbeitsnote-Karte ausgeblendet (keine Daten)');
+        return;
+    }
+
+    // Card anzeigen
+    if (statsGroup) statsGroup.style.display = 'block';
+
+    // Gesamtnote anzeigen (deutsches Format: 82,64)
+    const percentage = gradeData.overall;
+    if (overallGradeEl) {
+        overallGradeEl.textContent = `${percentage.toFixed(2).replace('.', ',')}%`;
+    }
+
+    // IHK-Note berechnen und anzeigen
+    const ihkGradeInfo = calculateIHKGrade(percentage);
+    if (ihkGradeEl && ihkGradeNameEl) {
+        // Note mit Tendenz (z.B. "2+" oder "3-")
+        let gradeDisplay = ihkGradeInfo.grade.toString();
+        if (ihkGradeInfo.tendency) {
+            gradeDisplay += ihkGradeInfo.tendency;
+        }
+        ihkGradeEl.textContent = gradeDisplay;
+
+        // Notennamen aus Config holen
+        const gradeConfig = EXTERNAL_CONFIG.grades[ihkGradeInfo.grade];
+        if (gradeConfig) {
+            ihkGradeNameEl.textContent = gradeConfig.name;
+            // Farbe setzen
+            ihkGradeEl.style.color = gradeConfig.color;
+        }
+    }
+
+    // Bestandteile rendern
+    if (componentsContainer) {
+        componentsContainer.innerHTML = ''; // Clear
+
+        gradeData.components.forEach(component => {
+            const componentEl = document.createElement('div');
+            componentEl.className = 'mitarbeit-component';
+
+            const nameEl = document.createElement('span');
+            nameEl.className = 'mitarbeit-component-name';
+            nameEl.textContent = component.name;
+
+            const gradeEl = document.createElement('span');
+            gradeEl.className = 'mitarbeit-component-grade';
+            gradeEl.textContent = component.grade.toFixed(2).replace('.', ',');
+
+            componentEl.appendChild(nameEl);
+            componentEl.appendChild(gradeEl);
+            componentsContainer.appendChild(componentEl);
+        });
+    }
+
+    console.log('✓ Mitarbeitsnote-Karte aktualisiert');
+}
+
+/**
+ * Load und display Mitarbeitsnote Daten
+ * @param {boolean} useCache - Cache verwenden?
+ */
+async function loadMitarbeitsnote(useCache = true) {
+    try {
+        const gradeData = await fetchMitarbeitsnote(useCache);
+        updateMitarbeitsnoteCard(gradeData);
+
+        // Background-Refresh bei Cache-Verwendung
+        if (useCache && gradeData) {
+            setTimeout(() => {
+                console.log('📡 Mitarbeitsnote wird im Hintergrund aktualisiert...');
+                loadMitarbeitsnote(false);
+            }, 100);
+        }
+    } catch (error) {
+        console.error('Fehler beim Laden der Mitarbeitsnote:', error);
+        updateMitarbeitsnoteCard(null); // Card ausblenden
+    }
+}
+
 async function extractFromChecklistIndex(useCache = true) {
     // Zeige Loading-Overlay für Checklisten-Stats
     showChecklistStatsLoading(true);
@@ -1507,30 +1714,33 @@ function updateProgressDisplay(pflichtAvg, gesamtAvg) {
 function calculateIHKGrade(percentage) {
     let grade, tendency = '';
 
-    if (percentage > 91) {
+    // Verwende Schwellenwerte dynamisch aus Config (EXTERNAL_CONFIG.grades)
+    const grades = EXTERNAL_CONFIG.grades;
+
+    if (percentage > grades[1].threshold) {  // Note 1
         grade = 1;
-        if (percentage >= 98) tendency = '+';  // High end gets +
-        else if (percentage <= 93) tendency = '-';  // Low end gets -
-    } else if (percentage > 80) {
+        if (percentage >= 98) tendency = '+';
+        else if (percentage <= grades[1].threshold + 2) tendency = '-';
+    } else if (percentage > grades[2].threshold) {  // Note 2
         grade = 2;
-        if (percentage >= 90) tendency = '+';  // High end gets +
-        else if (percentage <= 81) tendency = '-';  // Low end gets -
-    } else if (percentage > 66) {
+        if (percentage >= 90) tendency = '+';
+        else if (percentage <= grades[2].threshold + 2) tendency = '-';
+    } else if (percentage > grades[3].threshold) {  // Note 3
         grade = 3;
-        if (percentage >= 79) tendency = '+';  // High end gets +
-        else if (percentage <= 67) tendency = '-';  // Low end gets -
-    } else if (percentage > 49) {
+        if (percentage >= 79) tendency = '+';
+        else if (percentage <= grades[3].threshold + 2) tendency = '-';
+    } else if (percentage > grades[4].threshold) {  // Note 4
         grade = 4;
-        if (percentage >= 65) tendency = '+';  // High end gets +
-        else if (percentage <= 51) tendency = '-';  // Low end gets -
-    } else if (percentage > 29) {
+        if (percentage >= 65) tendency = '+';
+        else if (percentage <= grades[4].threshold + 2) tendency = '-';
+    } else if (percentage > grades[5].threshold) {  // Note 5
         grade = 5;
-        if (percentage >= 48) tendency = '+';  // High end gets +
-        else if (percentage <= 31) tendency = '-';  // Low end gets -
-    } else {
+        if (percentage >= 48) tendency = '+';
+        else if (percentage <= grades[5].threshold + 2) tendency = '-';
+    } else {  // Note 6
         grade = 6;
-        if (percentage >= 28) tendency = '+';  // Any points in grade 6 is relatively good
-        else if (percentage <= 10) tendency = '-'; 
+        if (percentage >= 28) tendency = '+';
+        else if (percentage <= 10) tendency = '-';
     }
 
     return { grade, tendency };
@@ -2928,7 +3138,8 @@ window.addEventListener('DOMContentLoaded', () => {
     // Parallel data loading für bessere Performance
     Promise.all([
         extractFromChecklistIndex(),
-        extractPflichtOverview()
+        extractPflichtOverview(),
+        loadMitarbeitsnote()
     ]).catch(error => {
         console.error('Fehler beim parallelen Laden der Daten:', error);
     });
@@ -2948,7 +3159,8 @@ window.addEventListener('DOMContentLoaded', () => {
                 // Force refresh - keine Cache-Nutzung bei manueller Aktualisierung
                 await Promise.all([
                     extractFromChecklistIndex(false), // false = kein Cache
-                    extractPflichtOverview(false)     // false = kein Cache
+                    extractPflichtOverview(false),    // false = kein Cache
+                    loadMitarbeitsnote(false)         // false = kein Cache
                 ]);
             } catch (e) {
                 console.error('Refresh fehlgeschlagen:', e);

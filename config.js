@@ -17,10 +17,10 @@ const EXTERNAL_CONFIG = {
     // IHK-Notensystem - Schwellenwerte und Farben
     grades: {
         1: { name: 'sehr gut', threshold: 91, color: '#1e7e34', description: 'Dunkelgrün - Note 1 (sehr gut)' },
-        2: { name: 'gut', threshold: 81, color: '#28a745', description: 'Grün - Note 2 (gut)' },
-        3: { name: 'befriedigend', threshold: 67, color: '#7cb342', description: 'Hellgrün - Note 3 (befriedigend)' },
-        4: { name: 'ausreichend', threshold: 50, color: '#ffc107', description: 'Gelb - Note 4 (ausreichend)' },
-        5: { name: 'mangelhaft', threshold: 30, color: '#fd7e14', description: 'Orange - Note 5 (mangelhaft)' },
+        2: { name: 'gut', threshold: 80, color: '#28a745', description: 'Grün - Note 2 (gut)' },
+        3: { name: 'befriedigend', threshold: 66, color: '#7cb342', description: 'Hellgrün - Note 3 (befriedigend)' },
+        4: { name: 'ausreichend', threshold: 49, color: '#ffc107', description: 'Gelb - Note 4 (ausreichend)' },
+        5: { name: 'mangelhaft', threshold: 29, color: '#fd7e14', description: 'Orange - Note 5 (mangelhaft)' },
         6: { name: 'ungenügend', threshold: 0, color: '#dc3545', description: 'Rot - Note 6 (ungenügend)' }
     },
 
@@ -139,7 +139,12 @@ const EXTERNAL_CONFIG = {
     excludeFromOverview: [
         "(Leistungsnachweis)",
         "Review-Talk"
-    ]
+    ],
+
+    // Assignment Categories für Notenfilterung
+    assignmentCategories: {
+        Mitarbeitsnote_1: 'cat_2407714'  // CSS-Klasse für Mitarbeitsnote im Grade Report
+    }
 };
 
 // Globale Verfügbarkeit sicherstellen
