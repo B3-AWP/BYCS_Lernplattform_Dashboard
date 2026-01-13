@@ -629,23 +629,29 @@ const COURSE_ID = EXTERNAL_CONFIG.system.courseId;
 function updateReferenceWeek(weekValue) {
     currentReferenceWeek = parseInt(weekValue);
     document.getElementById('referenceWeekSlider').value = currentReferenceWeek;
-    
+
     // Mark this as a manual override to prevent track system from overriding
     localStorage.setItem('manualReferenceWeek', currentReferenceWeek);
-    
+
     // Labels mit Referenzwoche aktualisieren
     updateReferenceWeekLabels();
-    
+
     // Alle Berechnungen neu durchführen
     if (checklistData && checklistData.length > 0) {
         updateStatistics();
         updateCharts();
         updateChecklistTable(checklistData);
     }
-    
+
     if (window.pflichtData && window.pflichtData.length > 0) {
         updatePflichtStats();
         updatePflichtTable(window.pflichtData);
+    }
+
+    // NEU: Mitarbeitsnote-Fortschritt neu berechnen
+    const gradeData = getCachedData('mitarbeitsnote');
+    if (gradeData) {
+        updateMitarbeitsnoteCard(gradeData);
     }
 }
 
@@ -1083,6 +1089,58 @@ function updateMitarbeitsnoteCard(gradeData) {
         });
     }
 
+    // NEU: Fortschritt 2. Mitarbeitsnote berechnen und anzeigen
+    const progressRow = document.getElementById('mitarbeitProgressRow');
+
+    if (shouldShowMitarbeitProgressCards()) {
+        const progressData = calculateFortschritt2Mitarbeitsnote(gradeData);
+
+        if (progressData && progressRow) {
+            // Progress Row anzeigen
+            progressRow.style.display = 'grid';
+
+            // Fortschritt % anzeigen
+            const fortschrittEl = document.getElementById('mitarbeitFortschrittPercent');
+            if (fortschrittEl) {
+                fortschrittEl.textContent = `${progressData.fortschrittPercent.toFixed(1).replace('.', ',')}%`;
+            }
+
+            // Referenzwoche anzeigen
+            const refWeekDisplay = document.getElementById('mitarbeitReferenceWeekDisplay');
+            if (refWeekDisplay) {
+                const B7 = EXTERNAL_CONFIG.mitarbeitsnote1ReferenceWeek;
+                refWeekDisplay.textContent = B7;
+            }
+
+            // Erwartete Note anzeigen
+            const expectedGradeEl = document.getElementById('mitarbeitExpectedGrade');
+            const expectedGradeNameEl = document.getElementById('mitarbeitExpectedGradeName');
+
+            if (expectedGradeEl && expectedGradeNameEl) {
+                // Note mit Tendenz
+                let gradeDisplay = progressData.erwarteteNote.grade.toString();
+                if (progressData.erwarteteNote.tendency) {
+                    gradeDisplay += progressData.erwarteteNote.tendency;
+                }
+                expectedGradeEl.textContent = gradeDisplay;
+
+                // Notenname und Farbe
+                const gradeConfig = EXTERNAL_CONFIG.grades[progressData.erwarteteNote.grade];
+                if (gradeConfig) {
+                    expectedGradeNameEl.textContent = gradeConfig.name;
+                    expectedGradeEl.style.color = gradeConfig.color;
+                }
+            }
+
+            console.log('✓ Fortschritt 2. Mitarbeitsnote angezeigt');
+        }
+    } else {
+        // Progress Row ausblenden
+        if (progressRow) {
+            progressRow.style.display = 'none';
+        }
+    }
+
     console.log('✓ Mitarbeitsnote-Karte aktualisiert');
 }
 
@@ -1106,6 +1164,181 @@ async function loadMitarbeitsnote(useCache = true) {
         console.error('Fehler beim Laden der Mitarbeitsnote:', error);
         updateMitarbeitsnoteCard(null); // Card ausblenden
     }
+}
+
+/**
+ * Extrahiert Quantität-Wert aus Mitarbeitsnote-Daten
+ * @param {Object} gradeData - Mitarbeitsnote-Daten mit components Array
+ * @returns {number|null} - Quantität-Wert oder null wenn nicht gefunden
+ */
+function getQuantitaetFromGradeData(gradeData) {
+    if (!gradeData || !gradeData.components || gradeData.components.length === 0) {
+        console.warn('⚠️ Keine Komponenten in Mitarbeitsnote gefunden');
+        return null;
+    }
+
+    const quantitaet = gradeData.components.find(c =>
+        c.name.toLowerCase().includes('quantität') ||
+        c.name.toLowerCase().includes('quantitat')
+    );
+
+    if (!quantitaet) {
+        console.warn('⚠️ Quantität-Komponente nicht in Mitarbeitsnote gefunden. Verfügbare Komponenten:',
+                     gradeData.components.map(c => c.name));
+        return null;
+    }
+
+    console.log(`✓ Quantität gefunden: ${quantitaet.grade}%`);
+    return quantitaet.grade;
+}
+
+/**
+ * Berechnet Fortschritt zur 2. Mitarbeitsnote basierend auf Excel-Formel
+ * @param {Object} currentGradeData - Aktuelle Mitarbeitsnote-Daten
+ * @returns {Object|null} - { fortschrittPercent, erwarteteNote, debugInfo } oder null
+ */
+function calculateFortschritt2Mitarbeitsnote(currentGradeData) {
+    // 1. Prerequisite checks
+    const B7 = EXTERNAL_CONFIG.mitarbeitsnote1ReferenceWeek;
+    if (!B7) {
+        console.log('ℹ️ Keine Referenzwoche für 1. Mitarbeitsnote in config.js definiert');
+        return null;
+    }
+
+    const C7 = currentReferenceWeek;
+
+    // Nur berechnen wenn aktuelle Woche > Referenzwoche der 1. Mitarbeitsnote
+    if (C7 <= B7) {
+        console.log(`ℹ️ Fortschritt 2. Mitarbeitsnote nicht angezeigt: Aktuelle Woche (${C7}) <= Referenzwoche 1. MA (${B7})`);
+        return null;
+    }
+
+    // 2. B10: Quantität aus 1. Mitarbeitsnote-Komponenten holen (historischer Wert)
+    const quantitaet1MA = getQuantitaetFromGradeData(currentGradeData);
+    if (quantitaet1MA === null) {
+        console.warn('⚠️ Fortschritt kann nicht berechnet werden: Keine Quantität in 1. Mitarbeitsnote');
+        return null;
+    }
+
+    // 3. avgPflicht aus window holen (referenzwochen-adjustiert!)
+    if (typeof window.avgPflichtProgress === 'undefined') {
+        console.warn('⚠️ Fortschritt kann nicht berechnet werden: avgPflichtProgress nicht verfügbar');
+        return null;
+    }
+    const avgPflicht = window.avgPflichtProgress; // Ändert sich mit Referenzwoche!
+
+    // 4. Checklisten-Daten prüfen
+    if (!checklistData || checklistData.length === 0) {
+        console.warn('⚠️ Fortschritt kann nicht berechnet werden: Keine Checklisten-Daten vorhanden');
+        return null;
+    }
+
+    const checklistsWithPflicht = checklistData.filter(item =>
+        !item.error && item.pflichtProgress !== null
+    );
+
+    if (checklistsWithPflicht.length === 0) {
+        console.warn('⚠️ Fortschritt kann nicht berechnet werden: Keine Checklisten mit Pflichtabgaben');
+        return null;
+    }
+
+    // 5. Variablen für Formel berechnen
+    const B10 = quantitaet1MA / 100; // z.B. 20.00 / 100 = 0.20
+    const B3 = checklistsWithPflicht.length * 100; // z.B. 24 * 100 = 2400
+    const B4 = TOTAL_WEEKS; // z.B. 9
+
+    // C8: Erreichte Punkte bis zur Referenzwoche C7 (aus Checklisten-Fortschritt)
+    const C8 = (avgPflicht / 100) * ((B3 / B4) * C7); // z.B. (23 / 100) * ((2400/9) * 5) = 306
+
+    // 6. Übertrag berechnen: D8 = MAX(0, (B10 - 1) * (B3/B4 * B7))
+    const D8 = Math.max(0, (B10 - 1) * ((B3 / B4) * B7));
+
+    if (D8 > 0) {
+        console.log(`✓ Übertrag erkannt: ${D8.toFixed(2)} Punkte (1. Mitarbeitsnote Quantität hatte ${(B10*100).toFixed(2)}%)`);
+    }
+
+    // 7. Fortschritt berechnen: (C8 - (B10 * (B3/B4 * B7)) + D8) / ((B3/B4) * (C7-B7)) * 100
+    const numerator = C8 - (B10 * ((B3 / B4) * B7)) + D8;
+    const denominator = (B3 / B4) * (C7 - B7);
+
+    // Division by zero check
+    if (denominator === 0) {
+        console.error('❌ Fortschritt kann nicht berechnet werden: Zeitraum ist 0 (Denominator = 0)');
+        return null;
+    }
+
+    if (B3 === 0) {
+        console.error('❌ Fortschritt kann nicht berechnet werden: B3 = 0 (keine Checklisten)');
+        return null;
+    }
+
+    const fortschrittPercent = (numerator / denominator) * 100;
+
+    // Warnung bei negativem Fortschritt
+    if (fortschrittPercent < 0) {
+        console.warn(`⚠️ Fortschritt ist negativ: ${fortschrittPercent.toFixed(2)}% - Dies kann auf Rückschritte hinweisen`);
+    }
+
+    // 8. Erwartete Note berechnen
+    const erwarteteNote = calculateIHKGrade(fortschrittPercent);
+
+    // 9. Debug-Info zusammenstellen
+    const debugInfo = {
+        B3, B4, B7, B10, C7, C8, D8,
+        numerator, denominator,
+        avgPflicht,
+        quantitaet1MA,
+        checklistCount: checklistsWithPflicht.length
+    };
+
+    // 10. Debug-Ausgabe
+    console.group('🎯 Fortschritt 2. Mitarbeitsnote Berechnung');
+    console.log('📊 Parameter:');
+    console.table({
+        'B3 (Total Punkte)': B3,
+        'B4 (Total Wochen)': B4,
+        'B7 (Ref.-Woche 1. MA)': B7,
+        'B10 (Quantität 1. MA)': (B10 * 100).toFixed(2) + '%',
+        'C7 (Aktuelle Ref.-Woche)': C7,
+        'avgPflicht (ref-adj.)': avgPflicht.toFixed(2) + '%',
+        'C8 (Punkte bis C7)': C8.toFixed(2),
+        'D8 (Übertrag)': D8.toFixed(2),
+        'MaxPunkte für C7': ((B3/B4) * C7).toFixed(2)
+    });
+    console.log('📈 Ergebnis:');
+    console.log(`  Fortschritt: ${fortschrittPercent.toFixed(2)}%`);
+    console.log(`  Erwartete Note: ${erwarteteNote.grade}${erwarteteNote.tendency || ''}`);
+    console.log(`  Formel: (${numerator.toFixed(2)} / ${denominator.toFixed(2)}) * 100`);
+    console.groupEnd();
+
+    return {
+        fortschrittPercent: fortschrittPercent,
+        erwarteteNote: erwarteteNote,
+        debugInfo: debugInfo
+    };
+}
+
+/**
+ * Prüft ob die Fortschritt 2. Mitarbeitsnote Cards angezeigt werden sollen
+ * @returns {boolean}
+ */
+function shouldShowMitarbeitProgressCards() {
+    // 1. Referenzwoche für 1. Mitarbeitsnote muss in config.js definiert sein
+    const B7 = EXTERNAL_CONFIG.mitarbeitsnote1ReferenceWeek;
+    if (!B7) return false;
+
+    // 2. Aktuelle Referenzwoche muss größer sein als Referenzwoche der 1. Mitarbeitsnote
+    if (currentReferenceWeek <= B7) return false;
+
+    // 3. Aktuelle Mitarbeitsnote muss existieren
+    const currentGradeData = getCachedData('mitarbeitsnote');
+    if (!currentGradeData) return false;
+
+    // 4. Quantität muss in aktueller Mitarbeitsnote vorhanden sein
+    const currentQuantitaet = getQuantitaetFromGradeData(currentGradeData);
+    if (currentQuantitaet === null) return false;
+
+    return true;
 }
 
 async function extractFromChecklistIndex(useCache = true) {
@@ -1363,11 +1596,14 @@ function updateStatistics() {
             : 0;
         const avgGesamt = validChecklists.reduce((sum, item) => sum + (item.gesamtProgress || 0), 0) / totalChecklists;
         const completed = checklistsWithPflicht.filter(item => item.pflichtProgress >= 100).length;
-        
+
         // Referenzwochen-adjustierte Werte berechnen
         const referenceAvgPflicht = calculateReferenceProgressFromPercentage(avgPflicht, pflichtCount);
         const referenceAvgGesamt = calculateReferenceProgressFromPercentage(avgGesamt, totalChecklists);
         const referenceCompleted = calculateReferenceProgress(completed, pflichtCount);
+
+        // Referenzwochen-adjustierten avgPflicht für Mitarbeitsnote-Berechnung verfügbar machen
+        window.avgPflichtProgress = referenceAvgPflicht;
 
         console.log('Statistics Update:', {
             totalChecklists,
@@ -3148,9 +3384,9 @@ window.addEventListener('DOMContentLoaded', () => {
     const refreshBtn = document.getElementById('refreshBtn');
     if (refreshBtn) {
         refreshBtn.onclick = async () => {
-            
+
             // const activeTab = document.getElementById('checklistsTab').style.display !== 'none' ? 'checklists' : 'pflicht';
-            
+
             try {
                 setRefreshButtonLoading(true);
                 window.dashboardLoadingStartTime = Date.now();

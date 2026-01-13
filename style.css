@@ -2138,3 +2138,65 @@ h3 {
 .stats-group-mitarbeit .combined-stats-content {
     align-items: flex-start;
 }
+
+/* ================================
+   Fortschritt 2. Mitarbeitsnote
+   ================================ */
+
+/* Sublabel für "seit Woche X" */
+.stat-sublabel {
+    font-size: 0.7rem;
+    color: var(--text-light);
+    margin-top: 4px;
+    font-style: italic;
+}
+
+/* Erwartete Note Display */
+.mitarbeit-expected-grade {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 8px;
+}
+
+.mitarbeit-expected-grade .mitarbeit-grade-number {
+    font-size: 2.5rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.mitarbeit-expected-grade .mitarbeit-grade-name {
+    font-size: 0.8rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-light);
+    margin-top: 4px;
+}
+
+/* Settings Group für Mitarbeitsnote 1 */
+#mitarbeitsnote1SettingsGroup {
+    margin-top: var(--spacing-lg);
+    padding-top: var(--spacing-lg);
+    border-top: 1px solid var(--border-color);
+}
+
+#mitarbeitsnote1SettingsGroup .slider-label {
+    font-size: 0.9rem;
+    color: var(--text-color);
+    margin-bottom: var(--spacing-sm);
+}
+
+#mitarbeitsnote1SettingsGroup .nav-btn {
+    margin-top: var(--spacing-md);
+}
+
+#resetMitarbeitsnote1Btn {
+    margin-left: var(--spacing-sm);
+    background-color: var(--danger-color);
+}
+
+#resetMitarbeitsnote1Btn:hover {
+    background-color: #c0392b;
+}
