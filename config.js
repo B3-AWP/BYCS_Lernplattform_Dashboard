@@ -160,6 +160,36 @@ const EXTERNAL_CONFIG = {
     prognosisAssignments: {
         reviewTalk2: 83500375,   // Review-Talk 2 Assignment ID
         codeReview: 80560819     // Code Review Assignment ID
+    },
+
+    // Hilfetexte für alle Bereiche
+    helpTexts: {
+        // Checklisten Übersicht
+        checklisten: {
+            'abgeschlossen': 'Zeigt, wie viele deiner Pflicht-Checklisten du bereits vollständig abgehakt hast. Die Zahl rechts (von X) zeigt die Gesamtanzahl der Pflicht-Checklisten, die bis zur aktuellen Referenzwoche erwartet werden.',
+            'durchschnitt': 'Der prozentuale Durchschnitt aller Checklistenpunkte. "Pflicht" zeigt nur Pflicht-Checklisten, "Gesamt" alle Checklisten inklusive optionaler.',
+            'ihkNote': 'Deine Note nach IHK-Notenschlüssel basierend auf dem Pflicht-Checklisten-Durchschnitt. Die Prozentangabe zeigt den genauen Wert, die Tendenz (+/-) zeigt, ob du näher an der besseren oder schlechteren Note bist.'
+        },
+        // Pflichtabgaben Übersicht
+        pflichtabgaben: {
+            'abgeschlossen': 'Zeigt, wie viele Pflichtabgaben du bereits abgegeben oder bewertet bekommen hast. Die Zahl rechts (von X) zeigt die erwartete Anzahl bis zur aktuellen Referenzwoche.',
+            'durchschnittsnote': 'Deine Durchschnittsnote aller bewerteten Pflichtabgaben nach IHK-Notenschlüssel. Die Prozentangabe zeigt den genauen Durchschnittswert.'
+        },
+        // 1. Mitarbeitsnote
+        mitarbeitsnote1: {
+            'Quantität': 'Prozentuale Erfüllung der Pflicht-Checklisten bis zur Referenzwoche der 1. Mitarbeitsnote. Die Punkte in Klammern zeigen erreichte/mögliche Punkte.',
+            'Qualität': 'Durchschnitt aller bis zur 1. Mitarbeitsnote bewerteten Pflichtabgaben.',
+            'Review-Talk': 'Bewertung deines ersten Review-Talks.',
+            'gesamt': 'Durchschnitt aller Komponenten (Quantität, Qualität, Review-Talk), die eine Bewertung haben. Komponenten ohne Bewertung werden nicht eingerechnet.'
+        },
+        // Prognose 2. Mitarbeitsnote
+        prognose: {
+            'Quantität': 'Die erreichten Punkte zeigen deine Leistung zwischen der 1. und 2. Bewertung. Berechnung: Von deinen aktuell erreichten Punkten werden die Punkte der 1. Mitarbeitsnote abgezogen. Falls du dort über 100% erreicht hast, werden diese Bonuspunkte wieder hinzugefügt. Das Ergebnis wird durch die maximal möglichen Punkte im aktuellen Zeitraum geteilt.',
+            'Qualität': 'Durchschnitt aller bewerteten Pflichtabgaben seit der 1. Mitarbeitsnote.',
+            'Review-Talk 2': 'Bewertung deines zweiten Review-Talks (falls bereits bewertet und nach der 1. Mitarbeitsnote).',
+            'Code Review': 'Bewertung deines Code Reviews (falls bereits bewertet und nach der 1. Mitarbeitsnote).',
+            'gesamt': 'Durchschnitt aller Komponenten (Quantität, Qualität, Review-Talk 2, Code Review), die eine Bewertung haben. Komponenten ohne Bewertung werden nicht eingerechnet.'
+        }
     }
 };
 

@@ -1151,6 +1151,9 @@ async function updateMitarbeitsnoteCard(gradeData) {
     // Card anzeigen
     if (statsGroup) statsGroup.style.display = 'block';
 
+    // Tooltips für Mitarbeitsnoten initialisieren (falls noch nicht geschehen)
+    initializeHelpTooltips();
+
     // Gesamtnote anzeigen (deutsches Format: 82,64)
     const percentage = gradeData.overall;
     if (overallGradeEl) {
@@ -1207,26 +1210,49 @@ async function updateMitarbeitsnoteCard(gradeData) {
             }
         }
 
+        // Hilfetexte aus Config laden
+        const helpTextsMA1 = EXTERNAL_CONFIG.helpTexts?.mitarbeitsnote1 || {};
+
         gradeData.components.forEach(component => {
             const componentEl = document.createElement('div');
             componentEl.className = 'mitarbeit-component';
 
             const nameEl = document.createElement('span');
             nameEl.className = 'mitarbeit-component-name';
-            nameEl.textContent = component.name;
+
+            // Hilfetext für diese Komponente finden
+            const isQuantitaet = component.name.toLowerCase().includes('quantität') ||
+                                 component.name.toLowerCase().includes('quantitat');
+            const isQualitaet = component.name.toLowerCase().includes('qualität') ||
+                                component.name.toLowerCase().includes('qualitat');
+            const isReviewTalk = component.name.toLowerCase().includes('review');
+
+            let helpText = null;
+            if (isQuantitaet) helpText = helpTextsMA1['Quantität'];
+            else if (isQualitaet) helpText = helpTextsMA1['Qualität'];
+            else if (isReviewTalk) helpText = helpTextsMA1['Review-Talk'];
+
+            // Name mit Info-Icon und Tooltip
+            if (helpText) {
+                nameEl.innerHTML = `
+                    <span class="tooltip-container">
+                        ${component.name}
+                        <span class="info-icon">?</span>
+                        <span class="tooltip-text">${helpText}</span>
+                    </span>`;
+            } else {
+                nameEl.textContent = component.name;
+            }
 
             const gradeEl = document.createElement('span');
             gradeEl.className = 'mitarbeit-component-grade';
 
-            // Bei Quantität auch Punkte anzeigen (ohne Nachkommastellen, mit %)
-            const isQuantitaet = component.name.toLowerCase().includes('quantität') ||
-                                 component.name.toLowerCase().includes('quantitat');
+            // Alle Komponenten ohne Nachkommastellen und mit % anzeigen
             if (isQuantitaet && quantitaetPoints) {
                 gradeEl.innerHTML = `${Math.round(component.grade)}% <span style="color: #666; font-size: 0.85em; margin-left: 4px;">(${quantitaetPoints})</span>`;
-            } else if (isQuantitaet) {
-                gradeEl.textContent = `${Math.round(component.grade)}%`;
             } else {
-                gradeEl.textContent = component.grade.toFixed(2).replace('.', ',');
+                // Quantität, Qualität, Review-Talk - alle mit % und ohne Nachkommastellen
+                gradeEl.textContent = `${Math.round(component.grade)}%`;
             }
 
             componentEl.appendChild(nameEl);
@@ -1728,12 +1754,15 @@ async function updatePrognosisComponents(progressData) {
     const quantitaetMax = progressData.denominator || 0;
     const quantitaetPoints = `${prognoseReached}/${Math.round(quantitaetMax)}`;
 
+    // Hilfetexte aus Config laden
+    const helpTexts = EXTERNAL_CONFIG.helpTexts?.prognose || {};
+
     // Komponenten-Daten sammeln (value für Berechnung, display für Anzeige, points für Zusatzinfo)
     const components = [
-        { name: 'Quantität', value: quantitaet, display: `${Math.round(quantitaet)}%`, points: quantitaetPoints },
-        { name: 'Qualität', value: qualitaet, display: `${Math.round(qualitaet)}%` },
-        { name: 'Review-Talk 2', value: reviewTalk2Value, display: reviewTalk2Display },
-        { name: 'Code Review', value: codeReviewValue, display: codeReviewDisplay }
+        { name: 'Quantität', value: quantitaet, display: `${Math.round(quantitaet)}%`, points: quantitaetPoints, help: helpTexts['Quantität'] },
+        { name: 'Qualität', value: qualitaet, display: `${Math.round(qualitaet)}%`, help: helpTexts['Qualität'] },
+        { name: 'Review-Talk 2', value: reviewTalk2Value, display: reviewTalk2Display, help: helpTexts['Review-Talk 2'] },
+        { name: 'Code Review', value: codeReviewValue, display: codeReviewDisplay, help: helpTexts['Code Review'] }
     ];
 
     // Gesamtnote nach Formel berechnen
@@ -1764,11 +1793,22 @@ async function updatePrognosisComponents(progressData) {
         componentEl.className = 'mitarbeit-component';
 
         const nameEl = document.createElement('div');
-        nameEl.className = 'component-name';
-        nameEl.textContent = component.name;
+        nameEl.className = 'mitarbeit-component-name';
+
+        // Name mit Info-Icon und Tooltip
+        if (component.help) {
+            nameEl.innerHTML = `
+                <span class="tooltip-container">
+                    ${component.name}
+                    <span class="info-icon">?</span>
+                    <span class="tooltip-text">${component.help}</span>
+                </span>`;
+        } else {
+            nameEl.textContent = component.name;
+        }
 
         const gradeEl = document.createElement('div');
-        gradeEl.className = 'component-grade';
+        gradeEl.className = 'mitarbeit-component-grade';
         // Bei Quantität auch Punkte anzeigen
         if (component.points) {
             gradeEl.innerHTML = `${component.display} <span style="color: #666; font-size: 0.85em; margin-left: 4px;">(${component.points})</span>`;
@@ -2744,8 +2784,12 @@ function updateIHKGrade(percentage) {
     const ihkGradeCard = document.getElementById('ihkGradeCard');
 
     // IHK Card ausblenden, wenn 1. Mitarbeitsnote existiert
+    // Prüfe sowohl Cache als auch ob die Mitarbeitsnoten-Card sichtbar ist
     const currentGradeData = getCachedData('mitarbeitsnote');
-    if (currentGradeData && ihkGradeCard) {
+    const mitarbeitStatsGroup = document.getElementById('mitarbeitStatsGroup');
+    const mitarbeitnoteVisible = mitarbeitStatsGroup && mitarbeitStatsGroup.style.display !== 'none';
+
+    if ((currentGradeData || mitarbeitnoteVisible) && ihkGradeCard) {
         ihkGradeCard.style.display = 'none';
         return;
     } else if (ihkGradeCard) {
@@ -2781,10 +2825,25 @@ function toggleProgressType() {
     const gesamtLabel = document.getElementById('gesamtLabel');
     const progressLabel = document.getElementById('progressLabel');
 
+    // Hilfsfunktion: Label-Text aktualisieren unter Beibehaltung des Tooltips
+    const updateLabelWithTooltip = (labelText) => {
+        const helpText = EXTERNAL_CONFIG.helpTexts?.checklisten?.durchschnitt;
+        if (helpText) {
+            progressLabel.innerHTML = `
+                <span class="tooltip-container">
+                    ${labelText}
+                    <span class="info-icon">?</span>
+                    <span class="tooltip-text">${helpText}</span>
+                </span>`;
+        } else {
+            progressLabel.textContent = labelText;
+        }
+    };
+
     if (selectedType === 'pflicht') {
         pflichtLabel.classList.add('active');
         gesamtLabel.classList.remove('active');
-        progressLabel.textContent = 'Checkliste Durchschnitt';
+        updateLabelWithTooltip('Checkliste Durchschnitt');
         animateProgressBar('avgCompletionText', 'avgCompletionBar', currentPflichtAvg);
         updateProgressDetails('pflicht');
         // Grade always based on Pflicht, never Gesamt
@@ -2792,7 +2851,7 @@ function toggleProgressType() {
     } else {
         pflichtLabel.classList.remove('active');
         gesamtLabel.classList.add('active');
-        progressLabel.textContent = 'Checkliste Durchschnitt';
+        updateLabelWithTooltip('Checkliste Durchschnitt');
         animateProgressBar('avgCompletionText', 'avgCompletionBar', currentGesamtAvg);
         updateProgressDetails('gesamt');
         // Grade always based on Pflicht, never Gesamt
@@ -4256,10 +4315,108 @@ function setupConfettiEasterEgg() {
     }
 }
 
+/**
+ * Initialisiert Hilfe-Tooltips für statische Labels im Dashboard
+ * Hilfetexte werden aus EXTERNAL_CONFIG.helpTexts geladen
+ */
+function initializeHelpTooltips() {
+    const helpTexts = EXTERNAL_CONFIG.helpTexts || {};
+
+    // Mapping: Element-Selektor -> Hilfetext-Schlüssel
+    const tooltipMappings = [
+        // Checklisten
+        {
+            selector: '.stats-group-checklist .completion-label',
+            category: 'checklisten',
+            key: 'abgeschlossen'
+        },
+        {
+            selector: '#progressLabel',
+            category: 'checklisten',
+            key: 'durchschnitt'
+        },
+        {
+            selector: '#ihkGradeCard .stat-label',
+            category: 'checklisten',
+            key: 'ihkNote'
+        },
+        // Pflichtabgaben
+        {
+            selector: '.stats-group-pflicht .completion-label',
+            category: 'pflichtabgaben',
+            key: 'abgeschlossen'
+        },
+        // Hinweis: Pflichtabgaben Durchschnittsnote wird als Spezialfall unten behandelt
+        // Mitarbeitsnoten
+        {
+            selector: '#mitarbeitStatsContent .completion-label',
+            category: 'mitarbeitsnote1',
+            key: 'gesamt'
+        },
+        {
+            selector: '#mitarbeitProgressContent .completion-label',
+            category: 'prognose',
+            key: 'gesamt',
+            preserveChildren: true // Behält Kinder-Elemente (Emoji + Text)
+        }
+    ];
+
+    tooltipMappings.forEach(mapping => {
+        const element = document.querySelector(mapping.selector);
+        if (!element) return;
+
+        const text = helpTexts[mapping.category]?.[mapping.key];
+        if (!text) return;
+
+        // Prüfe ob bereits ein Tooltip vorhanden ist
+        if (element.querySelector('.tooltip-container')) return;
+
+        if (mapping.preserveChildren) {
+            // Behalte bestehende Kinder-Elemente und füge nur Info-Icon hinzu
+            const originalHTML = element.innerHTML;
+            element.innerHTML = `
+                <span class="tooltip-container">
+                    ${originalHTML}
+                    <span class="info-icon">?</span>
+                    <span class="tooltip-text">${text}</span>
+                </span>`;
+        } else {
+            // Speichere den originalen Text
+            const originalText = element.textContent.trim();
+
+            // Ersetze durch Tooltip-Container
+            element.innerHTML = `
+                <span class="tooltip-container">
+                    ${originalText}
+                    <span class="info-icon">?</span>
+                    <span class="tooltip-text">${text}</span>
+                </span>`;
+        }
+    });
+
+    // Spezialfall: Pflichtabgaben Durchschnittsnote (Label ist separates Element)
+    const pflichtAvgLabel = document.querySelector('.stats-group-pflicht .stat-card:nth-child(2) .stat-label');
+    if (pflichtAvgLabel && helpTexts.pflichtabgaben?.durchschnittsnote) {
+        // Prüfe ob bereits ein Tooltip vorhanden ist
+        if (!pflichtAvgLabel.querySelector('.tooltip-container')) {
+            const originalText = pflichtAvgLabel.textContent.trim();
+            pflichtAvgLabel.innerHTML = `
+                <span class="tooltip-container">
+                    ${originalText}
+                    <span class="info-icon">?</span>
+                    <span class="tooltip-text">${helpTexts.pflichtabgaben.durchschnittsnote}</span>
+                </span>`;
+        }
+    }
+}
+
 // Event Listeners
 window.addEventListener('DOMContentLoaded', () => {
     // Initialisiere UI-Texte aus Konfiguration
     initializeLoadingTexts();
+
+    // Initialisiere Hilfe-Tooltips
+    initializeHelpTooltips();
 
     // Initialisiere Konfetti Easter Egg
     setupConfettiEasterEgg();
@@ -4284,7 +4441,14 @@ window.addEventListener('DOMContentLoaded', () => {
         extractFromChecklistIndex(),
         extractPflichtOverview(),
         loadMitarbeitsnote()
-    ]).catch(error => {
+    ]).then(() => {
+        // Nach dem Laden aller Daten: Mitarbeitsnoten-Karte nochmal aktualisieren
+        // (stellt sicher, dass alle Abhängigkeiten wie checklistData verfügbar sind)
+        const gradeData = getCachedData('mitarbeitsnote');
+        if (gradeData) {
+            updateMitarbeitsnoteCard(gradeData);
+        }
+    }).catch(error => {
         console.error('Fehler beim parallelen Laden der Daten:', error);
     });
 
