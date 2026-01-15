@@ -171,8 +171,9 @@
                         </div>
                     </div>
                     <div class="stat-label" id="progressLabel">Checkliste Durchschnitt</div>
+                    <div class="stat-sublabel" id="avgCompletionDetails">0 / 0 Punkte</div>
                 </div>
-                <div class="stat-card">
+                <div class="stat-card" id="ihkGradeCard">
                     <div class="stat-number" id="ihkGradeText">-</div>
                     <div class="stat-label">Note Pflicht-Checklisten gemäß IHK</div>
                     <div class="ihk-grade-details">
@@ -230,7 +231,7 @@
                     </svg>
                     Mitarbeitsnoten
                 </div>
-                <div class="stats-row stats-grid">
+                <div class="stats-row stats-grid" id="mitarbeitProgressRow">
                     <div class="stat-card combined-stats-card">
                         <div class="combined-stats-content" id="mitarbeitStatsContent">
                             <div class="completion-overview">
@@ -250,22 +251,30 @@
                             </div>
                         </div>
                     </div>
-                </div>
 
-                <!-- Fortschritt 2. Mitarbeitsnote -->
-                <div class="stats-row stats-grid" id="mitarbeitProgressRow" style="display: none;">
-                    <div class="stat-card">
-                        <div class="stat-number" id="mitarbeitFortschrittPercent">-</div>
-                        <div class="stat-label">Fortschritt 2. Mitarbeitsnote</div>
-                        <div class="stat-sublabel">seit Woche <span id="mitarbeitReferenceWeekDisplay">-</span></div>
-                    </div>
-
-                    <div class="stat-card">
-                        <div class="mitarbeit-expected-grade">
-                            <div class="mitarbeit-grade-number" id="mitarbeitExpectedGrade">-</div>
-                            <div class="mitarbeit-grade-name" id="mitarbeitExpectedGradeName">-</div>
+                    <!-- Fortschritt 2. Mitarbeitsnote -->
+                    <div class="stat-card combined-stats-card" id="mitarbeitProgressCard" style="display: none; border-left: 4px solid #ffc107;">
+                        <div class="combined-stats-content" id="mitarbeitProgressContent">
+                            <div class="completion-overview">
+                                <div class="completion-main">
+                                    <span class="completion-count" id="mitarbeitFortschrittPercent">-</span>
+                                </div>
+                                <div class="completion-label" style="display: flex; align-items: center; gap: 6px;">
+                                    <span style="font-size: 18px;">📊</span>
+                                    <span>Prognose 2. Mitarbeitsnote</span>
+                                </div>
+                                <div class="stat-sublabel" style="margin-bottom: 8px; color: #856404; font-weight: 500;">seit Woche <span id="mitarbeitReferenceWeekDisplay">-</span></div>
+                                <div class="mitarbeit-components" id="mitarbeitProgressComponents">
+                                    <!-- Dynamisch gefüllt per JavaScript -->
+                                </div>
+                            </div>
+                            <div class="completion-visual">
+                                <div class="mitarbeit-ihk-grade">
+                                    <div class="mitarbeit-grade-number" id="mitarbeitExpectedGrade">-</div>
+                                    <div class="mitarbeit-grade-name" id="mitarbeitExpectedGradeName">-</div>
+                                </div>
+                            </div>
                         </div>
-                        <div class="stat-label">Erwartete 2. Mitarbeitsnote</div>
                     </div>
                 </div>
             </div>

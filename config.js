@@ -147,7 +147,19 @@ const EXTERNAL_CONFIG = {
     },
 
     // Referenzwoche für 1. Mitarbeitsnote
-    mitarbeitsnote1ReferenceWeek: 4  // Woche, in der die 1. Mitarbeitsnote vergeben wurde
+    mitarbeitsnote1ReferenceWeek: 4,  // Woche, in der die 1. Mitarbeitsnote vergeben wurde
+
+    // Referenztermin für 2. Mitarbeitsnote (Bewertungen müssen NACH diesem Datum sein)
+    ReferenzterminMitarbeitsnote1: {
+        "Schiene1": "2025-12-10",  // Referenztermin für Schiene 1
+        "Schiene3": "2026-01-08"   // Referenztermin für Schiene 3
+    },
+
+    // Assign-IDs für Prognose-Komponenten
+    prognosisAssignments: {
+        reviewTalk2: 83500375,   // Review-Talk 2 Assignment ID
+        codeReview: 80560819     // Code Review Assignment ID
+    }
 };
 
 // Globale Verfügbarkeit sicherstellen

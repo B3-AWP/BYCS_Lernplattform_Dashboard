@@ -651,7 +651,10 @@ function updateReferenceWeek(weekValue) {
     // NEU: Mitarbeitsnote-Fortschritt neu berechnen
     const gradeData = getCachedData('mitarbeitsnote');
     if (gradeData) {
-        updateMitarbeitsnoteCard(gradeData);
+        // Async Aufruf ohne await (UI blockiert nicht)
+        updateMitarbeitsnoteCard(gradeData).catch(err => {
+            console.error('Fehler beim Update der Mitarbeitsnote-Card:', err);
+        });
     }
 }
 
@@ -1025,7 +1028,7 @@ async function fetchMitarbeitsnote(useCache = true) {
  * Update Mitarbeitsnote Stat-Card mit Daten
  * @param {Object|null} gradeData - Grade-Daten oder null
  */
-function updateMitarbeitsnoteCard(gradeData) {
+async function updateMitarbeitsnoteCard(gradeData) {
     const statsGroup = document.getElementById('mitarbeitStatsGroup');
     const overallGradeEl = document.getElementById('mitarbeitOverallGrade');
     const componentsContainer = document.getElementById('mitarbeitComponents');
@@ -1090,20 +1093,14 @@ function updateMitarbeitsnoteCard(gradeData) {
     }
 
     // NEU: Fortschritt 2. Mitarbeitsnote berechnen und anzeigen
-    const progressRow = document.getElementById('mitarbeitProgressRow');
+    const progressCard = document.getElementById('mitarbeitProgressCard');
 
     if (shouldShowMitarbeitProgressCards()) {
         const progressData = calculateFortschritt2Mitarbeitsnote(gradeData);
 
-        if (progressData && progressRow) {
-            // Progress Row anzeigen
-            progressRow.style.display = 'grid';
-
-            // Fortschritt % anzeigen
-            const fortschrittEl = document.getElementById('mitarbeitFortschrittPercent');
-            if (fortschrittEl) {
-                fortschrittEl.textContent = `${progressData.fortschrittPercent.toFixed(1).replace('.', ',')}%`;
-            }
+        if (progressData && progressCard) {
+            // Progress Card anzeigen
+            progressCard.style.display = 'block';
 
             // Referenzwoche anzeigen
             const refWeekDisplay = document.getElementById('mitarbeitReferenceWeekDisplay');
@@ -1112,36 +1109,530 @@ function updateMitarbeitsnoteCard(gradeData) {
                 refWeekDisplay.textContent = B7;
             }
 
-            // Erwartete Note anzeigen
-            const expectedGradeEl = document.getElementById('mitarbeitExpectedGrade');
-            const expectedGradeNameEl = document.getElementById('mitarbeitExpectedGradeName');
-
-            if (expectedGradeEl && expectedGradeNameEl) {
-                // Note mit Tendenz
-                let gradeDisplay = progressData.erwarteteNote.grade.toString();
-                if (progressData.erwarteteNote.tendency) {
-                    gradeDisplay += progressData.erwarteteNote.tendency;
-                }
-                expectedGradeEl.textContent = gradeDisplay;
-
-                // Notenname und Farbe
-                const gradeConfig = EXTERNAL_CONFIG.grades[progressData.erwarteteNote.grade];
-                if (gradeConfig) {
-                    expectedGradeNameEl.textContent = gradeConfig.name;
-                    expectedGradeEl.style.color = gradeConfig.color;
-                }
-            }
+            // Komponenten für Prognose anzeigen (inkl. Gesamtnote)
+            await updatePrognosisComponents(progressData);
 
             console.log('✓ Fortschritt 2. Mitarbeitsnote angezeigt');
         }
     } else {
-        // Progress Row ausblenden
-        if (progressRow) {
-            progressRow.style.display = 'none';
+        // Progress Card ausblenden
+        if (progressCard) {
+            progressCard.style.display = 'none';
         }
     }
 
     console.log('✓ Mitarbeitsnote-Karte aktualisiert');
+}
+
+/**
+ * Parst deutsches Datum aus Mebis (z.B. "Dienstag, 13. Januar 2026, 15:06")
+ * @param {string} dateStr - Datum-String im deutschen Format
+ * @returns {Date|null} - Geparster Date-Objekt oder null
+ */
+function parseGermanDate(dateStr) {
+    try {
+        // Monats-Mapping Deutsch -> Englisch
+        const monthMap = {
+            'Januar': '01', 'Februar': '02', 'März': '03', 'April': '04',
+            'Mai': '05', 'Juni': '06', 'Juli': '07', 'August': '08',
+            'September': '09', 'Oktober': '10', 'November': '11', 'Dezember': '12'
+        };
+
+        // Regex: "Mittwoch, 17. Dezember 2025, 10:43" (mit optionalem Wochentag)
+        const regex = /(?:\w+,\s+)?(\d+)\.\s+(\w+)\s+(\d{4}),\s+(\d{2}):(\d{2})/;
+        const match = dateStr.match(regex);
+
+        if (!match) {
+            console.warn('⚠️ Konnte Datum nicht parsen:', dateStr);
+            return null;
+        }
+
+        const [, day, monthName, year, hours, minutes] = match;
+        const month = monthMap[monthName];
+
+        if (!month) {
+            console.warn('⚠️ Unbekannter Monat:', monthName);
+            return null;
+        }
+
+        // ISO-Format: YYYY-MM-DDTHH:MM
+        const isoStr = `${year}-${month}-${day.padStart(2, '0')}T${hours}:${minutes}:00`;
+        return new Date(isoStr);
+    } catch (error) {
+        console.error('❌ Fehler beim Parsen des Datums:', error);
+        return null;
+    }
+}
+
+/**
+ * Holt das Bewertungsdatum für ein Assignment oder Quiz
+ * @param {number} cmid - Course Module ID
+ * @returns {Promise<Date|null>} - Bewertungsdatum oder null
+ */
+async function fetchGradedDate(cmid) {
+    // Versuche zuerst Assignment, dann Quiz
+    const assignmentDate = await fetchGradedDateFromAssignment(cmid);
+    if (assignmentDate) return assignmentDate;
+
+    const quizDate = await fetchGradedDateFromQuiz(cmid);
+    if (quizDate) return quizDate;
+
+    console.warn(`⚠️ CMID ${cmid}: Kein Bewertungsdatum gefunden (weder Assignment noch Quiz)`);
+    return null;
+}
+
+/**
+ * Holt das Bewertungsdatum für ein Assignment
+ * @param {number} assignId - Assignment ID (cmid)
+ * @returns {Promise<Date|null>} - Bewertungsdatum oder null
+ */
+async function fetchGradedDateFromAssignment(assignId) {
+    try {
+        const url = `https://lernplattform.mebis.bycs.de/mod/assign/view.php?id=${assignId}`;
+        const response = await fetch(url, {
+            credentials: 'same-origin',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        });
+
+        if (!response.ok) {
+            console.log(`  ℹ️ Assignment ${assignId}: HTTP ${response.status} (kein Assignment)`);
+            return null;
+        }
+
+        const html = await response.text();
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+
+        // Suche "Bewertet am" in der Feedback-Tabelle
+        const rows = doc.querySelectorAll('table.generaltable tr');
+
+        for (const row of rows) {
+            const headerCell = row.querySelector('th');
+            if (headerCell) {
+                const headerText = headerCell.textContent.trim();
+
+                if (headerText.includes('Bewertet am')) {
+                    const dataCell = row.querySelector('td');
+                    if (dataCell) {
+                        const dateStr = dataCell.textContent.trim();
+                        const parsedDate = parseGermanDate(dateStr);
+                        console.log(`📅 Assignment ${assignId}: Bewertet am ${dateStr} → ${parsedDate}`);
+                        return parsedDate;
+                    }
+                }
+            }
+        }
+
+        return null;
+
+    } catch (error) {
+        console.log(`  ℹ️ Assignment ${assignId}: Fehler (kein Assignment)`);
+        return null;
+    }
+}
+
+/**
+ * Holt das Bewertungsdatum für ein Quiz
+ * @param {number} quizId - Quiz ID (cmid)
+ * @returns {Promise<Date|null>} - Bewertungsdatum oder null
+ */
+async function fetchGradedDateFromQuiz(quizId) {
+    try {
+        const url = `https://lernplattform.mebis.bycs.de/mod/quiz/view.php?id=${quizId}`;
+        const response = await fetch(url, {
+            credentials: 'same-origin',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        });
+
+        if (!response.ok) {
+            console.log(`  ℹ️ Quiz ${quizId}: HTTP ${response.status} (kein Quiz)`);
+            return null;
+        }
+
+        const html = await response.text();
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+
+        // Suche "Begonnen" oder "Abgeschlossen" in der Quiz-Review-Summary-Tabelle
+        const rows = doc.querySelectorAll('table.quizreviewsummary tr');
+
+        let begunnenDate = null;
+        let abgeschlossenDate = null;
+
+        for (const row of rows) {
+            const headerCell = row.querySelector('th');
+            if (headerCell) {
+                const headerText = headerCell.textContent.trim();
+                const dataCell = row.querySelector('td');
+
+                if (dataCell) {
+                    const dateStr = dataCell.textContent.trim();
+                    const parsedDate = parseGermanDate(dateStr);
+
+                    if (headerText.includes('Abgeschlossen')) {
+                        abgeschlossenDate = parsedDate;
+                        console.log(`📅 Quiz ${quizId}: Abgeschlossen ${dateStr} → ${parsedDate}`);
+                    } else if (headerText.includes('Begonnen')) {
+                        begunnenDate = parsedDate;
+                        console.log(`📅 Quiz ${quizId}: Begonnen ${dateStr} → ${parsedDate}`);
+                    }
+                }
+            }
+        }
+
+        // Bevorzuge "Abgeschlossen", falls vorhanden
+        return abgeschlossenDate || begunnenDate;
+
+    } catch (error) {
+        console.log(`  ℹ️ Quiz ${quizId}: Fehler (kein Quiz)`);
+        return null;
+    }
+}
+
+/**
+ * Hilfsfunktion zum Parsen von Overview-Zeilen
+ * @param {NodeList} rows - Zeilen aus der Overview-Tabelle
+ * @param {Map} gradesMap - Map zum Speichern der Bewertungen
+ * @param {string} type - Typ der Bewertung ('Assignment' oder 'Quiz')
+ */
+function parseOverviewRows(rows, gradesMap, type) {
+    rows.forEach(row => {
+        const cmid = row.getAttribute('data-mdl-overview-cmid');
+        if (!cmid) return;
+
+        const id = parseInt(cmid);
+
+        // Suche Bewertungszelle
+        const gradeCell = row.querySelector('td[data-mdl-overview-item="Bewertung"]');
+        if (!gradeCell) return;
+
+        const gradeValue = gradeCell.getAttribute('data-mdl-overview-value');
+        const gradeText = gradeCell.textContent.trim();
+
+        if (!gradeValue || gradeValue === '0' || gradeText === '-' || gradeText === 'Keine Bewertung') {
+            return;
+        }
+
+        console.log(`✓ ${type} ${id}: Bewertung = "${gradeText}" (value: ${gradeValue})`);
+
+        // Parse Bewertung
+        const numValue = parseFloat(gradeValue);
+
+        // Prüfe ob Stern-Bewertung (1-4) oder Punkt/Prozent-Bewertung (> 4)
+        if (numValue >= 1 && numValue <= 4) {
+            // Stern-Bewertung
+            const starCount = Math.round(numValue);
+            const percentage = convertStarsToPercentage(starCount);
+            gradesMap.set(id, {
+                value: percentage,
+                display: `${'*'.repeat(starCount)} (${percentage}%)`,
+                type: type
+            });
+            console.log(`→ Stern-Bewertung: ${starCount} Sterne = ${percentage}%`);
+        } else if (numValue > 4) {
+            // Punkt/Prozent-Bewertung (keine Obergrenze, da Punkte > 100 möglich)
+            gradesMap.set(id, {
+                value: numValue,
+                display: `${Math.round(numValue)}%`,
+                type: type
+            });
+            console.log(`→ Punkt-Bewertung: ${numValue}`);
+        }
+    });
+}
+
+/**
+ * Lädt alle Assignment- und Quiz-Bewertungen aus der Course Overview
+ * @returns {Promise<Map<number, Object>>} - Map von CMID zu { value, display }
+ */
+async function fetchAllAssignmentGrades() {
+    try {
+        const gradesMap = new Map();
+        const parser = new DOMParser();
+
+        // Lade BEIDE Overview-Seiten: Assignments und Quizzes
+        const assignOverviewUrl = `https://lernplattform.mebis.bycs.de/course/overview.php?id=${COURSE_ID}&expand[]=assign#assign_overview_collapsible`;
+        const quizOverviewUrl = `https://lernplattform.mebis.bycs.de/course/overview.php?id=${COURSE_ID}&expand[]=quiz#quiz_overview_collapsible`;
+
+        // Paralleles Laden beider Overview-Seiten
+        const [assignResponse, quizResponse] = await Promise.all([
+            fetch(assignOverviewUrl, {
+                credentials: 'same-origin',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            }),
+            fetch(quizOverviewUrl, {
+                credentials: 'same-origin',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+        ]);
+
+        // Verarbeite Assignment Overview
+        if (assignResponse.ok) {
+            const assignHtml = await assignResponse.text();
+            const assignDoc = parser.parseFromString(assignHtml, 'text/html');
+            const assignRows = assignDoc.querySelectorAll('tr[data-mdl-overview-cmid]');
+            console.log(`📋 Assignment Overview: ${assignRows.length} Assignments gefunden`);
+            parseOverviewRows(assignRows, gradesMap, 'Assignment');
+        }
+
+        // Verarbeite Quiz Overview
+        if (quizResponse.ok) {
+            const quizHtml = await quizResponse.text();
+            const quizDoc = parser.parseFromString(quizHtml, 'text/html');
+            const quizRows = quizDoc.querySelectorAll('tr[data-mdl-overview-cmid]');
+            console.log(`📋 Quiz Overview: ${quizRows.length} Quizzes gefunden`);
+            parseOverviewRows(quizRows, gradesMap, 'Quiz');
+        }
+
+        console.log(`📋 Gesamt: ${gradesMap.size} Bewertungen aus Course Overview`);
+
+        // Jetzt Bewertungsdaten für alle Assignments mit Bewertungen laden
+        if (gradesMap.size > 0) {
+            console.log('📅 Lade Bewertungsdaten für alle Assignments...');
+            const assignIds = Array.from(gradesMap.keys());
+
+            // Paralleles Laden der Bewertungsdaten
+            const datePromises = assignIds.map(async (assignId) => {
+                const gradedDate = await fetchGradedDate(assignId);
+                return { assignId, gradedDate };
+            });
+
+            const dateResults = await Promise.all(datePromises);
+
+            // Füge Bewertungsdaten zu gradesMap hinzu
+            dateResults.forEach(({ assignId, gradedDate }) => {
+                const existingData = gradesMap.get(assignId);
+                if (existingData) {
+                    gradesMap.set(assignId, {
+                        ...existingData,
+                        gradedDate: gradedDate
+                    });
+                }
+            });
+
+            console.log('✅ Bewertungsdaten hinzugefügt');
+        }
+
+        return gradesMap;
+
+    } catch (error) {
+        console.error('❌ Fehler beim Laden der Course Overview:', error);
+        return new Map();
+    }
+}
+
+/**
+ * Holt die Bewertung für ein Assignment (aus Cache oder lädt neu)
+ * @param {number} assignId - Assignment ID
+ * @returns {Promise<Object|null>} - { value: number, display: string } oder null
+ */
+async function getAssignmentGrade(assignId) {
+    // Prüfe ob alle Bewertungen bereits im globalen Cache sind
+    if (!window.allAssignmentGrades) {
+        // Lade alle Bewertungen auf einmal
+        const cacheKey = 'all_assignment_grades';
+        const cachedArray = getCachedData(cacheKey);
+
+        let gradesMap;
+
+        if (cachedArray && Array.isArray(cachedArray)) {
+            // Array aus Cache zurück in Map konvertieren
+            console.log('💾 Alle Assignment-Bewertungen aus Cache');
+            gradesMap = new Map(cachedArray);
+        } else {
+            // Neu laden
+            console.log('📥 Lade alle Assignment-Bewertungen aus Course Overview...');
+            gradesMap = await fetchAllAssignmentGrades();
+
+            // Map in Array konvertieren für Cache-Speicherung
+            const arrayForCache = Array.from(gradesMap.entries());
+            setCachedData(cacheKey, arrayForCache);
+        }
+
+        // Global speichern für schnellen Zugriff
+        window.allAssignmentGrades = gradesMap;
+    }
+
+    // Bewertung für spezifisches Assignment holen
+    const grade = window.allAssignmentGrades.get(assignId);
+
+    if (grade) {
+        console.log(`✓ Assignment ${assignId} gefunden:`, grade);
+    } else {
+        console.warn(`⚠️ Assignment ${assignId} hat keine Bewertung`);
+    }
+
+    return grade || null;
+}
+
+/**
+ * Aktualisiert die Komponenten für die Fortschritt 2. Mitarbeitsnote (Prognose)
+ * @param {Object} progressData - Fortschritts-Daten
+ */
+async function updatePrognosisComponents(progressData) {
+    const componentsContainer = document.getElementById('mitarbeitProgressComponents');
+    if (!componentsContainer) return;
+
+    console.group('🔍 Prognose-Komponenten Debug');
+    console.log('📌 Config Assignment-IDs:', EXTERNAL_CONFIG.prognosisAssignments);
+
+    // Hole aktuellen Track und Referenztermin
+    let currentTrack = localStorage.getItem('userTrack');
+    // Fallback: Leite Track aus Klasse ab
+    if (!currentTrack) {
+        const userClass = localStorage.getItem('userClass');
+        if (userClass && CLASS_TO_TRACK[userClass]) {
+            currentTrack = CLASS_TO_TRACK[userClass];
+        }
+    }
+
+    const referenztermin = currentTrack ? EXTERNAL_CONFIG.ReferenzterminMitarbeitsnote1[currentTrack] : null;
+    const referenzDate = referenztermin ? new Date(referenztermin) : null;
+
+    console.log('📅 Aktueller Track:', currentTrack);
+    console.log('📅 Referenztermin:', referenztermin);
+
+    // Bewertungen abrufen (await da async)
+    console.log('🔎 Lade Review-Talk 2 (ID:', EXTERNAL_CONFIG.prognosisAssignments.reviewTalk2, ')');
+    const reviewTalk2Data = await getAssignmentGrade(EXTERNAL_CONFIG.prognosisAssignments.reviewTalk2);
+    console.log('✅ Review-Talk 2 Ergebnis:', reviewTalk2Data);
+
+    console.log('🔎 Lade Code Review (ID:', EXTERNAL_CONFIG.prognosisAssignments.codeReview, ')');
+    const codeReviewData = await getAssignmentGrade(EXTERNAL_CONFIG.prognosisAssignments.codeReview);
+    console.log('✅ Code Review Ergebnis:', codeReviewData);
+
+    // Prüfe ob Bewertungen nach Referenztermin sind
+    let reviewTalk2Value = 0;
+    let reviewTalk2Display = '-';
+    if (reviewTalk2Data) {
+        // Konvertiere gradedDate zu Date-Objekt, falls es ein String ist (Cache)
+        const reviewTalk2GradedDate = reviewTalk2Data.gradedDate
+            ? (typeof reviewTalk2Data.gradedDate === 'string'
+                ? new Date(reviewTalk2Data.gradedDate)
+                : reviewTalk2Data.gradedDate)
+            : null;
+
+        if (!referenzDate || !reviewTalk2GradedDate) {
+            // Kein Referenztermin oder kein Bewertungsdatum -> verwende Bewertung
+            reviewTalk2Value = reviewTalk2Data.value;
+            reviewTalk2Display = reviewTalk2Data.display;
+        } else if (reviewTalk2GradedDate > referenzDate) {
+            // Bewertungsdatum ist nach Referenztermin -> verwende Bewertung
+            reviewTalk2Value = reviewTalk2Data.value;
+            reviewTalk2Display = reviewTalk2Data.display;
+            console.log('✓ Review-Talk 2 ist nach Referenztermin');
+        } else {
+            // Bewertungsdatum ist vor/am Referenztermin -> ignoriere Bewertung
+            console.log('⚠️ Review-Talk 2 ist vor Referenztermin, wird ignoriert');
+        }
+    }
+
+    let codeReviewValue = 0;
+    let codeReviewDisplay = '-';
+    if (codeReviewData) {
+        // Konvertiere gradedDate zu Date-Objekt, falls es ein String ist (Cache)
+        const codeReviewGradedDate = codeReviewData.gradedDate
+            ? (typeof codeReviewData.gradedDate === 'string'
+                ? new Date(codeReviewData.gradedDate)
+                : codeReviewData.gradedDate)
+            : null;
+
+        if (!referenzDate || !codeReviewGradedDate) {
+            // Kein Referenztermin oder kein Bewertungsdatum -> verwende Bewertung
+            codeReviewValue = codeReviewData.value;
+            codeReviewDisplay = codeReviewData.display;
+        } else if (codeReviewGradedDate > referenzDate) {
+            // Bewertungsdatum ist nach Referenztermin -> verwende Bewertung
+            codeReviewValue = codeReviewData.value;
+            codeReviewDisplay = codeReviewData.display;
+            console.log('✓ Code Review ist nach Referenztermin');
+        } else {
+            // Bewertungsdatum ist vor/am Referenztermin -> ignoriere Bewertung
+            console.log('⚠️ Code Review ist vor Referenztermin, wird ignoriert');
+        }
+    }
+
+    const quantitaet = progressData.fortschrittPercent || 0;
+    const qualitaet = window.pflichtAveragePercentage || 0;
+    console.log('📈 Quantität:', quantitaet, '| Qualität:', qualitaet);
+
+    // Komponenten-Daten sammeln (value für Berechnung, display für Anzeige)
+    const components = [
+        { name: 'Quantität', value: quantitaet, display: `${quantitaet.toFixed(2).replace('.', ',')}` },
+        { name: 'Qualität', value: qualitaet, display: `${qualitaet.toFixed(2).replace('.', ',')}` },
+        { name: 'Review-Talk 2', value: reviewTalk2Value, display: reviewTalk2Display },
+        { name: 'Code Review', value: codeReviewValue, display: codeReviewDisplay }
+    ];
+
+    // Gesamtnote nach Formel berechnen
+    let numerator = 0;
+    let denominator = 0;
+
+    components.forEach(comp => {
+        if (comp.value > 0) {
+            numerator += comp.value;
+            denominator += 1;
+        }
+    });
+
+    const gesamtnote = denominator > 0 ? numerator / denominator : 0;
+
+    // Gesamtnote oben anzeigen
+    const fortschrittEl = document.getElementById('mitarbeitFortschrittPercent');
+    if (fortschrittEl) {
+        fortschrittEl.textContent = gesamtnote > 0 ? `${gesamtnote.toFixed(2).replace('.', ',')}%` : '-';
+    }
+
+    // Container leeren
+    componentsContainer.innerHTML = '';
+
+    // Komponenten-Elemente erstellen
+    components.forEach(component => {
+        const componentEl = document.createElement('div');
+        componentEl.className = 'mitarbeit-component';
+
+        const nameEl = document.createElement('div');
+        nameEl.className = 'component-name';
+        nameEl.textContent = component.name;
+
+        const gradeEl = document.createElement('div');
+        gradeEl.className = 'component-grade';
+        gradeEl.textContent = component.display;
+
+        componentEl.appendChild(nameEl);
+        componentEl.appendChild(gradeEl);
+        componentsContainer.appendChild(componentEl);
+    });
+
+    // Erwartete Note basierend auf Gesamtnote anzeigen
+    const expectedGradeEl = document.getElementById('mitarbeitExpectedGrade');
+    const expectedGradeNameEl = document.getElementById('mitarbeitExpectedGradeName');
+
+    if (expectedGradeEl && expectedGradeNameEl && gesamtnote > 0) {
+        const erwarteteNote = calculateIHKGrade(gesamtnote);
+
+        // Note mit Tendenz
+        let gradeDisplay = erwarteteNote.grade.toString();
+        if (erwarteteNote.tendency) {
+            gradeDisplay += erwarteteNote.tendency;
+        }
+        expectedGradeEl.textContent = gradeDisplay;
+
+        // Notenname und Farbe
+        const gradeConfig = EXTERNAL_CONFIG.grades[erwarteteNote.grade];
+        if (gradeConfig) {
+            expectedGradeNameEl.textContent = gradeConfig.name;
+            expectedGradeEl.style.color = gradeConfig.color;
+        }
+    }
+
+    console.log('📊 Finale Komponenten:', components.map(c => ({
+        name: c.name,
+        value: c.value,
+        display: c.display
+    })));
+    console.log('🎯 Gesamtnote:', gesamtnote.toFixed(2));
+    console.groupEnd();
 }
 
 /**
@@ -1151,7 +1642,7 @@ function updateMitarbeitsnoteCard(gradeData) {
 async function loadMitarbeitsnote(useCache = true) {
     try {
         const gradeData = await fetchMitarbeitsnote(useCache);
-        updateMitarbeitsnoteCard(gradeData);
+        await updateMitarbeitsnoteCard(gradeData);
 
         // Background-Refresh bei Cache-Verwendung
         if (useCache && gradeData) {
@@ -1162,7 +1653,7 @@ async function loadMitarbeitsnote(useCache = true) {
         }
     } catch (error) {
         console.error('Fehler beim Laden der Mitarbeitsnote:', error);
-        updateMitarbeitsnoteCard(null); // Card ausblenden
+        await updateMitarbeitsnoteCard(null); // Card ausblenden
     }
 }
 
@@ -1314,6 +1805,8 @@ function calculateFortschritt2Mitarbeitsnote(currentGradeData) {
     return {
         fortschrittPercent: fortschrittPercent,
         erwarteteNote: erwarteteNote,
+        numerator: numerator,
+        denominator: denominator,
         debugInfo: debugInfo
     };
 }
@@ -1590,17 +2083,27 @@ function updateStatistics() {
         const checklistsWithPflicht = validChecklists.filter(item => item.pflichtProgress !== null);
         const pflichtCount = checklistsWithPflicht.length;
 
-        // Ursprüngliche Werte berechnen
-        const avgPflicht = pflichtCount > 0
-            ? checklistsWithPflicht.reduce((sum, item) => sum + (item.pflichtProgress || 0), 0) / pflichtCount
+        // Summen berechnen für Zähler/Nenner-Anzeige
+        const sumPflicht = pflichtCount > 0
+            ? checklistsWithPflicht.reduce((sum, item) => sum + (item.pflichtProgress || 0), 0)
             : 0;
-        const avgGesamt = validChecklists.reduce((sum, item) => sum + (item.gesamtProgress || 0), 0) / totalChecklists;
+        const sumGesamt = validChecklists.reduce((sum, item) => sum + (item.gesamtProgress || 0), 0);
+
+        // Ursprüngliche Werte berechnen
+        const avgPflicht = pflichtCount > 0 ? sumPflicht / pflichtCount : 0;
+        const avgGesamt = sumGesamt / totalChecklists;
         const completed = checklistsWithPflicht.filter(item => item.pflichtProgress >= 100).length;
 
         // Referenzwochen-adjustierte Werte berechnen
         const referenceAvgPflicht = calculateReferenceProgressFromPercentage(avgPflicht, pflichtCount);
         const referenceAvgGesamt = calculateReferenceProgressFromPercentage(avgGesamt, totalChecklists);
         const referenceCompleted = calculateReferenceProgress(completed, pflichtCount);
+
+        // Zähler und Nenner für Anzeige berechnen
+        const maxPunktePflicht = pflichtCount * 100;
+        const maxPunkteGesamt = totalChecklists * 100;
+        const expectedPunktePflicht = (maxPunktePflicht / TOTAL_WEEKS) * currentReferenceWeek;
+        const expectedPunkteGesamt = (maxPunkteGesamt / TOTAL_WEEKS) * currentReferenceWeek;
 
         // Referenzwochen-adjustierten avgPflicht für Mitarbeitsnote-Berechnung verfügbar machen
         window.avgPflichtProgress = referenceAvgPflicht;
@@ -1617,7 +2120,11 @@ function updateStatistics() {
         updateCombinedStats(completed, pflichtCount, referenceCompleted);
         updateProgressDisplay(
             currentReferenceWeek === TOTAL_WEEKS ? Math.round(referenceAvgPflicht) : Math.ceil(referenceAvgPflicht),
-            currentReferenceWeek === TOTAL_WEEKS ? Math.round(referenceAvgGesamt) : Math.ceil(referenceAvgGesamt)
+            currentReferenceWeek === TOTAL_WEEKS ? Math.round(referenceAvgGesamt) : Math.ceil(referenceAvgGesamt),
+            sumPflicht,
+            expectedPunktePflicht,
+            sumGesamt,
+            expectedPunkteGesamt
         );
 
         // Verstecke Loading-Overlay wenn alle Daten geladen sind
@@ -1847,14 +2354,19 @@ function updatePflichtStats() {
             return sum + getGradeValueForCalculation(item);
         }, 0);
         const averagePercentage = totalPercentage / gradedItems.length;
-        
+
+        // Global speichern für Prognose-Komponenten
+        window.pflichtAveragePercentage = averagePercentage;
+
         // Calculate IHK grade from average percentage
         const ihkGradeInfo = calculateIHKGrade(averagePercentage);
         let tendencyText = '';
         if (ihkGradeInfo.tendency === '+') tendencyText = '+';
         else if (ihkGradeInfo.tendency === '-') tendencyText = '-';
-        
+
         averageGradeDisplay = `${ihkGradeInfo.grade}${tendencyText} (${Math.round(averagePercentage)}%)`;
+    } else {
+        window.pflichtAveragePercentage = 0;
     }
 
     const averageGradeElement = document.getElementById('pflichtAverageGrade');
@@ -1934,17 +2446,37 @@ function updatePflichtCombinedStats(completed, total, referencePercentage = null
 let currentPflichtAvg = 0;
 let currentGesamtAvg = 0;
 
-function updateProgressDisplay(pflichtAvg, gesamtAvg) {
+function updateProgressDisplay(pflichtAvg, gesamtAvg, sumPflicht, expectedPunktePflicht, sumGesamt, expectedPunkteGesamt) {
     currentPflichtAvg = pflichtAvg;
     currentGesamtAvg = gesamtAvg;
+
+    // Zähler/Nenner für spätere Verwendung speichern
+    window.currentProgressDetails = {
+        pflicht: { sum: sumPflicht, expected: expectedPunktePflicht },
+        gesamt: { sum: sumGesamt, expected: expectedPunkteGesamt }
+    };
 
     const selectedRadio = document.querySelector('input[name="progressType"]:checked');
     const selectedType = selectedRadio ? selectedRadio.value : 'pflicht';
     const targetValue = selectedType === 'pflicht' ? pflichtAvg : gesamtAvg;
 
     animateProgressBar('avgCompletionText', 'avgCompletionBar', targetValue);
+
+    // Zähler/Nenner anzeigen
+    updateProgressDetails(selectedType);
+
     // Grade always based on Pflicht, never Gesamt
     updateIHKGrade(pflichtAvg);
+}
+
+function updateProgressDetails(type) {
+    const detailsEl = document.getElementById('avgCompletionDetails');
+    if (!detailsEl || !window.currentProgressDetails) return;
+
+    const details = window.currentProgressDetails[type];
+    if (!details) return;
+
+    detailsEl.textContent = `${Math.round(details.sum)} / ${Math.round(details.expected)} Punkte`;
 }
 
 function calculateIHKGrade(percentage) {
@@ -1987,6 +2519,16 @@ function updateIHKGrade(percentage) {
     const gradeText = document.getElementById('ihkGradeText');
     const gradePercentage = document.getElementById('ihkGradePercentage');
     const gradeTendency = document.getElementById('ihkGradeTendency');
+    const ihkGradeCard = document.getElementById('ihkGradeCard');
+
+    // IHK Card ausblenden, wenn 1. Mitarbeitsnote existiert
+    const currentGradeData = getCachedData('mitarbeitsnote');
+    if (currentGradeData && ihkGradeCard) {
+        ihkGradeCard.style.display = 'none';
+        return;
+    } else if (ihkGradeCard) {
+        ihkGradeCard.style.display = 'block';
+    }
 
     gradeText.textContent = gradeInfo.grade;
     gradePercentage.textContent = Math.round(percentage) + '%';
@@ -2022,6 +2564,7 @@ function toggleProgressType() {
         gesamtLabel.classList.remove('active');
         progressLabel.textContent = 'Checkliste Durchschnitt';
         animateProgressBar('avgCompletionText', 'avgCompletionBar', currentPflichtAvg);
+        updateProgressDetails('pflicht');
         // Grade always based on Pflicht, never Gesamt
         updateIHKGrade(currentPflichtAvg);
     } else {
@@ -2029,6 +2572,7 @@ function toggleProgressType() {
         gesamtLabel.classList.add('active');
         progressLabel.textContent = 'Checkliste Durchschnitt';
         animateProgressBar('avgCompletionText', 'avgCompletionBar', currentGesamtAvg);
+        updateProgressDetails('gesamt');
         // Grade always based on Pflicht, never Gesamt
         updateIHKGrade(currentPflichtAvg);
     }
@@ -2804,7 +3348,7 @@ function applyPflichtFilters() {
     createPflichtCharts(filteredData);
 }
 
-function updatePflichtTable(data) {
+async function updatePflichtTable(data) {
     // Verstecke Loading-Indikator und zeige Inhalte
     const loadingIndicator = document.getElementById('pflichtLoadingIndicator');
     const pflichtFilterSection = document.getElementById('pflichtFilterSection');
@@ -2813,6 +3357,33 @@ function updatePflichtTable(data) {
     if (loadingIndicator) loadingIndicator.style.display = 'none';
     if (pflichtFilterSection) pflichtFilterSection.style.display = 'block';
     if (pflichtSessionInfo) pflichtSessionInfo.style.display = 'block';
+
+    // Lade Assignment-Grades, falls noch nicht vorhanden (für Datumsspalte)
+    if (!window.allAssignmentGrades) {
+        try {
+            console.log('📅 Lade Assignment-Grades für Datumsspalte...');
+            const cacheKey = 'all_assignment_grades';
+            const cachedArray = getCachedData(cacheKey);
+
+            let gradesMap;
+            if (cachedArray && Array.isArray(cachedArray)) {
+                console.log('💾 Assignment-Grades aus Cache geladen');
+                gradesMap = new Map(cachedArray);
+            } else {
+                console.log('📥 Lade Assignment-Grades von Server...');
+                gradesMap = await fetchAllAssignmentGrades();
+                const arrayForCache = Array.from(gradesMap.entries());
+                setCachedData(cacheKey, arrayForCache);
+            }
+
+            window.allAssignmentGrades = gradesMap;
+            console.log(`✅ ${gradesMap.size} Assignment-Grades verfügbar`);
+        } catch (error) {
+            console.error('❌ Fehler beim Laden der Assignment-Grades:', error);
+        }
+    } else {
+        console.log(`✓ Assignment-Grades bereits geladen (${window.allAssignmentGrades.size} Einträge)`);
+    }
 
     // Dynamische Überschrift basierend auf dem aktuellen Filter
     const requirementFilter = document.getElementById('pflichtRequirementFilter')?.value || 'pflicht';
@@ -2868,6 +3439,7 @@ function updatePflichtTable(data) {
     html += '<th onclick="sortPflichtTableByColumn(2)" class="sortable-header" style="cursor: pointer;">Status <span class="sort-icon"><svg width="12" height="12"><use href="#icon-sort-both"></use></svg></span></th>';
     html += '<th onclick="sortPflichtTableByColumn(3)" class="sortable-header" style="cursor: pointer;">Abgabeform <span class="sort-icon"><svg width="12" height="12"><use href="#icon-sort-both"></use></svg></span></th>';
     html += '<th onclick="sortPflichtTableByColumn(4)" class="sortable-header" style="cursor: pointer;">Bewertung <span class="sort-icon"><svg width="12" height="12"><use href="#icon-sort-both"></use></svg></span></th>';
+    html += '<th onclick="sortPflichtTableByColumn(5)" class="sortable-header" style="cursor: pointer;">Bewertet am <span class="sort-icon"><svg width="12" height="12"><use href="#icon-sort-both"></use></svg></span></th>';
     html += '</tr></thead><tbody id="pflichtTableBody">';
 
     data.forEach((item, index) => {
@@ -2926,12 +3498,37 @@ function updatePflichtTable(data) {
         // Hintergrundfarbe für Zeile (sehr dezent)
         const rowStyle = item.isPflicht ? '' : 'style="background-color: rgba(149, 165, 166, 0.05);"';
 
+        // Extrahiere cmid aus URL und hole Bewertungsdatum
+        let gradedDateDisplay = '-';
+        if (item.url && window.allAssignmentGrades) {
+            const cmidMatch = item.url.match(/[?&]id=(\d+)/);
+            if (cmidMatch) {
+                const cmid = parseInt(cmidMatch[1]);
+                const gradeData = window.allAssignmentGrades.get(cmid);
+                if (gradeData && gradeData.gradedDate) {
+                    // Formatiere Datum: DD.MM.YYYY
+                    // Konvertiere String zu Date, falls nötig (Cache-Serialisierung)
+                    const date = typeof gradeData.gradedDate === 'string'
+                        ? new Date(gradeData.gradedDate)
+                        : gradeData.gradedDate;
+
+                    if (date && !isNaN(date.getTime())) {
+                        const day = String(date.getDate()).padStart(2, '0');
+                        const month = String(date.getMonth() + 1).padStart(2, '0');
+                        const year = date.getFullYear();
+                        gradedDateDisplay = `${day}.${month}.${year}`;
+                    }
+                }
+            }
+        }
+
         html += `<tr data-name="${item.name.toLowerCase()}" data-type="${item.type.toLowerCase()}" data-status="${statusText.toLowerCase()}" data-grade="${item.grade}" ${rowStyle}>
             <td data-label="Name"><a href="${item.url}" target="_blank" title="${item.name}">${item.name}</a>${requirementBadge}</td>
             <td data-label="Typ"><span class="type-badge" style="${typeBadgeStyle}">${typeIcon}${item.type}</span></td>
             <td data-label="Status">${statusBadge}</td>
             <td data-label="Abgabeform">${groupAssignment}</td>
             <td data-label="Bewertung"><strong style="${gradeColor}">${gradeDisplay}</strong></td>
+            <td data-label="Bewertet am">${gradedDateDisplay}</td>
         </tr>`;
     });
 
@@ -2997,35 +3594,47 @@ function displayStarsFromGrade(grade) {
     if (grade === '-' || grade === 'Unbekannt' || grade === '') return '-';
 
     const numGrade = parseFloat(grade.replace(',', '.'));
-    if (isNaN(numGrade) || numGrade < 1 || numGrade > 4) return '-';
+    if (isNaN(numGrade) || numGrade < 1) return '-';
 
-    const roundedGrade = Math.round(numGrade);
-    const stars = '*'.repeat(roundedGrade);
-    const percentage = convertStarsToPercentage(roundedGrade);
-
-    return `${stars} (${percentage}%)`;
+    // Unterscheide zwischen Sternebewertung (1-4) und Prozentbewertung (> 4)
+    if (numGrade <= 4) {
+        // Sternebewertung
+        const roundedGrade = Math.round(numGrade);
+        const stars = '*'.repeat(roundedGrade);
+        const percentage = convertStarsToPercentage(roundedGrade);
+        return `${stars} (${percentage}%)`;
+    } else {
+        // Prozentbewertung (z.B. 84/100)
+        return `${Math.round(numGrade)}%`;
+    }
 }
 
 function getGradeValueForCalculation(item) {
-    // Quiz types use actual percentage, assignments use star conversion
+    // Quiz types use actual percentage, assignments use star conversion or percentage
     if (item.type === 'Quiz') {
         const grade = item.grade;
         if (!grade || grade === '-' || grade === 'Unbekannt') return null;
-        
+
         const numGrade = parseFloat(grade.replace(',', '.'));
         if (isNaN(numGrade)) return null;
-        
+
         // For Quiz, the grade is already a percentage (0-100)
         return Math.max(0, Math.min(100, numGrade));
     } else {
-        // For Aufgabe, convert stars to percentage
+        // For Aufgabe: Sternebewertung (1-4) oder Prozentbewertung (> 4)
         const grade = item.grade;
         if (!grade || grade === '-' || grade === 'Unbekannt') return null;
-        
+
         const numGrade = parseFloat(grade.replace(',', '.'));
-        if (isNaN(numGrade) || numGrade < 1 || numGrade > 4) return null;
-        
-        return convertStarsToPercentage(numGrade);
+        if (isNaN(numGrade) || numGrade < 1) return null;
+
+        if (numGrade <= 4) {
+            // Sternebewertung -> in Prozent umwandeln
+            return convertStarsToPercentage(Math.round(numGrade));
+        } else {
+            // Prozentbewertung -> direkt verwenden
+            return Math.max(0, Math.min(100, numGrade));
+        }
     }
 }
 
@@ -3100,14 +3709,54 @@ function sortPflichtTableByColumn(columnIndex) {
                 // Convert grades to percentage values for fair comparison
                 const percentageA = getGradeValueForCalculation(a);
                 const percentageB = getGradeValueForCalculation(b);
-                
+
                 // Handle null/undefined values (ungraded items go to end)
                 if (percentageA === null && percentageB === null) return 0;
                 if (percentageA === null) return ascending ? 1 : -1;
                 if (percentageB === null) return ascending ? -1 : 1;
-                
+
                 // Sort by percentage value
                 return ascending ? percentageA - percentageB : percentageB - percentageA;
+            case 5: // Bewertet am (Grading Date)
+                // Extrahiere Datum aus allAssignmentGrades
+                let dateA = null;
+                let dateB = null;
+
+                if (a.url && window.allAssignmentGrades) {
+                    const cmidMatchA = a.url.match(/[?&]id=(\d+)/);
+                    if (cmidMatchA) {
+                        const gradeDataA = window.allAssignmentGrades.get(parseInt(cmidMatchA[1]));
+                        if (gradeDataA?.gradedDate) {
+                            // Konvertiere String zu Date, falls nötig
+                            dateA = typeof gradeDataA.gradedDate === 'string'
+                                ? new Date(gradeDataA.gradedDate)
+                                : gradeDataA.gradedDate;
+                        }
+                    }
+                }
+
+                if (b.url && window.allAssignmentGrades) {
+                    const cmidMatchB = b.url.match(/[?&]id=(\d+)/);
+                    if (cmidMatchB) {
+                        const gradeDataB = window.allAssignmentGrades.get(parseInt(cmidMatchB[1]));
+                        if (gradeDataB?.gradedDate) {
+                            // Konvertiere String zu Date, falls nötig
+                            dateB = typeof gradeDataB.gradedDate === 'string'
+                                ? new Date(gradeDataB.gradedDate)
+                                : gradeDataB.gradedDate;
+                        }
+                    }
+                }
+
+                // Handle null dates (ungraded items go to end)
+                if (!dateA && !dateB) return 0;
+                if (!dateA) return ascending ? 1 : -1;
+                if (!dateB) return ascending ? -1 : 1;
+
+                // Sort by date (convert to timestamp for comparison)
+                const timeA = dateA.getTime();
+                const timeB = dateB.getTime();
+                return ascending ? timeA - timeB : timeB - timeA;
             default:
                 valueA = a.name.toLowerCase();
                 valueB = b.name.toLowerCase();
