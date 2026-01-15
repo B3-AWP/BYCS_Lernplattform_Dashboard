@@ -52,6 +52,112 @@ let TOTAL_WEEKS = 9; // Default, wird später aktualisiert
 let currentReferenceWeek = 9; // Standard: Letzte Woche (100% der Zeit)
 
 // ================================
+// VERBINDUNGSFEHLER-TRACKING
+// ================================
+let connectionErrors = {
+    count: 0,
+    threshold: 5, // Ab dieser Anzahl gilt die Verbindung als instabil
+    hasShownWarning: false,
+    criticalDataAffected: false
+};
+
+/**
+ * Registriert einen Verbindungsfehler und zeigt ggf. eine Warnung an
+ * @param {string} context - Beschreibung, wo der Fehler aufgetreten ist
+ * @param {boolean} isCritical - Ob der Fehler kritische Daten betrifft (z.B. Pflichtabgaben)
+ */
+function trackConnectionError(context, isCritical = false) {
+    connectionErrors.count++;
+    if (isCritical) {
+        connectionErrors.criticalDataAffected = true;
+    }
+
+    console.warn(`⚠️ Verbindungsfehler #${connectionErrors.count}: ${context}`);
+
+    // Zeige Warnung wenn Schwellenwert überschritten und noch nicht gezeigt
+    if (connectionErrors.count >= connectionErrors.threshold && !connectionErrors.hasShownWarning) {
+        showConnectionWarning();
+    }
+}
+
+/**
+ * Zeigt eine Warnung bei Verbindungsproblemen an
+ */
+function showConnectionWarning() {
+    connectionErrors.hasShownWarning = true;
+
+    // Erstelle Warn-Banner
+    const warningBanner = document.createElement('div');
+    warningBanner.id = 'connectionWarningBanner';
+    warningBanner.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        background: linear-gradient(135deg, #fff3cd 0%, #ffeeba 100%);
+        border-bottom: 3px solid #ffc107;
+        padding: 16px 20px;
+        z-index: 10000;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    `;
+
+    warningBanner.innerHTML = `
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="#856404" style="flex-shrink: 0;">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+        </svg>
+        <div style="flex: 1;">
+            <div style="font-weight: 600; color: #856404; font-size: 1rem; margin-bottom: 4px;">
+                Verbindungsprobleme erkannt
+            </div>
+            <div style="color: #856404; font-size: 0.9rem; line-height: 1.4;">
+                Aufgrund von Netzwerkproblemen können einige Daten nicht geladen werden.
+                Die angezeigten Informationen sind möglicherweise unvollständig.
+                Bitte entschuldigen Sie die Unannehmlichkeiten.
+            </div>
+        </div>
+        <button onclick="dismissConnectionWarning()" style="
+            background: #856404;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 500;
+            white-space: nowrap;
+        ">Verstanden</button>
+    `;
+
+    document.body.prepend(warningBanner);
+
+    // Verschiebe den Body-Inhalt nach unten
+    document.body.style.paddingTop = warningBanner.offsetHeight + 'px';
+}
+
+/**
+ * Schließt die Verbindungswarnung
+ */
+function dismissConnectionWarning() {
+    const banner = document.getElementById('connectionWarningBanner');
+    if (banner) {
+        banner.remove();
+        document.body.style.paddingTop = '0';
+    }
+}
+
+/**
+ * Prüft ob die Daten aufgrund von Verbindungsfehlern unzuverlässig sind
+ * @returns {boolean}
+ */
+function isDataUnreliable() {
+    return connectionErrors.criticalDataAffected && connectionErrors.count >= connectionErrors.threshold;
+}
+
+// ================================
 // SMART CACHING SYSTEM (PERSISTENT)
 // ================================
 
@@ -1417,6 +1523,7 @@ async function fetchAllAssignmentGrades() {
 
     } catch (error) {
         console.error('❌ Fehler beim Laden der Course Overview:', error);
+        trackConnectionError('Course Overview (Bewertungen)', true);
         return new Map();
     }
 }
@@ -1928,6 +2035,7 @@ async function extractFromChecklistIndex(useCache = true) {
                     timeoutCount++;
                 }
                 console.warn(`Failed to load checklist ${name}:`, error.message);
+                trackConnectionError(`Checkliste: ${name}`, false);
                 updateLoadingProgress(completedCount, totalChecklists);
                 return { name: `${name} (Fehler)`, url, pflichtProgress: 0, gesamtProgress: 0, error: error.message };
             }
@@ -3151,6 +3259,7 @@ async function fetchAssignmentDetails(url) {
         return details;
     } catch (error) {
         console.error('Fehler beim Abrufen der Assignment-Details:', error);
+        trackConnectionError('Assignment-Details', true);
         return null;
     }
 }
@@ -3402,9 +3511,42 @@ async function updatePflichtTable(data) {
     // Zähle Pflicht- und optionale Aufgaben
     const pflichtCount = data.filter(item => item.isPflicht).length;
     const optionalCount = data.length - pflichtCount;
+
+    // Warnung bei Verbindungsproblemen
+    let connectionWarningHtml = '';
+    if (isDataUnreliable()) {
+        connectionWarningHtml = `
+        <div class="connection-warning-inline" style="
+            margin: 16px 0;
+            padding: 16px;
+            background: linear-gradient(135deg, #fff3cd 0%, #ffeeba 100%);
+            border-left: 4px solid #ffc107;
+            border-radius: 8px;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        ">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="#856404" style="flex-shrink: 0; margin-top: 2px;">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+            </svg>
+            <div>
+                <div style="font-weight: 600; color: #856404; margin-bottom: 4px;">
+                    Eingeschränkte Datenqualität
+                </div>
+                <div style="color: #856404; font-size: 0.9rem; line-height: 1.5;">
+                    Aufgrund von Verbindungsproblemen konnten nicht alle Daten vollständig geladen werden.
+                    Die angezeigten Informationen sind möglicherweise unvollständig oder veraltet.
+                    Bitte laden Sie die Seite später erneut, um aktuelle Daten zu erhalten.
+                </div>
+            </div>
+        </div>`;
+    }
     const countInfo = requirementFilter === 'all' ? ` (${pflichtCount} Pflicht, ${optionalCount} Optional)` : ` (${data.length})`;
 
     let html = `<h4 style="display: flex; align-items: center; gap: 8px;"><svg width="18" height="18"><use href="#icon-books"></use></svg>${tableTitle}${countInfo}</h4>`;
+
+    // Verbindungswarnung einfügen (falls vorhanden)
+    html += connectionWarningHtml;
 
     // Info-Banner für "Alle Aufgaben" Ansicht
     if (requirementFilter === 'all') {
