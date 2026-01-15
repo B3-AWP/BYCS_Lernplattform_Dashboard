@@ -1180,6 +1180,33 @@ async function updateMitarbeitsnoteCard(gradeData) {
     if (componentsContainer) {
         componentsContainer.innerHTML = ''; // Clear
 
+        // Punkte für Quantität berechnen (falls Checklisten-Daten vorhanden)
+        let quantitaetPoints = null;
+        const B7 = EXTERNAL_CONFIG.mitarbeitsnote1ReferenceWeek;
+        if (checklistData && checklistData.length > 0 && B7) {
+            const checklistsWithPflicht = checklistData.filter(item =>
+                !item.error && item.pflichtProgress !== null
+            );
+            if (checklistsWithPflicht.length > 0) {
+                const B3 = checklistsWithPflicht.length * 100; // Total Punkte
+                const B4 = TOTAL_WEEKS;
+                const maxPoints = (B3 / B4) * B7; // Max Punkte für 1. MA Zeitraum
+
+                // Finde Quantität-Komponente
+                const quantitaetComp = gradeData.components.find(c =>
+                    c.name.toLowerCase().includes('quantität') ||
+                    c.name.toLowerCase().includes('quantitat')
+                );
+                if (quantitaetComp) {
+                    const reachedPoints = (quantitaetComp.grade / 100) * maxPoints;
+                    // Exakte Werte ohne Rundung speichern für konsistente Anzeige
+                    window.ma1ReachedPoints = reachedPoints;
+                    window.ma1MaxPoints = maxPoints;
+                    quantitaetPoints = `${Math.round(reachedPoints)}/${Math.round(maxPoints)}`;
+                }
+            }
+        }
+
         gradeData.components.forEach(component => {
             const componentEl = document.createElement('div');
             componentEl.className = 'mitarbeit-component';
@@ -1190,7 +1217,15 @@ async function updateMitarbeitsnoteCard(gradeData) {
 
             const gradeEl = document.createElement('span');
             gradeEl.className = 'mitarbeit-component-grade';
-            gradeEl.textContent = component.grade.toFixed(2).replace('.', ',');
+
+            // Bei Quantität auch Punkte anzeigen
+            const isQuantitaet = component.name.toLowerCase().includes('quantität') ||
+                                 component.name.toLowerCase().includes('quantitat');
+            if (isQuantitaet && quantitaetPoints) {
+                gradeEl.innerHTML = `${component.grade.toFixed(2).replace('.', ',')} <span style="color: #666; font-size: 0.85em; margin-left: 4px;">(${quantitaetPoints})</span>`;
+            } else {
+                gradeEl.textContent = component.grade.toFixed(2).replace('.', ',');
+            }
 
             componentEl.appendChild(nameEl);
             componentEl.appendChild(gradeEl);
@@ -1663,9 +1698,37 @@ async function updatePrognosisComponents(progressData) {
     const qualitaet = window.pflichtAveragePercentage || 0;
     console.log('📈 Quantität:', quantitaet, '| Qualität:', qualitaet);
 
-    // Komponenten-Daten sammeln (value für Berechnung, display für Anzeige)
+    // Punkte für Quantität berechnen
+    // C8 = Gesamte erreichte Punkte bis aktuelle Woche
+    // MA1 = Punkte die in 1. MA erreicht wurden (kann über 100% sein)
+    // MA1_max = Maximale Punkte für den MA1-Zeitraum
+    // Bei Übertrag (MA1 > MA1_max): Nur MA1_max wird abgezogen, Rest ist Übertrag
+    // Prognose = C8 - min(MA1, MA1_max) für konsistente Summen
+    const debugInfo = progressData.debugInfo || {};
+    const c8Total = debugInfo.C8 || 0; // Gesamte Punkte bis aktuelle Woche
+    const ma1Reached = window.ma1ReachedPoints || (debugInfo.B10 * ((debugInfo.B3 / debugInfo.B4) * debugInfo.B7)) || 0;
+    const ma1Max = window.ma1MaxPoints || ((debugInfo.B3 / debugInfo.B4) * debugInfo.B7) || 0;
+
+    // Bei Übertrag: MA1 kann größer als MA1_max sein (z.B. 130%)
+    // Für die Summe zählt nur min(MA1, MA1_max), der Rest ist Übertrag
+    const ma1Capped = Math.min(ma1Reached, ma1Max); // Für Summenberechnung gedeckelt
+    const uebertrag = Math.max(0, ma1Reached - ma1Max); // Übertrag bei >100%
+
+    // Runde einmal, dann berechne Prognose als Differenz für Konsistenz
+    const c8Rounded = Math.round(c8Total);
+    const ma1CappedRounded = Math.round(ma1Capped);
+    const prognoseReached = c8Rounded - ma1CappedRounded; // Garantiert: min(MA1,max) + Prognose = C8
+
+    if (uebertrag > 0) {
+        console.log(`✓ Übertrag aus 1. MA: ${Math.round(uebertrag)} Punkte (${((ma1Reached/ma1Max)*100).toFixed(1)}% erreicht)`);
+    }
+
+    const quantitaetMax = progressData.denominator || 0;
+    const quantitaetPoints = `${prognoseReached}/${Math.round(quantitaetMax)}`;
+
+    // Komponenten-Daten sammeln (value für Berechnung, display für Anzeige, points für Zusatzinfo)
     const components = [
-        { name: 'Quantität', value: quantitaet, display: `${quantitaet.toFixed(2).replace('.', ',')}` },
+        { name: 'Quantität', value: quantitaet, display: `${quantitaet.toFixed(2).replace('.', ',')}`, points: quantitaetPoints },
         { name: 'Qualität', value: qualitaet, display: `${qualitaet.toFixed(2).replace('.', ',')}` },
         { name: 'Review-Talk 2', value: reviewTalk2Value, display: reviewTalk2Display },
         { name: 'Code Review', value: codeReviewValue, display: codeReviewDisplay }
@@ -1704,7 +1767,12 @@ async function updatePrognosisComponents(progressData) {
 
         const gradeEl = document.createElement('div');
         gradeEl.className = 'component-grade';
-        gradeEl.textContent = component.display;
+        // Bei Quantität auch Punkte anzeigen
+        if (component.points) {
+            gradeEl.innerHTML = `${component.display} <span style="color: #666; font-size: 0.85em; margin-left: 4px;">(${component.points})</span>`;
+        } else {
+            gradeEl.textContent = component.display;
+        }
 
         componentEl.appendChild(nameEl);
         componentEl.appendChild(gradeEl);
