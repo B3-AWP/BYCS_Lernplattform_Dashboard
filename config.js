@@ -138,7 +138,8 @@ const EXTERNAL_CONFIG = {
     // Aufgaben, die einen dieser Strings im Namen enthalten, werden NICHT angezeigt
     excludeFromOverview: [
         "(Leistungsnachweis)",
-        "Review-Talk"
+        "Review-Talk",
+        "Code-Review"
     ],
 
     // Assignment Categories für Notenfilterung
