@@ -1218,11 +1218,13 @@ async function updateMitarbeitsnoteCard(gradeData) {
             const gradeEl = document.createElement('span');
             gradeEl.className = 'mitarbeit-component-grade';
 
-            // Bei Quantität auch Punkte anzeigen
+            // Bei Quantität auch Punkte anzeigen (ohne Nachkommastellen, mit %)
             const isQuantitaet = component.name.toLowerCase().includes('quantität') ||
                                  component.name.toLowerCase().includes('quantitat');
             if (isQuantitaet && quantitaetPoints) {
-                gradeEl.innerHTML = `${component.grade.toFixed(2).replace('.', ',')} <span style="color: #666; font-size: 0.85em; margin-left: 4px;">(${quantitaetPoints})</span>`;
+                gradeEl.innerHTML = `${Math.round(component.grade)}% <span style="color: #666; font-size: 0.85em; margin-left: 4px;">(${quantitaetPoints})</span>`;
+            } else if (isQuantitaet) {
+                gradeEl.textContent = `${Math.round(component.grade)}%`;
             } else {
                 gradeEl.textContent = component.grade.toFixed(2).replace('.', ',');
             }
@@ -1728,8 +1730,8 @@ async function updatePrognosisComponents(progressData) {
 
     // Komponenten-Daten sammeln (value für Berechnung, display für Anzeige, points für Zusatzinfo)
     const components = [
-        { name: 'Quantität', value: quantitaet, display: `${quantitaet.toFixed(2).replace('.', ',')}`, points: quantitaetPoints },
-        { name: 'Qualität', value: qualitaet, display: `${qualitaet.toFixed(2).replace('.', ',')}` },
+        { name: 'Quantität', value: quantitaet, display: `${Math.round(quantitaet)}%`, points: quantitaetPoints },
+        { name: 'Qualität', value: qualitaet, display: `${Math.round(qualitaet)}%` },
         { name: 'Review-Talk 2', value: reviewTalk2Value, display: reviewTalk2Display },
         { name: 'Code Review', value: codeReviewValue, display: codeReviewDisplay }
     ];
@@ -2523,16 +2525,60 @@ function updatePflichtStats() {
         return getGradeValueForCalculation(item) !== null;
     });
 
+    // Für Prognose 2. MA: Nur Pflichtabgaben nach dem Referenztermin berücksichtigen
+    // Hole Track und Referenztermin
+    let currentTrack = localStorage.getItem('userTrack');
+    if (!currentTrack) {
+        const userClass = localStorage.getItem('userClass');
+        if (userClass && CLASS_TO_TRACK[userClass]) {
+            currentTrack = CLASS_TO_TRACK[userClass];
+        }
+    }
+    const referenztermin = currentTrack ? EXTERNAL_CONFIG.ReferenzterminMitarbeitsnote1[currentTrack] : null;
+    const referenzDate = referenztermin ? new Date(referenztermin) : null;
+
+    // Filtere bewertete Items nach Referenztermin für Prognose-Qualität
+    const gradedItemsForPrognose = gradedItems.filter(item => {
+        if (!referenzDate || !window.allAssignmentGrades) return true; // Fallback: alle verwenden
+
+        // Extrahiere cmid aus URL
+        const cmidMatch = item.url?.match(/[?&]id=(\d+)/);
+        if (!cmidMatch) return true; // Kein cmid -> verwenden
+
+        const cmid = parseInt(cmidMatch[1]);
+        const gradeData = window.allAssignmentGrades.get(cmid);
+        if (!gradeData?.gradedDate) return true; // Kein Datum -> verwenden
+
+        // Konvertiere String zu Date, falls nötig (Cache-Serialisierung)
+        const gradedDate = typeof gradeData.gradedDate === 'string'
+            ? new Date(gradeData.gradedDate)
+            : gradeData.gradedDate;
+
+        // Nur Items nach Referenztermin für Prognose
+        return gradedDate > referenzDate;
+    });
+
+    console.log(`📊 Qualität: ${gradedItems.length} bewertete Pflichtabgaben gesamt, ${gradedItemsForPrognose.length} nach Referenztermin (${referenztermin || 'nicht gesetzt'})`);
+
     let averageGradeDisplay = '-';
     if (gradedItems.length > 0) {
-        // Calculate average percentage using mixed grading system
+        // Calculate average percentage using mixed grading system (für Anzeige im Pflichtabgaben-Tab)
         const totalPercentage = gradedItems.reduce((sum, item) => {
             return sum + getGradeValueForCalculation(item);
         }, 0);
         const averagePercentage = totalPercentage / gradedItems.length;
 
-        // Global speichern für Prognose-Komponenten
-        window.pflichtAveragePercentage = averagePercentage;
+        // Für Prognose: Nur Pflichtabgaben nach Referenztermin
+        let averagePercentagePrognose = 0;
+        if (gradedItemsForPrognose.length > 0) {
+            const totalPercentagePrognose = gradedItemsForPrognose.reduce((sum, item) => {
+                return sum + getGradeValueForCalculation(item);
+            }, 0);
+            averagePercentagePrognose = totalPercentagePrognose / gradedItemsForPrognose.length;
+        }
+
+        // Global speichern für Prognose-Komponenten (nur Pflichtabgaben nach Referenztermin)
+        window.pflichtAveragePercentage = averagePercentagePrognose;
 
         // Calculate IHK grade from average percentage
         const ihkGradeInfo = calculateIHKGrade(averagePercentage);
