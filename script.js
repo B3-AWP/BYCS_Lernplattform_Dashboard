@@ -2961,6 +2961,9 @@ function showTab(tab) {
             if (loadingIndicator) loadingIndicator.style.display = 'none';
             if (pflichtFilterSection) pflichtFilterSection.style.display = 'block';
             if (pflichtSessionInfo) pflichtSessionInfo.style.display = 'block';
+
+            // Wende aktuelle Filter erneut an beim Tab-Wechsel
+            applyPflichtFilters();
         }
     }
 }
