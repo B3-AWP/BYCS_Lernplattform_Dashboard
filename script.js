@@ -551,7 +551,7 @@ function setupTrackSelector() {
   // Event Listener für Track-Buttons einmalig einrichten
   const trackBtns = document.querySelectorAll('.track-btn');
   trackBtns.forEach(btn => {
-    btn.onclick = function() {
+    btn.onclick = async function() {
       if (this.disabled) return; // Ignore clicks on disabled buttons
       
       const selectedTrack = this.getAttribute('data-track');
@@ -578,9 +578,9 @@ function setupTrackSelector() {
           updateCharts();
           updateChecklistTable(checklistData);
         }
-        
+
         if (window.pflichtData && window.pflichtData.length > 0) {
-          updatePflichtStats();
+          await updatePflichtStats();
           updatePflichtTable(window.pflichtData);
         }
       }
@@ -732,7 +732,7 @@ const COURSE_ID = EXTERNAL_CONFIG.system.courseId;
 
 
 // Referenzwochen-Funktionen
-function updateReferenceWeek(weekValue) {
+async function updateReferenceWeek(weekValue) {
     currentReferenceWeek = parseInt(weekValue);
     document.getElementById('referenceWeekSlider').value = currentReferenceWeek;
 
@@ -750,7 +750,7 @@ function updateReferenceWeek(weekValue) {
     }
 
     if (window.pflichtData && window.pflichtData.length > 0) {
-        updatePflichtStats();
+        await updatePflichtStats();
         updatePflichtTable(window.pflichtData);
     }
 
@@ -921,7 +921,7 @@ function resetLoadingProgress() {
     }
 }
 
-function checkAndHideDashboardLoading() {
+async function checkAndHideDashboardLoading() {
     // Hide dashboard loading state when both checklists and pflicht data are available
     if (checklistData && checklistData.length > 0 && window.pflichtData && window.pflichtData.length > 0) {
         // Show completion message
@@ -930,7 +930,7 @@ function checkAndHideDashboardLoading() {
 
         // Update overview statistics now that both datasets are loaded
         updateStatistics();
-        updatePflichtStats();
+        await updatePflichtStats();
 
         // Ensure loading is visible for at least 1.5 seconds for better UX
         const loadingStartTime = window.dashboardLoadingStartTime || 0;
@@ -962,13 +962,13 @@ function updateLoadingProgress(completed, total) {
 }
 
 
-function extractPflichtOverview(useCache = true) {
+async function extractPflichtOverview(useCache = true) {
     // Prüfe Cache zuerst
     const cachedData = useCache ? getCachedData('pflicht') : null;
     if (cachedData) {
         showCacheNotification('pflicht');
         window.pflichtData = cachedData;
-        updatePflichtStats();
+        await updatePflichtStats();
         showBothStatsRows(); // Stelle sicher, dass die Stats-Reihen angezeigt werden
 
         // Background update starten
@@ -977,7 +977,7 @@ function extractPflichtOverview(useCache = true) {
             extractPflichtOverview(false); // ohne Cache
         }, 100);
 
-        return Promise.resolve();
+        return;
     }
 
     showLoading(true);
@@ -995,7 +995,7 @@ function extractPflichtOverview(useCache = true) {
             setCachedData('pflicht', enrichedData);
 
             window.pflichtData = enrichedData;
-            updatePflichtStats();
+            await updatePflichtStats();
             const pfSection = document.getElementById('pflichtFilterSection');
             if (pfSection) pfSection.style.display = 'block';
 
@@ -2541,7 +2541,7 @@ function updateCombinedStats(completed, total, referencePercentage = null) {
     totalElement.textContent = expectedTotal;
 }
 
-function updatePflichtStats() {
+async function updatePflichtStats() {
     if (!window.pflichtData || window.pflichtData.length === 0) {
         console.log('No pflichtData available');
         return;
@@ -2576,6 +2576,27 @@ function updatePflichtStats() {
     }
     const referenztermin = currentTrack ? EXTERNAL_CONFIG.ReferenzterminMitarbeitsnote1[currentTrack] : null;
     const referenzDate = referenztermin ? new Date(referenztermin) : null;
+
+    // Stelle sicher, dass allAssignmentGrades geladen ist für Datumsfilterung
+    if (!window.allAssignmentGrades && referenzDate) {
+        try {
+            // Lade alle Assignment-Grades für korrekte Datumsfilterung
+            const cacheKey = 'all_assignment_grades';
+            const cachedArray = getCachedData(cacheKey);
+
+            if (cachedArray && Array.isArray(cachedArray)) {
+                window.allAssignmentGrades = new Map(cachedArray);
+                console.log('💾 Assignment-Grades aus Cache für Qualitäts-Filterung geladen');
+            } else {
+                console.log('📥 Lade Assignment-Grades für Qualitäts-Filterung...');
+                window.allAssignmentGrades = await fetchAllAssignmentGrades();
+                const arrayForCache = Array.from(window.allAssignmentGrades.entries());
+                setCachedData(cacheKey, arrayForCache);
+            }
+        } catch (error) {
+            console.warn('⚠️ Konnte Assignment-Grades nicht laden:', error);
+        }
+    }
 
     // Filtere bewertete Items nach Referenztermin für Prognose-Qualität
     const gradedItemsForPrognose = gradedItems.filter(item => {
