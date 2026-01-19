@@ -9,6 +9,8 @@ Ein interaktives Dashboard zur Visualisierung und Analyse von Lernfortschritten 
 - **Pflichtabgaben-Tracking**: Vollständige Überwachung von Assignments und Quizzes
 - **IHK-Notensystem**: Automatische Berechnung von IHK-Noten basierend auf Leistungen
 - **Referenzwochen-System**: Fortschrittsbewertung bezogen auf Kurswochen
+- **Mitarbeitsnoten-Anzeige**: Anzeige der 1. Mitarbeitsnote mit Komponenten (Quantität, Qualität, Review-Talk)
+- **Prognose 2. Mitarbeitsnote**: Automatische Prognose basierend auf aktuellen Leistungen seit der 1. Mitarbeitsnote
 
 ### 🎨 **Visuelle Darstellung**
 - **Interaktive Charts**: Ein-/ausklappbare Diagramme mit IHK-Farben (rot bis grün)
@@ -23,6 +25,7 @@ Ein interaktives Dashboard zur Visualisierung und Analyse von Lernfortschritten 
 - **Smart Loading**: Detaillierte Fortschrittsmeldungen beim Laden
 - **Filteroptionen**: Flexible Datenfilterung nach verschiedenen Kriterien
 - **Export-Funktionen**: Datenexport für weitere Analysen
+- **Hilfetexte (Tooltips)**: Kontextbezogene Erklärungen für alle Berechnungen via Info-Icons (?) - inkl. Berechnungslogik und Handlungsempfehlungen
 
 ### 🛡️ **Sicherheit & Performance**
 - **Same-Origin-Policy**: Sichere Datenübertragung
@@ -87,10 +90,11 @@ Ein interaktives Dashboard zur Visualisierung und Analyse von Lernfortschritten 
 ```
 ├── index.html         # Haupt-HTML-Struktur
 ├── script.js          # JavaScript-Logik und API-Calls
-├── config.js          # Externe Konfigurationsdatei
+├── config.js          # Externe Konfigurationsdatei (Hilfetexte, Notensystem, Termine)
 ├── style.css          # CSS-Styling und Animationen
 ├── debug-test.html    # Test-Seite für Progress Bars
-└── README.md          # Dokumentation
+├── CONFIGURATION.md   # Dokumentation der Konfigurationsoptionen
+└── README.md          # Projektdokumentation
 ```
 
 ### **Technologie-Stack:**
@@ -125,7 +129,14 @@ Bei Fragen oder Problemen:
 
 ### **Kommende Features:**
 
-### **Aktuelle Verbesserungen (v1.1):**
+### **Aktuelle Verbesserungen (v1.2):**
+- [x] **Mitarbeitsnoten-Anzeige**: 1. Mitarbeitsnote mit Komponenten (Quantität, Qualität, Review-Talk)
+- [x] **Prognose 2. Mitarbeitsnote**: Automatische Prognose basierend auf Leistungen seit der 1. Mitarbeitsnote
+- [x] **Hilfetexte (Tooltips)**: Konfigurierbare Erklärungen für alle Berechnungen
+- [x] **Referenzdatum-Filter**: Qualität-Berechnung berücksichtigt Bewertungsdatum
+- [x] **Formatierung**: Einheitliche Darstellung ohne Nachkommastellen mit %-Zeichen
+
+### **Frühere Verbesserungen (v1.1):**
 - [x] **Cache-Optimierung**: 60-70% reduzierter localStorage-Verbrauch
 - [x] **Progress Bars**: Visuelle Fortschrittsbalken in Tabellen
 - [x] **Konfetti Easter Egg**: Verstecktes Feature für exzellente Leistungen
