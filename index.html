@@ -115,112 +115,79 @@
             </div>
 
             <!-- Stats Rows (Always Visible) -->
-            <!-- Checklisten Statistics Group - vorübergehend ausgeblendet -->
-            <div class="stats-group stats-group-checklist" style="display: none;">
+            <!-- Übersicht - Gesamtes Schuljahr (Checklisten + Pflichtabgaben kombiniert) -->
+            <div class="stats-group stats-group-checklist">
                 <div class="stats-group-title">
                     <svg width="20" height="20" aria-hidden="true">
                         <use href="#icon-checklist"></use>
                     </svg>
-                    Checklisten Übersicht - gesamtes Schuljahr
+                    Übersicht - Gesamtes Schuljahr
                 </div>
                 <div class="stats-row stats-grid" id="statsRow">
-                <div class="stat-card combined-stats-card" style="position: relative;">
-                    <div class="stat-card-loading" id="checklistStatsLoading" style="display: none;">
-                        <div class="spinner"></div>
-                        <div style="margin-top: 8px; font-size: 12px; color: #6c757d;">Lade Checklisten...</div>
-                    </div>
-                    <div class="combined-stats-content" id="checklistStatsContent">
-                        <div class="completion-overview">
-                            <div class="completion-main">
-                                <span class="completion-count" id="completedCount">0</span>
-                                <span class="completion-separator">von</span>
-                                <span class="completion-total" id="totalCount">0</span>
-                            </div>
-                            <div class="completion-label">
-                               Pflicht-Checklisten abgeschlossen</div>
+                    <!-- Checklisten Durchschnitt mit Pflicht/Gesamt Toggle -->
+                    <div class="stat-card">
+                        <div class="stat-progress-text" id="avgCompletionText">0%</div>
+                        <div class="progress-toggle">
+                            <label id="pflichtLabel" class="active">
+                                <input type="radio" name="progressType" value="pflicht" checked
+                                    onchange="toggleProgressType()">
+                                Pflicht
+                            </label>
+                            <label id="gesamtLabel">
+                                <input type="radio" name="progressType" value="gesamt" onchange="toggleProgressType()">
+                                Gesamt
+                            </label>
                         </div>
-                        <div class="completion-visual">
-                            <div class="completion-progress-ring">
-                                <svg width="60" height="60" viewBox="0 0 60 60">
-                                    <circle cx="30" cy="30" r="25" stroke="#e9ecef" stroke-width="4" fill="none" />
-                                    <circle id="completionRing" cx="30" cy="30" r="25" stroke="#28a745" stroke-width="4"
-                                        fill="none" stroke-dasharray="157" stroke-dashoffset="157"
-                                        style="transition: stroke-dashoffset 0.8s ease-in-out;" />
-                                </svg>
-                                <div class="completion-percentage" id="completionPercentage">0%</div>
+                        <div class="stat-progress-container">
+                            <div class="stat-progress-bar">
+                                <div class="stat-progress-fill" id="avgCompletionBar" style="width: 0%"></div>
                             </div>
                         </div>
+                        <div class="stat-label" id="progressLabel">Checkliste Durchschnitt</div>
+                        <div class="stat-sublabel" id="avgCompletionDetails">0 / 0 Punkte</div>
                     </div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-progress-text" id="avgCompletionText">0%</div>
-                    <div class="progress-toggle">
-                        <label id="pflichtLabel" class="active">
-                            <input type="radio" name="progressType" value="pflicht" checked
-                                onchange="toggleProgressType()">
-                            Pflicht
-                        </label>
-                        <label id="gesamtLabel">
-                            <input type="radio" name="progressType" value="gesamt" onchange="toggleProgressType()">
-                            Gesamt
-                        </label>
-                    </div>
-                    <div class="stat-progress-container">
-                        <div class="stat-progress-bar">
-                            <div class="stat-progress-fill" id="avgCompletionBar" style="width: 0%"></div>
-                        </div>
-                    </div>
-                    <div class="stat-label" id="progressLabel">Checkliste Durchschnitt</div>
-                    <div class="stat-sublabel" id="avgCompletionDetails">0 / 0 Punkte</div>
-                </div>
-                <div class="stat-card" id="ihkGradeCard">
-                    <div class="stat-number" id="ihkGradeText">-</div>
-                    <div class="stat-label">Note Pflicht-Checklisten gemäß IHK</div>
-                    <div class="ihk-grade-details">
-                        <div class="ihk-grade-percentage" id="ihkGradePercentage">0%</div>
-                        <div class="ihk-grade-tendency" id="ihkGradeTendency"></div>
-                    </div>
-                </div>
-            </div>
-            </div>
 
-            <!-- Pflichtabgaben Statistics Group -->
-            <div class="stats-group stats-group-pflicht">
-                <div class="stats-group-title">
-                    <svg width="20" height="20" aria-hidden="true">
-                        <use href="#icon-pflicht"></use>
-                    </svg>
-                    Pflichtabgaben Übersicht  - gesamtes Schuljahr
-                </div>
-                <div class="stats-row stats-grid" id="pflichtStatsRow">
-                <div class="stat-card combined-stats-card">
-                    <div class="combined-stats-content">
-                        <div class="completion-overview">
-                            <div class="completion-main">
-                                <span class="completion-count" id="pflichtCompletedCount">0</span>
-                                <span class="completion-separator">von</span>
-                                <span class="completion-total" id="pflichtTotalCount">0</span>
-                            </div>
-                            <div class="completion-label">Pflichtabgaben abgeschlossen</div>
+                    <!-- IHK Note Card (standardmäßig ausgeblendet) -->
+                    <div class="stat-card easter-egg-card" id="ihkGradeCard" style="display: none;">
+                        <div class="stat-number" id="ihkGradeText">-</div>
+                        <div class="stat-label">Note Pflicht-Checklisten gemäß IHK</div>
+                        <div class="ihk-grade-details">
+                            <div class="ihk-grade-percentage" id="ihkGradePercentage">0%</div>
+                            <div class="ihk-grade-tendency" id="ihkGradeTendency"></div>
                         </div>
-                        <div class="completion-visual">
-                            <div class="completion-progress-ring">
-                                <svg width="60" height="60" viewBox="0 0 60 60">
-                                    <circle cx="30" cy="30" r="25" stroke="#e9ecef" stroke-width="4" fill="none" />
-                                    <circle id="pflichtCompletionRing" cx="30" cy="30" r="25" stroke="#28a745"
-                                        stroke-width="4" fill="none" stroke-dasharray="157" stroke-dashoffset="157"
-                                        style="transition: stroke-dashoffset 0.8s ease-in-out;" />
-                                </svg>
-                                <div class="completion-percentage" id="pflichtCompletionPercentage">0%</div>
+                    </div>
+
+                    <!-- Pflichtabgaben Abschluss-Ring -->
+                    <div class="stat-card combined-stats-card">
+                        <div class="combined-stats-content">
+                            <div class="completion-overview">
+                                <div class="completion-main">
+                                    <span class="completion-count" id="pflichtCompletedCount">0</span>
+                                    <span class="completion-separator">von</span>
+                                    <span class="completion-total" id="pflichtTotalCount">0</span>
+                                </div>
+                                <div class="completion-label">Pflichtabgaben abgeschlossen</div>
+                            </div>
+                            <div class="completion-visual">
+                                <div class="completion-progress-ring">
+                                    <svg width="60" height="60" viewBox="0 0 60 60">
+                                        <circle cx="30" cy="30" r="25" stroke="#e9ecef" stroke-width="4" fill="none" />
+                                        <circle id="pflichtCompletionRing" cx="30" cy="30" r="25" stroke="#28a745"
+                                            stroke-width="4" fill="none" stroke-dasharray="157" stroke-dashoffset="157"
+                                            style="transition: stroke-dashoffset 0.8s ease-in-out;" />
+                                    </svg>
+                                    <div class="completion-percentage" id="pflichtCompletionPercentage">0%</div>
+                                </div>
                             </div>
                         </div>
                     </div>
+
+                    <!-- Pflichtabgaben Durchschnittsnote -->
+                    <div class="stat-card easter-egg-card">
+                        <div class="stat-number" id="pflichtAverageGrade">-</div>
+                        <div class="stat-label">Pflicht Abgaben Durchschnittsnote</div>
+                    </div>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-number" id="pflichtAverageGrade">-</div>
-                    <div class="stat-label">Pflicht Abgaben Durchschnittsnote</div>
-                </div>
-            </div>
             </div>
 
             <!-- Mitarbeitsnoten Statistics Group -->

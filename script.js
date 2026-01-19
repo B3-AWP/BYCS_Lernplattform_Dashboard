@@ -3206,14 +3206,10 @@ function updateCharts() {
 
 function showBothStatsRows() {
     const statsRow = document.getElementById('statsRow');
-    const pflichtStatsRow = document.getElementById('pflichtStatsRow');
 
-    if (statsRow && window.data && window.data.length > 0) {
+    // Zeige die kombinierte Übersichts-Zeile wenn Daten vorhanden
+    if (statsRow && (window.data?.length > 0 || window.pflichtData?.length > 0)) {
         statsRow.style.display = 'grid';
-    }
-
-    if (pflichtStatsRow && window.pflichtData && window.pflichtData.length > 0) {
-        pflichtStatsRow.style.display = 'grid';
     }
 }
 
@@ -4361,9 +4357,9 @@ function initializeHelpTooltips() {
             category: 'checklisten',
             key: 'ihkNote'
         },
-        // Pflichtabgaben
+        // Pflichtabgaben (jetzt in kombinierter Übersicht)
         {
-            selector: '.stats-group-pflicht .completion-label',
+            selector: '.stats-group-checklist .combined-stats-card .completion-label',
             category: 'pflichtabgaben',
             key: 'abgeschlossen'
         },
@@ -4415,8 +4411,8 @@ function initializeHelpTooltips() {
         }
     });
 
-    // Spezialfall: Pflichtabgaben Durchschnittsnote (Label ist separates Element)
-    const pflichtAvgLabel = document.querySelector('.stats-group-pflicht .stat-card:nth-child(2) .stat-label');
+    // Spezialfall: Pflichtabgaben Durchschnittsnote (Label ist separates Element in kombinierter Übersicht)
+    const pflichtAvgLabel = document.querySelector('#pflichtAverageGrade')?.closest('.stat-card')?.querySelector('.stat-label');
     if (pflichtAvgLabel && helpTexts.pflichtabgaben?.durchschnittsnote) {
         // Prüfe ob bereits ein Tooltip vorhanden ist
         if (!pflichtAvgLabel.querySelector('.tooltip-container')) {

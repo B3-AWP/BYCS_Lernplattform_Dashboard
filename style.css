@@ -2305,3 +2305,27 @@ h3 {
 .stats-row {
     overflow: visible;
 }
+
+/* Tooltip über allen anderen Elementen anzeigen */
+.stats-group:has(.tooltip-container:hover) {
+    z-index: 10000;
+}
+
+.stat-card:has(.tooltip-container:hover),
+.combined-stats-card:has(.tooltip-container:hover) {
+    z-index: 10001;
+}
+
+/* Stacking Context für Tooltip-Anzeige */
+.stats-grid {
+    overflow: visible;
+}
+
+.completion-label {
+    position: relative;
+    z-index: 1;
+}
+
+.completion-label:has(.tooltip-container:hover) {
+    z-index: 10002;
+}

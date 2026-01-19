@@ -167,7 +167,7 @@ const EXTERNAL_CONFIG = {
         // Checklisten Übersicht
         checklisten: {
             'abgeschlossen': 'Zeigt, wie viele deiner Pflicht-Checklisten zu 100% abgehakt sind. Die Zahl rechts (von X) zeigt die Gesamtanzahl der Pflicht-Checklisten, die bis zur aktuellen Referenzwoche erwartet werden.',
-            'durchschnitt': 'Der prozentuale Durchschnitt aller Checklistenpunkte. Jede Checkliste zählt als 100 Punkte - hast du alle Pflicht-Checkboxen einer Liste abgehakt, erhältst du 100%. Der angezeigte Wert ist der Durchschnitt über alle Checklisten. "Pflicht" zeigt nur die Pflicht-Checkboxen, "Gesamt" alle Checkboxen inklusive optionaler. <br> Um möglichst viele Punkte zu erreichen, erledigte alle Pflicht-Checkboxen in jeder Checkliste zeitnah. Die Punkte in Klammern zeigen erreichte/mögliche Punkte bezogen auf die aktuelle Referenzwoche.',
+            'durchschnitt': 'Der prozentuale Durchschnitt aller Checklistenpunkte.<br>Jede Checkliste zählt als 100 Punkte - hast du alle Pflicht-Checkboxen einer Liste abgehakt, erhältst du 100%. Der angezeigte Wert ist der Durchschnitt über alle Checklisten. "Pflicht" zeigt nur die Pflicht-Checkboxen, "Gesamt" alle Checkboxen inklusive optionaler. <br>Um möglichst viele Punkte zu erreichen, erledigte alle Pflicht-Checkboxen in jeder Checkliste zeitnah. Die Punkte in Klammern zeigen erreichte/mögliche Punkte bezogen auf die aktuelle Referenzwoche.',
             'ihkNote': 'Deine Note nach IHK-Notenschlüssel basierend auf dem Pflicht-Checklisten-Durchschnitt. Die Prozentangabe zeigt den genauen Wert, die Tendenz (+/-) zeigt, ob du näher an der besseren oder schlechteren Note bist.'
         },
         // Pflichtabgaben Übersicht
