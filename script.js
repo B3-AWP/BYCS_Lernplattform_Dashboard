@@ -1140,16 +1140,21 @@ async function updateMitarbeitsnoteCard(gradeData) {
     const componentsContainer = document.getElementById('mitarbeitComponents');
     const ihkGradeEl = document.getElementById('mitarbeitIHKGrade');
     const ihkGradeNameEl = document.getElementById('mitarbeitIHKGradeName');
+    const pflichtAverageGradeCard = document.getElementById('pflichtAverageGradeCard');
 
     // Card ausblenden bei fehlenden Daten
     if (!gradeData || gradeData.overall === null) {
         if (statsGroup) statsGroup.style.display = 'none';
-        console.log('Mitarbeitsnote-Karte ausgeblendet (keine Daten)');
+        // Pflichtabgaben Durchschnittsnote anzeigen, wenn keine 1. Mitarbeitsnote existiert
+        if (pflichtAverageGradeCard) pflichtAverageGradeCard.style.display = 'block';
+        console.log('Mitarbeitsnote-Karte ausgeblendet (keine Daten), Pflichtabgaben-Durchschnitt angezeigt');
         return;
     }
 
     // Card anzeigen
     if (statsGroup) statsGroup.style.display = 'block';
+    // Pflichtabgaben Durchschnittsnote ausblenden, wenn 1. Mitarbeitsnote existiert
+    if (pflichtAverageGradeCard) pflichtAverageGradeCard.style.display = 'none';
 
     // Tooltips für Mitarbeitsnoten initialisieren (falls noch nicht geschehen)
     initializeHelpTooltips();
