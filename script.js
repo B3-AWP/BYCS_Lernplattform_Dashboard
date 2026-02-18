@@ -409,15 +409,14 @@ function getCurrentSchulwoche(className = null) {
 async function detectUserClass() {
   // Versuche verschiedene URL-Varianten um die Klassen-Tabs zu finden
   const urlsToTry = [
-    `https://lernplattform.mebis.bycs.de/course/view.php?id=${COURSE_ID}`,
-    `https://lernplattform.mebis.bycs.de/course/view.php?id=${COURSE_ID}&section=0`
+    `https://lernplattform.bycs.de/course/view.php?id=${COURSE_ID}`,
+    `https://lernplattform.bycs.de/course/view.php?id=${COURSE_ID}&section=0`
   ];
   
   for (const courseUrl of urlsToTry) {
     try {
       const response = await fetch(courseUrl, {
-        credentials: 'same-origin',
-        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        credentials: 'include'
       });
       
       if (!response.ok) continue;
@@ -983,8 +982,8 @@ async function extractPflichtOverview(useCache = true) {
     showLoading(true);
     updateDashboardLoadingProgress(3, EXTERNAL_CONFIG.loading.progress.loadPflicht, EXTERNAL_CONFIG.loading.progress.loadPflichtSub);
 
-    const assignmentOverviewUrl = `https://lernplattform.mebis.bycs.de/course/overview.php?id=${COURSE_ID}&expand[]=assign#assign_overview_collapsible`;
-    const quizOverviewUrl = `https://lernplattform.mebis.bycs.de/course/overview.php?id=${COURSE_ID}&expand[]=quiz#quiz_overview_collapsible`;
+    const assignmentOverviewUrl = `https://lernplattform.bycs.de/course/overview.php?id=${COURSE_ID}&expand[]=assign#assign_overview_collapsible`;
+    const quizOverviewUrl = `https://lernplattform.bycs.de/course/overview.php?id=${COURSE_ID}&expand[]=quiz#quiz_overview_collapsible`;
 
     return fetchData(assignmentOverviewUrl, quizOverviewUrl)
         .then(async data => {
@@ -1041,11 +1040,10 @@ async function fetchMitarbeitsnote(useCache = true) {
     try {
         // 2. Fetch Grade Report
         const courseId = EXTERNAL_CONFIG.system.courseId;
-        const gradeReportUrl = `https://lernplattform.mebis.bycs.de/grade/report/user/index.php?id=${courseId}`;
+        const gradeReportUrl = `https://lernplattform.bycs.de/grade/report/user/index.php?id=${courseId}`;
 
         const response = await fetch(gradeReportUrl, {
-            credentials: 'same-origin',
-            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            credentials: 'include'
         });
 
         if (!response.ok) {
@@ -1362,10 +1360,9 @@ async function fetchGradedDate(cmid) {
  */
 async function fetchGradedDateFromAssignment(assignId) {
     try {
-        const url = `https://lernplattform.mebis.bycs.de/mod/assign/view.php?id=${assignId}`;
+        const url = `https://lernplattform.bycs.de/mod/assign/view.php?id=${assignId}`;
         const response = await fetch(url, {
-            credentials: 'same-origin',
-            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            credentials: 'include'
         });
 
         if (!response.ok) {
@@ -1412,10 +1409,9 @@ async function fetchGradedDateFromAssignment(assignId) {
  */
 async function fetchGradedDateFromQuiz(quizId) {
     try {
-        const url = `https://lernplattform.mebis.bycs.de/mod/quiz/view.php?id=${quizId}`;
+        const url = `https://lernplattform.bycs.de/mod/quiz/view.php?id=${quizId}`;
         const response = await fetch(url, {
-            credentials: 'same-origin',
-            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            credentials: 'include'
         });
 
         if (!response.ok) {
@@ -1525,18 +1521,16 @@ async function fetchAllAssignmentGrades() {
         const parser = new DOMParser();
 
         // Lade BEIDE Overview-Seiten: Assignments und Quizzes
-        const assignOverviewUrl = `https://lernplattform.mebis.bycs.de/course/overview.php?id=${COURSE_ID}&expand[]=assign#assign_overview_collapsible`;
-        const quizOverviewUrl = `https://lernplattform.mebis.bycs.de/course/overview.php?id=${COURSE_ID}&expand[]=quiz#quiz_overview_collapsible`;
+        const assignOverviewUrl = `https://lernplattform.bycs.de/course/overview.php?id=${COURSE_ID}&expand[]=assign#assign_overview_collapsible`;
+        const quizOverviewUrl = `https://lernplattform.bycs.de/course/overview.php?id=${COURSE_ID}&expand[]=quiz#quiz_overview_collapsible`;
 
         // Paralleles Laden beider Overview-Seiten
         const [assignResponse, quizResponse] = await Promise.all([
             fetch(assignOverviewUrl, {
-                credentials: 'same-origin',
-                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                credentials: 'include'
             }),
             fetch(quizOverviewUrl, {
-                credentials: 'same-origin',
-                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                credentials: 'include'
             })
         ]);
 
@@ -2082,9 +2076,9 @@ async function extractFromChecklistIndex(useCache = true) {
     console.log(EXTERNAL_CONFIG.debug.startingExtraction);
 
     try {
-        const checklistIndexUrl = `https://lernplattform.mebis.bycs.de/mod/checklist/index.php?id=${COURSE_ID}`;
+        const checklistIndexUrl = `https://lernplattform.bycs.de/mod/checklist/index.php?id=${COURSE_ID}`;
 
-        const response = await fetch(checklistIndexUrl, { credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+        const response = await fetch(checklistIndexUrl, { credentials: 'include' });
         if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         
         const html = await response.text();
@@ -2127,7 +2121,7 @@ async function extractFromChecklistIndex(useCache = true) {
 
         const loadWithProgress = async (link, index) => {
             const name = link.textContent.trim();
-            const url = `https://lernplattform.mebis.bycs.de/mod/checklist/${link.getAttribute('href')}`;
+            const url = `https://lernplattform.bycs.de/mod/checklist/${link.getAttribute('href')}`;
 
             // Fail-Fast: Skip bei zu vielen Timeouts
             if (timeoutCount >= maxTimeouts) {
@@ -2230,7 +2224,7 @@ async function loadSingleChecklist(url, retryCount = 0) {
     });
 
     const fetchPromise = fetch(url, {
-        credentials: 'same-origin',
+        credentials: 'include',
         signal: AbortSignal.timeout ? AbortSignal.timeout(TIMEOUT_MS) : undefined
     }).then(response => {
         if (!response.ok) {
@@ -3289,8 +3283,8 @@ function createPflichtCharts(data) {
 
 async function fetchData(assignmentOverviewUrl, quizOverviewUrl) {
     const [assignRes, quizRes] = await Promise.all([
-        fetch(assignmentOverviewUrl, { credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } }),
-        fetch(quizOverviewUrl, { credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        fetch(assignmentOverviewUrl, { credentials: 'include' }),
+        fetch(quizOverviewUrl, { credentials: 'include' })
     ]);
 
     if (!assignRes.ok || !quizRes.ok) {
@@ -3397,7 +3391,7 @@ async function fetchData(assignmentOverviewUrl, quizOverviewUrl) {
 // Funktion zum Abrufen von Assignment-Details und Ermittlung des echten Status
 async function fetchAssignmentDetails(url) {
     try {
-        const response = await fetch(url, { credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+        const response = await fetch(url, { credentials: 'include' });
         if (!response.ok) {
             return null;
         }

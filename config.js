@@ -95,8 +95,8 @@ const EXTERNAL_CONFIG = {
 
     // Mebis URLs
     urls: {
-        courseIndex: 'https://lernplattform.mebis.bycs.de/course/view.php?id=2036416',
-        ajaxService: 'https://lernplattform.mebis.bycs.de/lib/ajax/service.php'
+        courseIndex: 'https://lernplattform.bycs.de/course/view.php?id=2036416',
+        ajaxService: 'https://lernplattform.bycs.de/lib/ajax/service.php'
     },
 
     // Schienen-basierte Schulwochen-Konfiguration
