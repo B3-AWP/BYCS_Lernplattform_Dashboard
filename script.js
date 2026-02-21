@@ -51,6 +51,9 @@ let historicalData = [];
 let TOTAL_WEEKS = 9; // Default, wird später aktualisiert
 let currentReferenceWeek = 9; // Standard: Letzte Woche (100% der Zeit)
 
+// Zwischenspeicher für Mitarbeitsnote-Daten (damit Prognose bei Wochenwechsel aktualisiert werden kann)
+let lastMitarbeitsnoteData = null;
+
 // ================================
 // VERBINDUNGSFEHLER-TRACKING
 // ================================
@@ -753,8 +756,8 @@ async function updateReferenceWeek(weekValue) {
         updatePflichtTable(window.pflichtData);
     }
 
-    // NEU: Mitarbeitsnote-Fortschritt neu berechnen
-    const gradeData = getCachedData('mitarbeitsnote');
+    // Mitarbeitsnote-Fortschritt neu berechnen (mit Fallback auf zuletzt geladene Daten)
+    const gradeData = getCachedData('mitarbeitsnote') || lastMitarbeitsnoteData;
     if (gradeData) {
         // Async Aufruf ohne await (UI blockiert nicht)
         updateMitarbeitsnoteCard(gradeData).catch(err => {
@@ -1661,13 +1664,13 @@ async function updatePrognosisComponents(progressData) {
     console.log('📅 Aktueller Track:', currentTrack);
     console.log('📅 Referenztermin:', referenztermin);
 
-    // Bewertungen abrufen (await da async)
+    // Bewertungen abrufen (await da async) - bei Fehler null verwenden
     console.log('🔎 Lade Review-Talk 2 (ID:', EXTERNAL_CONFIG.prognosisAssignments.reviewTalk2, ')');
-    const reviewTalk2Data = await getAssignmentGrade(EXTERNAL_CONFIG.prognosisAssignments.reviewTalk2);
+    const reviewTalk2Data = await getAssignmentGrade(EXTERNAL_CONFIG.prognosisAssignments.reviewTalk2).catch(() => null);
     console.log('✅ Review-Talk 2 Ergebnis:', reviewTalk2Data);
 
     console.log('🔎 Lade Code Review (ID:', EXTERNAL_CONFIG.prognosisAssignments.codeReview, ')');
-    const codeReviewData = await getAssignmentGrade(EXTERNAL_CONFIG.prognosisAssignments.codeReview);
+    const codeReviewData = await getAssignmentGrade(EXTERNAL_CONFIG.prognosisAssignments.codeReview).catch(() => null);
     console.log('✅ Code Review Ergebnis:', codeReviewData);
 
     // Prüfe ob Bewertungen nach Referenztermin sind
@@ -1858,6 +1861,7 @@ async function updatePrognosisComponents(progressData) {
 async function loadMitarbeitsnote(useCache = true) {
     try {
         const gradeData = await fetchMitarbeitsnote(useCache);
+        if (gradeData) lastMitarbeitsnoteData = gradeData;
         await updateMitarbeitsnoteCard(gradeData);
 
         // Background-Refresh bei Cache-Verwendung
