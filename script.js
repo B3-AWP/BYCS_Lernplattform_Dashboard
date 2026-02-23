@@ -54,6 +54,9 @@ let currentReferenceWeek = 9; // Standard: Letzte Woche (100% der Zeit)
 // Zwischenspeicher für Mitarbeitsnote-Daten (damit Prognose bei Wochenwechsel aktualisiert werden kann)
 let lastMitarbeitsnoteData = null;
 
+// Flag: Checklisten-Daten vollständig geladen (nicht nur aus Cache)
+let checklistsFullyLoaded = false;
+
 // ================================
 // VERBINDUNGSFEHLER-TRACKING
 // ================================
@@ -1267,10 +1270,11 @@ async function updateMitarbeitsnoteCard(gradeData) {
         });
     }
 
-    // NEU: Fortschritt 2. Mitarbeitsnote berechnen und anzeigen
+    // Fortschritt 2. Mitarbeitsnote berechnen und anzeigen
+    // Nur wenn Checklisten vollständig geladen sind (nicht nur Cache-Daten)
     const progressCard = document.getElementById('mitarbeitProgressCard');
 
-    if (shouldShowMitarbeitProgressCards()) {
+    if (checklistsFullyLoaded && shouldShowMitarbeitProgressCards()) {
         const progressData = calculateFortschritt2Mitarbeitsnote(gradeData);
 
         if (progressData && progressCard) {
@@ -2198,6 +2202,7 @@ async function extractFromChecklistIndex(useCache = true) {
         // Cache die erfolgreichen Daten
         setCachedData('checklists', valid);
 
+        checklistsFullyLoaded = true;
         createCharts(valid);
         updateChecklistTable(valid);
 
@@ -2290,9 +2295,17 @@ function createCharts(data) {
     generateInsights();
     // dashboardContainer element not found - removing this line
     showBothStatsRows();
-    
+
     // Check if both datasets are loaded and hide dashboard loading
     checkAndHideDashboardLoading();
+
+    // Mitarbeitsnote-Prognose aktualisieren (nach Background-Update der Checklisten)
+    // Nur wenn Mitarbeitsnote-Daten bereits geladen sind (lastMitarbeitsnoteData gesetzt)
+    if (lastMitarbeitsnoteData) {
+        updateMitarbeitsnoteCard(lastMitarbeitsnoteData).catch(err => {
+            console.error('Fehler beim Update der Mitarbeitsnote nach Checklisten-Refresh:', err);
+        });
+    }
 }
 
 function updateStatistics() {
@@ -3806,13 +3819,14 @@ async function updatePflichtTable(data) {
 
         // Einheitlicher Badge-Style für alle Spalten
         const baseBadgeStyle = 'display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 6px; font-size: 0.8em; font-weight: 500;';
+        const itemType = item.type || 'Unbekannt';
 
         // Typ-Badge
-        const typeBadgeStyle = item.type === 'Quiz'
+        const typeBadgeStyle = itemType === 'Quiz'
             ? `${baseBadgeStyle} background: #e3f2fd; color: #1976d2; border: 1px solid #bbdefb;`
             : `${baseBadgeStyle} background: #f3e5f5; color: #7b1fa2; border: 1px solid #e1bee7;`;
 
-        const typeIcon = item.type === 'Quiz'
+        const typeIcon = itemType === 'Quiz'
             ? '<svg width="12" height="12"><use href="#icon-quiz"></use></svg>'
             : '<svg width="12" height="12"><use href="#icon-assignment"></use></svg>';
 
@@ -3860,9 +3874,9 @@ async function updatePflichtTable(data) {
             }
         }
 
-        html += `<tr data-name="${item.name.toLowerCase()}" data-type="${item.type.toLowerCase()}" data-status="${statusText.toLowerCase()}" data-grade="${item.grade}" ${rowStyle}>
+        html += `<tr data-name="${item.name.toLowerCase()}" data-type="${itemType.toLowerCase()}" data-status="${statusText.toLowerCase()}" data-grade="${item.grade}" ${rowStyle}>
             <td data-label="Name"><a href="${item.url}" target="_blank" title="${item.name}">${item.name}</a>${requirementBadge}</td>
-            <td data-label="Typ"><span class="type-badge" style="${typeBadgeStyle}">${typeIcon}${item.type}</span></td>
+            <td data-label="Typ"><span class="type-badge" style="${typeBadgeStyle}">${typeIcon}${itemType}</span></td>
             <td data-label="Status">${statusBadge}</td>
             <td data-label="Abgabeform">${groupAssignment}</td>
             <td data-label="Bewertung"><strong style="${gradeColor}">${gradeDisplay}</strong></td>
@@ -4462,11 +4476,13 @@ window.addEventListener('DOMContentLoaded', () => {
         extractPflichtOverview(),
         loadMitarbeitsnote()
     ]).then(() => {
-        // Nach dem Laden aller Daten: Mitarbeitsnoten-Karte nochmal aktualisieren
-        // (stellt sicher, dass alle Abhängigkeiten wie checklistData verfügbar sind)
-        const gradeData = getCachedData('mitarbeitsnote');
-        if (gradeData) {
-            updateMitarbeitsnoteCard(gradeData);
+        // Nach dem Laden aller Daten: Mitarbeitsnoten-Karte aktualisieren
+        // Nur wenn Checklisten bereits vollständig geladen (nicht nur Cache)
+        if (checklistsFullyLoaded) {
+            const gradeData = getCachedData('mitarbeitsnote') || lastMitarbeitsnoteData;
+            if (gradeData) {
+                updateMitarbeitsnoteCard(gradeData);
+            }
         }
     }).catch(error => {
         console.error('Fehler beim parallelen Laden der Daten:', error);
