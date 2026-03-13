@@ -144,7 +144,7 @@ const EXTERNAL_CONFIG = {
 
     // Assignment Categories für Notenfilterung
     assignmentCategories: {
-        Mitarbeitsnote_1: 'cat_2407714'  // CSS-Klasse für Mitarbeitsnote im Grade Report
+        Mitarbeitsnote_1: 'cat_2490454'  // CSS-Klasse für Mitarbeitsnote im Grade Report
     },
 
     // Referenzwoche für 1. Mitarbeitsnote
