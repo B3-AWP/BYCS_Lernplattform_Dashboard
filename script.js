@@ -30,12 +30,10 @@ function initializeLoadingTexts() {
     const step1 = document.getElementById('step1');
     const step2 = document.getElementById('step2');
     const step3 = document.getElementById('step3');
-    const step4 = document.getElementById('step4');
 
     if (step1) step1.textContent = EXTERNAL_CONFIG.loading.steps[1].initial;
     if (step2) step2.textContent = EXTERNAL_CONFIG.loading.steps[2].initial;
     if (step3) step3.textContent = EXTERNAL_CONFIG.loading.steps[3].initial;
-    if (step4) step4.textContent = EXTERNAL_CONFIG.loading.steps[4].initial;
 }
 
 // ================================
@@ -843,7 +841,8 @@ function calculateReferenceProgressFromSinglePercentage(currentPercentage) {
 
 // Utility-Funktionen
 function showLoading(show) {
-    document.getElementById('loadingIndicator').style.display = show ? 'block' : 'none';
+    const el = document.getElementById('loadingIndicator');
+    if (el) el.style.display = show ? 'block' : 'none';
 }
 
 function showChecklistStatsLoading(show) {
@@ -885,7 +884,7 @@ function updateDashboardLoadingProgress(step, message, subtext = '') {
     if (subText) subText.textContent = subtext;
     
     // Update step states
-    const steps = ['step1', 'step2', 'step3', 'step4'];
+    const steps = ['step1', 'step2', 'step3'];
     steps.forEach((stepId, index) => {
         const stepElement = document.getElementById(stepId);
         if (stepElement) {
@@ -906,8 +905,7 @@ function resetLoadingProgress() {
     const step1 = document.getElementById('step1');
     const step2 = document.getElementById('step2');
     const step3 = document.getElementById('step3');
-    const step4 = document.getElementById('step4');
-    
+
     if (step1) {
         step1.className = 'progress-step completed';
         step1.innerHTML = EXTERNAL_CONFIG.loading.steps[1].completed;
@@ -920,21 +918,15 @@ function resetLoadingProgress() {
         step3.className = 'progress-step pending';
         step3.innerHTML = EXTERNAL_CONFIG.loading.steps[3].initial;
     }
-    if (step4) {
-        step4.className = 'progress-step pending';
-        step4.innerHTML = EXTERNAL_CONFIG.loading.steps[4].initial;
-    }
 }
 
 async function checkAndHideDashboardLoading() {
-    // Hide dashboard loading state when both checklists and pflicht data are available
-    if (checklistData && checklistData.length > 0 && window.pflichtData && window.pflichtData.length > 0) {
+    // Hide dashboard loading state when pflicht data is available
+    if (window.pflichtData && window.pflichtData.length > 0) {
         // Show completion message
-        const totalItems = checklistData.length + window.pflichtData.length;
-        updateDashboardLoadingProgress(4, 'Dashboard bereit!', `${totalItems} Elemente erfolgreich geladen`);
+        const totalItems = window.pflichtData.length;
+        updateDashboardLoadingProgress(3, 'Dashboard bereit!', `${totalItems} Pflichtabgaben erfolgreich geladen`);
 
-        // Update overview statistics now that both datasets are loaded
-        updateStatistics();
         await updatePflichtStats();
 
         // Ensure loading is visible for at least 1.5 seconds for better UX
@@ -1222,6 +1214,15 @@ async function updateMitarbeitsnoteCard(gradeData) {
         // Hilfetexte aus Config laden
         const helpTextsMA1 = EXTERNAL_CONFIG.helpTexts?.mitarbeitsnote1 || {};
 
+        // SOLL_1HJ für "Eingereichte Aufgaben X von Y"-Anzeige berechnen
+        const ma1RefForSoll = EXTERNAL_CONFIG.mitarbeitsnote1ReferenceWeek;
+        const totalPflichtForSoll = window.pflichtData
+            ? window.pflichtData.filter(item => item.isPflicht === true).length
+            : 0;
+        const soll1HJDisplay = (totalPflichtForSoll > 0 && ma1RefForSoll && TOTAL_WEEKS)
+            ? Math.round(totalPflichtForSoll * (ma1RefForSoll / TOTAL_WEEKS))
+            : null;
+
         gradeData.components.forEach(component => {
             const componentEl = document.createElement('div');
             componentEl.className = 'mitarbeit-component';
@@ -1257,10 +1258,14 @@ async function updateMitarbeitsnoteCard(gradeData) {
             gradeEl.className = 'mitarbeit-component-grade';
 
             // Alle Komponenten ohne Nachkommastellen und mit % anzeigen
+            const isEingereichtAufgaben = component.name.toLowerCase().includes('eingereichte aufgaben');
             if (isQuantitaet && quantitaetPoints) {
                 gradeEl.innerHTML = `${Math.round(component.grade)}% <span style="color: #666; font-size: 0.85em; margin-left: 4px;">(${quantitaetPoints})</span>`;
+            } else if (isEingereichtAufgaben) {
+                gradeEl.textContent = soll1HJDisplay
+                    ? `${Math.round(component.grade)} von ${soll1HJDisplay}`
+                    : `${Math.round(component.grade)}`;
             } else {
-                // Quantität, Qualität, Review-Talk - alle mit % und ohne Nachkommastellen
                 gradeEl.textContent = `${Math.round(component.grade)}%`;
             }
 
@@ -1274,11 +1279,9 @@ async function updateMitarbeitsnoteCard(gradeData) {
     // Nur wenn Checklisten vollständig geladen sind (nicht nur Cache-Daten)
     const progressCard = document.getElementById('mitarbeitProgressCard');
 
-    if (checklistsFullyLoaded && shouldShowMitarbeitProgressCards()) {
-        const progressData = calculateFortschritt2Mitarbeitsnote(gradeData);
-
-        if (progressData && progressCard) {
-            // Progress Card anzeigen
+    if (shouldShowMitarbeitProgressCards()) {
+        if (progressCard) {
+            // Progress Card immer anzeigen wenn 1. MA-Daten vorhanden
             progressCard.style.display = 'block';
 
             // Referenzwoche anzeigen
@@ -1288,13 +1291,28 @@ async function updateMitarbeitsnoteCard(gradeData) {
                 refWeekDisplay.textContent = B7;
             }
 
-            // Komponenten für Prognose anzeigen (inkl. Gesamtnote)
-            await updatePrognosisComponents(progressData);
+            // Referenztermin anzeigen
+            const refTerminDisplay = document.getElementById('mitarbeitReferenzterminDisplay');
+            if (refTerminDisplay) {
+                let currentTrack = localStorage.getItem('userTrack');
+                if (!currentTrack) {
+                    const userClass = localStorage.getItem('userClass');
+                    if (userClass && CLASS_TO_TRACK[userClass]) currentTrack = CLASS_TO_TRACK[userClass];
+                }
+                const referenztermin = currentTrack ? EXTERNAL_CONFIG.ReferenzterminMitarbeitsnote1[currentTrack] : null;
+                if (referenztermin) {
+                    const d = new Date(referenztermin);
+                    const day = String(d.getDate()).padStart(2, '0');
+                    const month = String(d.getMonth() + 1).padStart(2, '0');
+                    refTerminDisplay.textContent = `${day}.${month}.${d.getFullYear()}`;
+                }
+            }
 
+            await updatePrognosisComponents();
             console.log('✓ Fortschritt 2. Mitarbeitsnote angezeigt');
         }
     } else {
-        // Progress Card ausblenden
+        // Progress Card ausblenden (keine 1. MA-Daten)
         if (progressCard) {
             progressCard.style.display = 'none';
         }
@@ -1318,7 +1336,8 @@ function parseGermanDate(dateStr) {
         };
 
         // Regex: "Mittwoch, 17. Dezember 2025, 10:43" (mit optionalem Wochentag)
-        const regex = /(?:\w+,\s+)?(\d+)\.\s+(\w+)\s+(\d{4}),\s+(\d{2}):(\d{2})/;
+        // Monatsnamen können Umlaute enthalten (z.B. "März"), daher [A-Za-zäöüÄÖÜ]+ statt \w+
+        const regex = /(?:[A-Za-zäöüÄÖÜ]+,\s+)?(\d+)\.\s+([A-Za-zäöüÄÖÜ]+)\s+(\d{4}),\s+(\d{2}):(\d{2})/;
         const match = dateStr.match(regex);
 
         if (!match) {
@@ -1344,12 +1363,78 @@ function parseGermanDate(dateStr) {
 }
 
 /**
+ * Parst ein Datum im Format DD.MM.YYYY (aus Feedback-Spalte des Bewertungsberichts)
+ * @param {string} text - Datum-String
+ * @returns {Date|null} - Geparster Date-Objekt oder null bei ungültigem Format
+ */
+function parseFeedbackDate(text) {
+    const match = text.trim().match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+    if (!match) return null;
+    const [, day, month, year] = match;
+    const date = new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T12:00:00`);
+    return isNaN(date.getTime()) ? null : date;
+}
+
+/**
+ * Liest Feedback-Daten aus der bereits geladenen Bewertungsübersicht (kein HTTP-Request).
+ * Gilt für alle Item-Typen (Assignments und Quizzes).
+ * Ungültige oder nicht-Datum-Inhalte werden ignoriert.
+ * @returns {Map<number, Date>} - Map von cmid → Date
+ */
+async function fetchFeedbackDatesFromGradeReport() {
+    if (window.cachedFeedbackDates) return window.cachedFeedbackDates;
+    const dateMap = new Map();
+    try {
+        const courseId = EXTERNAL_CONFIG.system.courseId;
+        const url = `https://lernplattform.bycs.de/grade/report/user/index.php?id=${courseId}`;
+        const response = await fetch(url, { credentials: 'include' });
+        if (!response.ok) {
+            console.warn(`⚠️ Feedback-Fetch: HTTP ${response.status}`);
+            return dateMap;
+        }
+        const html = await response.text();
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+
+        const rows = doc.querySelectorAll('tr');
+        let rowsWithBoth = 0;
+        for (const row of rows) {
+            const link = row.querySelector('.column-itemname a[href*="id="]');
+            const feedbackDiv = row.querySelector('.column-feedback .text_to_html');
+            if (!link || !feedbackDiv) continue;
+            rowsWithBoth++;
+
+            const cmidMatch = link.href?.match(/[?&]id=(\d+)/);
+            if (!cmidMatch) continue;
+
+            const date = parseFeedbackDate(feedbackDiv.textContent);
+            if (date) dateMap.set(parseInt(cmidMatch[1]), date);
+        }
+        console.log(`📅 Feedback-Scan: ${rows.length} Zeilen, ${rowsWithBoth} mit itemname+feedback, ${dateMap.size} Daten gefunden`);
+    } catch (error) {
+        console.warn('⚠️ Feedback-Fetch fehlgeschlagen:', error);
+    }
+    window.cachedFeedbackDates = dateMap;
+    return dateMap;
+}
+
+/**
  * Holt das Bewertungsdatum für ein Assignment oder Quiz
  * @param {number} cmid - Course Module ID
  * @returns {Promise<Date|null>} - Bewertungsdatum oder null
  */
-async function fetchGradedDate(cmid) {
-    // Versuche zuerst Assignment, dann Quiz
+async function fetchGradedDate(cmid, type = null) {
+    if (type === 'Quiz') {
+        const quizDate = await fetchGradedDateFromQuiz(cmid);
+        if (!quizDate) console.warn(`⚠️ CMID ${cmid}: Kein Bewertungsdatum gefunden (Quiz)`);
+        return quizDate;
+    }
+    if (type === 'Assignment') {
+        const assignDate = await fetchGradedDateFromAssignment(cmid);
+        if (!assignDate) console.warn(`⚠️ CMID ${cmid}: Kein Bewertungsdatum gefunden (Assignment)`);
+        return assignDate;
+    }
+    // Fallback: beide versuchen
     const assignmentDate = await fetchGradedDateFromAssignment(cmid);
     if (assignmentDate) return assignmentDate;
 
@@ -1566,9 +1651,16 @@ async function fetchAllAssignmentGrades() {
             console.log('📅 Lade Bewertungsdaten für alle Assignments...');
             const assignIds = Array.from(gradesMap.keys());
 
-            // Paralleles Laden der Bewertungsdaten
+            // Feedback-Daten aus Bewertungsbericht (HTTP-Request, hat Vorrang vor Cache)
+            const feedbackDates = await fetchFeedbackDatesFromGradeReport();
+
+            // Paralleles Laden der Bewertungsdaten (Feedback-Datum hat Vorrang)
             const datePromises = assignIds.map(async (assignId) => {
-                const gradedDate = await fetchGradedDate(assignId);
+                if (feedbackDates.has(assignId)) {
+                    return { assignId, gradedDate: feedbackDates.get(assignId) };
+                }
+                const gradeEntry = gradesMap.get(assignId);
+                const gradedDate = await fetchGradedDate(assignId, gradeEntry?.type);
                 return { assignId, gradedDate };
             });
 
@@ -1645,7 +1737,7 @@ async function getAssignmentGrade(assignId) {
  * Aktualisiert die Komponenten für die Fortschritt 2. Mitarbeitsnote (Prognose)
  * @param {Object} progressData - Fortschritts-Daten
  */
-async function updatePrognosisComponents(progressData) {
+async function updatePrognosisComponents() {
     const componentsContainer = document.getElementById('mitarbeitProgressComponents');
     if (!componentsContainer) return;
 
@@ -1728,37 +1820,39 @@ async function updatePrognosisComponents(progressData) {
         }
     }
 
-    const quantitaet = progressData.fortschrittPercent || 0;
     const qualitaet = window.pflichtAveragePercentage || 0;
-    console.log('📈 Quantität:', quantitaet, '| Qualität:', qualitaet);
 
-    // Punkte für Quantität berechnen
-    // C8 = Gesamte erreichte Punkte bis aktuelle Woche
-    // MA1 = Punkte die in 1. MA erreicht wurden (kann über 100% sein)
-    // MA1_max = Maximale Punkte für den MA1-Zeitraum
-    // Bei Übertrag (MA1 > MA1_max): Nur MA1_max wird abgezogen, Rest ist Übertrag
-    // Prognose = C8 - min(MA1, MA1_max) für konsistente Summen
-    const debugInfo = progressData.debugInfo || {};
-    const c8Total = debugInfo.C8 || 0; // Gesamte Punkte bis aktuelle Woche
-    const ma1Reached = window.ma1ReachedPoints || (debugInfo.B10 * ((debugInfo.B3 / debugInfo.B4) * debugInfo.B7)) || 0;
-    const ma1Max = window.ma1MaxPoints || ((debugInfo.B3 / debugInfo.B4) * debugInfo.B7) || 0;
-
-    // Bei Übertrag: MA1 kann größer als MA1_max sein (z.B. 130%)
-    // Für die Summe zählt nur min(MA1, MA1_max), der Rest ist Übertrag
-    const ma1Capped = Math.min(ma1Reached, ma1Max); // Für Summenberechnung gedeckelt
-    const uebertrag = Math.max(0, ma1Reached - ma1Max); // Übertrag bei >100%
-
-    // Runde einmal, dann berechne Prognose als Differenz für Konsistenz
-    const c8Rounded = Math.round(c8Total);
-    const ma1CappedRounded = Math.round(ma1Capped);
-    const prognoseReached = c8Rounded - ma1CappedRounded; // Garantiert: min(MA1,max) + Prognose = C8
-
-    if (uebertrag > 0) {
-        console.log(`✓ Übertrag aus 1. MA: ${Math.round(uebertrag)} Punkte (${((ma1Reached/ma1Max)*100).toFixed(1)}% erreicht)`);
+    // Quantität: einfache Aufgabenzählung
+    // Zähler: erledigte Pflichtaufgaben im 2. HJ = gesamt erledigt - eingereicht 1. HJ (fix)
+    // Nenner: skaliert mit Referenzwoche (SOLL_2HJ * referenzwoche / totalWochen)
+    let quantitaet = 0;
+    let quantitaetPoints = null;
+    if (window.pflichtData && window.pflichtData.length > 0) {
+        const pflichtOnly = window.pflichtData.filter(item => item.isPflicht === true);
+        const totalPflicht = pflichtOnly.length;
+        const completedPflicht = pflichtOnly.filter(item =>
+            item.completionStatus === 'Bewertet' ||
+            item.completionStatus === 'Abgegeben'
+        ).length;
+        const ma1Ref = EXTERNAL_CONFIG.mitarbeitsnote1ReferenceWeek;
+        const soll1HJ = Math.round(totalPflicht * (ma1Ref / TOTAL_WEEKS));
+        const soll2HJ = totalPflicht - soll1HJ;
+        const eingereicht1HJ = getEingereichtAufgaben1HJ() ?? soll1HJ;
+        // Übertrag: Mehr Einreichungen im 1.HJ als nötig zählen zum 2.HJ
+        const angerechnet1HJ = Math.min(eingereicht1HJ, soll1HJ);
+        const completed2HJ = Math.max(0, completedPflicht - angerechnet1HJ);
+        const weeksInto2HJ = currentReferenceWeek - ma1Ref;
+        const totalWeeks2HJ = TOTAL_WEEKS - ma1Ref;
+        const denominator2HJ = weeksInto2HJ >= totalWeeks2HJ
+            ? soll2HJ
+            : Math.round(soll2HJ * weeksInto2HJ / totalWeeks2HJ);
+        quantitaet = denominator2HJ > 0 ? (completed2HJ / denominator2HJ) * 100 : 0;
+        const uebertrag = Math.max(0, eingereicht1HJ - soll1HJ);
+        quantitaetPoints = uebertrag > 0
+            ? `${completed2HJ}/${denominator2HJ}, inkl. ${uebertrag} Übertrag aus 1. HJ`
+            : `${completed2HJ}/${denominator2HJ}`;
     }
-
-    const quantitaetMax = progressData.denominator || 0;
-    const quantitaetPoints = `${prognoseReached}/${Math.round(quantitaetMax)}`;
+    console.log('📈 Quantität:', quantitaet, '| Qualität:', qualitaet);
 
     // Hilfetexte aus Config laden
     const helpTexts = EXTERNAL_CONFIG.helpTexts?.prognose || {};
@@ -1908,6 +2002,19 @@ function getQuantitaetFromGradeData(gradeData) {
 }
 
 /**
+ * Extrahiert "Eingereichte Aufgaben"-Wert aus gecachten Mitarbeitsnote-Daten (1. HJ)
+ * @returns {number|null} - Anzahl eingereichter Pflichtaufgaben im 1. HJ, oder null wenn nicht verfügbar
+ */
+function getEingereichtAufgaben1HJ() {
+    const gradeData = getCachedData('mitarbeitsnote');
+    if (!gradeData?.components) return null;
+    const c = gradeData.components.find(comp =>
+        comp.name.toLowerCase().includes('eingereichte aufgaben')
+    );
+    return c ? Math.round(c.grade) : null;
+}
+
+/**
  * Berechnet Fortschritt zur 2. Mitarbeitsnote basierend auf Excel-Formel
  * @param {Object} currentGradeData - Aktuelle Mitarbeitsnote-Daten
  * @returns {Object|null} - { fortschrittPercent, erwarteteNote, debugInfo } oder null
@@ -1942,24 +2049,9 @@ function calculateFortschritt2Mitarbeitsnote(currentGradeData) {
     }
     const avgPflicht = window.avgPflichtProgress; // Ändert sich mit Referenzwoche!
 
-    // 4. Checklisten-Daten prüfen
-    if (!checklistData || checklistData.length === 0) {
-        console.warn('⚠️ Fortschritt kann nicht berechnet werden: Keine Checklisten-Daten vorhanden');
-        return null;
-    }
-
-    const checklistsWithPflicht = checklistData.filter(item =>
-        !item.error && item.pflichtProgress !== null
-    );
-
-    if (checklistsWithPflicht.length === 0) {
-        console.warn('⚠️ Fortschritt kann nicht berechnet werden: Keine Checklisten mit Pflichtabgaben');
-        return null;
-    }
-
     // 5. Variablen für Formel berechnen
-    const B10 = quantitaet1MA / 100; // z.B. 20.00 / 100 = 0.20
-    const B3 = checklistsWithPflicht.length * 100; // z.B. 24 * 100 = 2400
+    const B10 = quantitaet1MA / 100;
+    const B3 = 100; // Normalisiert: B3 kürzt sich in der Formel heraus
     const B4 = TOTAL_WEEKS; // z.B. 9
 
     // C8: Erreichte Punkte bis zur Referenzwoche C7 (aus Checklisten-Fortschritt)
@@ -2003,7 +2095,7 @@ function calculateFortschritt2Mitarbeitsnote(currentGradeData) {
         numerator, denominator,
         avgPflicht,
         quantitaet1MA,
-        checklistCount: checklistsWithPflicht.length
+        checklistCount: null
     };
 
     // 10. Debug-Ausgabe
@@ -2044,7 +2136,7 @@ function shouldShowMitarbeitProgressCards() {
     const B7 = EXTERNAL_CONFIG.mitarbeitsnote1ReferenceWeek;
     if (!B7) return false;
 
-    // 2. Aktuelle Referenzwoche muss größer sein als Referenzwoche der 1. Mitarbeitsnote
+    // 2. Slider muss nach der Referenzwoche der 1. Mitarbeitsnote stehen
     if (currentReferenceWeek <= B7) return false;
 
     // 3. Aktuelle Mitarbeitsnote muss existieren
@@ -2308,63 +2400,6 @@ function createCharts(data) {
     }
 }
 
-function updateStatistics() {
-    const validChecklists = checklistData.filter(item => !item.error);
-    const totalChecklists = validChecklists.length;
-
-    if (totalChecklists > 0) {
-        // Nur Checklisten MIT Pflichtelementen für Pflicht-Durchschnitt berücksichtigen
-        const checklistsWithPflicht = validChecklists.filter(item => item.pflichtProgress !== null);
-        const pflichtCount = checklistsWithPflicht.length;
-
-        // Summen berechnen für Zähler/Nenner-Anzeige
-        const sumPflicht = pflichtCount > 0
-            ? checklistsWithPflicht.reduce((sum, item) => sum + (item.pflichtProgress || 0), 0)
-            : 0;
-        const sumGesamt = validChecklists.reduce((sum, item) => sum + (item.gesamtProgress || 0), 0);
-
-        // Ursprüngliche Werte berechnen
-        const avgPflicht = pflichtCount > 0 ? sumPflicht / pflichtCount : 0;
-        const avgGesamt = sumGesamt / totalChecklists;
-        const completed = checklistsWithPflicht.filter(item => item.pflichtProgress >= 100).length;
-
-        // Referenzwochen-adjustierte Werte berechnen
-        const referenceAvgPflicht = calculateReferenceProgressFromPercentage(avgPflicht, pflichtCount);
-        const referenceAvgGesamt = calculateReferenceProgressFromPercentage(avgGesamt, totalChecklists);
-        const referenceCompleted = calculateReferenceProgress(completed, pflichtCount);
-
-        // Zähler und Nenner für Anzeige berechnen
-        const maxPunktePflicht = pflichtCount * 100;
-        const maxPunkteGesamt = totalChecklists * 100;
-        const expectedPunktePflicht = (maxPunktePflicht / TOTAL_WEEKS) * currentReferenceWeek;
-        const expectedPunkteGesamt = (maxPunkteGesamt / TOTAL_WEEKS) * currentReferenceWeek;
-
-        // Referenzwochen-adjustierten avgPflicht für Mitarbeitsnote-Berechnung verfügbar machen
-        window.avgPflichtProgress = referenceAvgPflicht;
-
-        console.log('Statistics Update:', {
-            totalChecklists,
-            checklistsWithPflicht: pflichtCount,
-            originalAvg: { pflicht: avgPflicht, gesamt: avgGesamt },
-            referenceAvg: { pflicht: referenceAvgPflicht, gesamt: referenceAvgGesamt },
-            completed: completed,
-            referenceWeek: currentReferenceWeek
-        });
-
-        updateCombinedStats(completed, pflichtCount, referenceCompleted);
-        updateProgressDisplay(
-            currentReferenceWeek === TOTAL_WEEKS ? Math.round(referenceAvgPflicht) : Math.ceil(referenceAvgPflicht),
-            currentReferenceWeek === TOTAL_WEEKS ? Math.round(referenceAvgGesamt) : Math.ceil(referenceAvgGesamt),
-            sumPflicht,
-            expectedPunktePflicht,
-            sumGesamt,
-            expectedPunkteGesamt
-        );
-
-        // Verstecke Loading-Overlay wenn alle Daten geladen sind
-        showChecklistStatsLoading(false);
-    }
-}
 
 function animateNumber(elementId, targetValue, suffix = '') {
     const element = document.getElementById(elementId);
@@ -2567,15 +2602,21 @@ async function updatePflichtStats() {
     const pflichtOnly = window.pflichtData.filter(item => item.isPflicht === true);
 
     const totalPflicht = pflichtOnly.length;
-    // Bewertet und Abgegeben zählen als "erledigt"
+    // Nur Bewertet und Abgegaben zählen als "erledigt" (Erledigt ohne Note zählt nicht)
     const completedPflicht = pflichtOnly.filter(item =>
         item.completionStatus === 'Bewertet' ||
-        item.completionStatus === 'Abgegeben' ||
-        item.completionStatus === 'Erledigt'
+        item.completionStatus === 'Abgegeben'
     ).length;
 
-    // Referenzwochen-adjustierte Werte berechnen
-    const referencePflichtProgress = calculateReferenceProgress(completedPflicht, totalPflicht);
+    // avgPflichtProgress für Prognose 2. MA verfügbar machen
+    window.avgPflichtProgress = calculateReferenceProgress(completedPflicht, totalPflicht);
+
+    // Gesamt-Card: Immer alle erledigten Pflichtaufgaben zeigen
+    // Zähler bleibt fix, Nenner skaliert proportional mit der Referenzwoche
+    const displayCompleted = completedPflicht;
+    const displayTotal = currentReferenceWeek === TOTAL_WEEKS
+        ? totalPflicht
+        : Math.round(totalPflicht * (currentReferenceWeek / TOTAL_WEEKS));
 
     const gradedItems = pflichtOnly.filter(item => {
         return getGradeValueForCalculation(item) !== null;
@@ -2614,15 +2655,27 @@ async function updatePflichtStats() {
         }
     }
 
+    // Feedback-Daten laden (Vorrang vor allAssignmentGrades)
+    if (!window.cachedFeedbackDates && referenzDate) {
+        await fetchFeedbackDatesFromGradeReport();
+    }
+
     // Filtere bewertete Items nach Referenztermin für Prognose-Qualität
     const gradedItemsForPrognose = gradedItems.filter(item => {
-        if (!referenzDate || !window.allAssignmentGrades) return true; // Fallback: alle verwenden
+        if (!referenzDate) return true; // Fallback: alle verwenden
 
         // Extrahiere cmid aus URL
         const cmidMatch = item.url?.match(/[?&]id=(\d+)/);
         if (!cmidMatch) return true; // Kein cmid -> verwenden
 
         const cmid = parseInt(cmidMatch[1]);
+
+        // Feedback-Datum hat Vorrang (direkt aus Bewertungsbericht)
+        const feedbackDate = window.cachedFeedbackDates?.get(cmid);
+        if (feedbackDate) return feedbackDate > referenzDate;
+
+        // Fallback: allAssignmentGrades
+        if (!window.allAssignmentGrades) return true;
         const gradeData = window.allAssignmentGrades.get(cmid);
         if (!gradeData?.gradedDate) return true; // Kein Datum -> verwenden
 
@@ -2681,27 +2734,21 @@ async function updatePflichtStats() {
         }
     }
 
-    updatePflichtCombinedStats(completedPflicht, totalPflicht, referencePflichtProgress);
+    updatePflichtCombinedStats(displayCompleted, displayTotal);
     updateReferenceWeekLabels(); // Labels auch bei Pflichtabgaben aktualisieren
     showBothStatsRows();
 }
 
-function updatePflichtCombinedStats(completed, total, referencePercentage = null) {
+function updatePflichtCombinedStats(completed, total) {
     const completedElement = document.getElementById('pflichtCompletedCount');
     const totalElement = document.getElementById('pflichtTotalCount');
     const percentageElement = document.getElementById('pflichtCompletionPercentage');
     const ringElement = document.getElementById('pflichtCompletionRing');
 
     if (!completedElement || !totalElement || !percentageElement || !ringElement) {
-        // Retry after a short delay if elements are not ready yet
-        setTimeout(() => updatePflichtCombinedStats(completed, total, referencePercentage), 100);
+        setTimeout(() => updatePflichtCombinedStats(completed, total), 100);
         return;
     }
-
-    // Bei letzter Woche: Original-Total anzeigen, sonst erwartete Anzahl
-    const expectedTotal = currentReferenceWeek === TOTAL_WEEKS ?
-        total :
-        Math.ceil((total / TOTAL_WEEKS) * currentReferenceWeek);
 
     // Funktion für Ring-Update
     const updateRing = (percentage) => {
@@ -2718,7 +2765,7 @@ function updatePflichtCombinedStats(completed, total, referencePercentage = null
     };
 
     // Berechne sofort den korrekten Prozentsatz für initiale Anzeige
-    const immediatePercentage = expectedTotal > 0 ? Math.round((completed / expectedTotal) * 100) : 0;
+    const immediatePercentage = total > 0 ? Math.round((completed / total) * 100) : 0;
 
     // Ring und Text sofort mit korrektem Wert setzen
     updateRing(immediatePercentage);
@@ -2728,11 +2775,11 @@ function updatePflichtCombinedStats(completed, total, referencePercentage = null
     if (currentCompleted !== completed) {
         animateNumber('pflichtCompletedCount', completed);
     } else {
-        completedElement.textContent = completed; // Stelle sicher, dass der korrekte Wert angezeigt wird
+        completedElement.textContent = completed;
     }
-    totalElement.textContent = expectedTotal;
+    totalElement.textContent = total;
 
-    // Warte bis Animation abgeschlossen ist (30 * 50ms + Buffer), dann berechne Prozentsatz basierend auf tatsächlich angezeigten Werten
+    // Warte bis Animation abgeschlossen ist, dann Prozentsatz auf tatsächlich angezeigte Werte aktualisieren
     setTimeout(() => {
         const displayedCompleted = parseInt(completedElement.textContent) || 0;
         const displayedTotal = parseInt(totalElement.textContent) || 0;
@@ -2742,41 +2789,6 @@ function updatePflichtCombinedStats(completed, total, referencePercentage = null
     }, 1600);
 }
 
-let currentPflichtAvg = 0;
-let currentGesamtAvg = 0;
-
-function updateProgressDisplay(pflichtAvg, gesamtAvg, sumPflicht, expectedPunktePflicht, sumGesamt, expectedPunkteGesamt) {
-    currentPflichtAvg = pflichtAvg;
-    currentGesamtAvg = gesamtAvg;
-
-    // Zähler/Nenner für spätere Verwendung speichern
-    window.currentProgressDetails = {
-        pflicht: { sum: sumPflicht, expected: expectedPunktePflicht },
-        gesamt: { sum: sumGesamt, expected: expectedPunkteGesamt }
-    };
-
-    const selectedRadio = document.querySelector('input[name="progressType"]:checked');
-    const selectedType = selectedRadio ? selectedRadio.value : 'pflicht';
-    const targetValue = selectedType === 'pflicht' ? pflichtAvg : gesamtAvg;
-
-    animateProgressBar('avgCompletionText', 'avgCompletionBar', targetValue);
-
-    // Zähler/Nenner anzeigen
-    updateProgressDetails(selectedType);
-
-    // Grade always based on Pflicht, never Gesamt
-    updateIHKGrade(pflichtAvg);
-}
-
-function updateProgressDetails(type) {
-    const detailsEl = document.getElementById('avgCompletionDetails');
-    if (!detailsEl || !window.currentProgressDetails) return;
-
-    const details = window.currentProgressDetails[type];
-    if (!details) return;
-
-    detailsEl.textContent = `${Math.round(details.sum)} / ${Math.round(details.expected)} Punkte`;
-}
 
 function calculateIHKGrade(percentage) {
     let grade, tendency = '';
@@ -2813,88 +2825,6 @@ function calculateIHKGrade(percentage) {
     return { grade, tendency };
 }
 
-function updateIHKGrade(percentage) {
-    const gradeInfo = calculateIHKGrade(percentage);
-    const gradeText = document.getElementById('ihkGradeText');
-    const gradePercentage = document.getElementById('ihkGradePercentage');
-    const gradeTendency = document.getElementById('ihkGradeTendency');
-    const ihkGradeCard = document.getElementById('ihkGradeCard');
-
-    // IHK Card ausblenden, wenn 1. Mitarbeitsnote existiert
-    // Prüfe sowohl Cache als auch ob die Mitarbeitsnoten-Card sichtbar ist
-    const currentGradeData = getCachedData('mitarbeitsnote');
-    const mitarbeitStatsGroup = document.getElementById('mitarbeitStatsGroup');
-    const mitarbeitnoteVisible = mitarbeitStatsGroup && mitarbeitStatsGroup.style.display !== 'none';
-
-    if ((currentGradeData || mitarbeitnoteVisible) && ihkGradeCard) {
-        ihkGradeCard.style.display = 'none';
-        return;
-    } else if (ihkGradeCard) {
-        ihkGradeCard.style.display = 'block';
-    }
-
-    gradeText.textContent = gradeInfo.grade;
-    gradePercentage.textContent = Math.round(percentage) + '%';
-
-    if (gradeInfo.grade <= 2) {
-        gradeText.style.color = '#28a745'; // Grün
-    } else if (gradeInfo.grade <= 4) {
-        gradeText.style.color = '#ffc107'; // Gelb
-    } else {
-        gradeText.style.color = '#dc3545'; // Rot
-    }
-
-    if (gradeInfo.tendency === '+') {
-        gradeTendency.textContent = 'Tendenz: +';
-        gradeTendency.className = 'ihk-grade-tendency positive';
-    } else if (gradeInfo.tendency === '-') {
-        gradeTendency.textContent = 'Tendenz: -';
-        gradeTendency.className = 'ihk-grade-tendency negative';
-    } else {
-        gradeTendency.textContent = '';
-        gradeTendency.className = 'ihk-grade-tendency';
-    }
-}
-
-function toggleProgressType() {
-    const selectedType = document.querySelector('input[name="progressType"]:checked').value;
-    const pflichtLabel = document.getElementById('pflichtLabel');
-    const gesamtLabel = document.getElementById('gesamtLabel');
-    const progressLabel = document.getElementById('progressLabel');
-
-    // Hilfsfunktion: Label-Text aktualisieren unter Beibehaltung des Tooltips
-    const updateLabelWithTooltip = (labelText) => {
-        const helpText = EXTERNAL_CONFIG.helpTexts?.checklisten?.durchschnitt;
-        if (helpText) {
-            progressLabel.innerHTML = `
-                <span class="tooltip-container">
-                    ${labelText}
-                    <span class="info-icon">?</span>
-                    <span class="tooltip-text">${helpText}</span>
-                </span>`;
-        } else {
-            progressLabel.textContent = labelText;
-        }
-    };
-
-    if (selectedType === 'pflicht') {
-        pflichtLabel.classList.add('active');
-        gesamtLabel.classList.remove('active');
-        updateLabelWithTooltip('Checkliste Durchschnitt');
-        animateProgressBar('avgCompletionText', 'avgCompletionBar', currentPflichtAvg);
-        updateProgressDetails('pflicht');
-        // Grade always based on Pflicht, never Gesamt
-        updateIHKGrade(currentPflichtAvg);
-    } else {
-        pflichtLabel.classList.remove('active');
-        gesamtLabel.classList.add('active');
-        updateLabelWithTooltip('Checkliste Durchschnitt');
-        animateProgressBar('avgCompletionText', 'avgCompletionBar', currentGesamtAvg);
-        updateProgressDetails('gesamt');
-        // Grade always based on Pflicht, never Gesamt
-        updateIHKGrade(currentPflichtAvg);
-    }
-}
 
 function generateInsights() {
     const validChecklists = checklistData.filter(item => !item.error);
@@ -3230,7 +3160,7 @@ function showBothStatsRows() {
 }
 
 function showTab(tab) {
-    const tabs = ['homeTab', 'checklistsTab', 'pflichtTab'];
+    const tabs = ['homeTab', 'pflichtTab'];
     tabs.forEach(tabId => {
         const tabElement = document.getElementById(tabId);
         if (tabElement) {
@@ -3493,6 +3423,11 @@ async function enrichPflichtDataWithDetails(pflichtData) {
                 enrichedItem.isGroupAssignment = false;
                 enrichedItem.actualStatus = item.completionStatus;
             }
+            // Falls eine Bewertung existiert, Status immer auf "Bewertet" setzen (manuelle Bewertung möglich)
+            if (item.grade && item.grade !== '-' && item.grade !== 'Unbekannt' && item.grade !== '') {
+                enrichedItem.completionStatus = 'Bewertet';
+                enrichedItem.actualStatus = 'Bewertet';
+            }
         } else if (item.type === 'Quiz') {
             // Für Quizzes: Wenn eine Bewertung existiert, Status auf "Bewertet" setzen
             enrichedItem.isGroupAssignment = false;
@@ -3703,6 +3638,8 @@ async function updatePflichtTable(data) {
         console.log(`✓ Assignment-Grades bereits geladen (${window.allAssignmentGrades.size} Einträge)`);
     }
 
+
+
     // Dynamische Überschrift basierend auf dem aktuellen Filter
     const requirementFilter = document.getElementById('pflichtRequirementFilter')?.value || 'pflicht';
     let tableTitle = 'Aufgaben-Übersicht';
@@ -3793,16 +3730,58 @@ async function updatePflichtTable(data) {
     html += '<th onclick="sortPflichtTableByColumn(5)" class="sortable-header" style="cursor: pointer;">Bewertet am <span class="sort-icon"><svg width="12" height="12"><use href="#icon-sort-both"></use></svg></span></th>';
     html += '</tr></thead><tbody id="pflichtTableBody">';
 
+    // Feedback-Daten direkt beim Rendern verwenden (hat Vorrang vor Cache)
+    const renderFeedbackDates = await fetchFeedbackDatesFromGradeReport();
+
+    // window.pflichtData mit Feedback-basiertem Status aktualisieren,
+    // damit updatePflichtStats() die korrekte Zählung hat
+    if (window.pflichtData && renderFeedbackDates.size > 0) {
+        let statsNeedUpdate = false;
+        for (const item of window.pflichtData) {
+            const hasNoGrade = !item.grade || item.grade === '-';
+            if (!hasNoGrade || item.completionStatus === 'Abgegeben') continue;
+            const cmidMatch = item.url?.match(/[?&]id=(\d+)/);
+            if (!cmidMatch) continue;
+            if (renderFeedbackDates.has(parseInt(cmidMatch[1]))) {
+                item.completionStatus = 'Abgegeben';
+                statsNeedUpdate = true;
+            }
+        }
+        if (statsNeedUpdate) await updatePflichtStats();
+    }
+
     data.forEach((item, index) => {
+        // Extrahiere cmid und Bewertungsdatum (wird auch für Status benötigt)
+        let gradedDateDisplay = '-';
+        if (item.url) {
+            const cmidMatch = item.url.match(/[?&]id=(\d+)/);
+            if (cmidMatch) {
+                const cmid = parseInt(cmidMatch[1]);
+                const feedbackDate = renderFeedbackDates.get(cmid);
+                const rawDate = feedbackDate ?? window.allAssignmentGrades?.get(cmid)?.gradedDate;
+                if (rawDate) {
+                    const date = typeof rawDate === 'string' ? new Date(rawDate) : rawDate;
+                    if (date && !isNaN(date.getTime())) {
+                        const day = String(date.getDate()).padStart(2, '0');
+                        const month = String(date.getMonth() + 1).padStart(2, '0');
+                        const year = date.getFullYear();
+                        gradedDateDisplay = `${day}.${month}.${year}`;
+                    }
+                }
+            }
+        }
+
         // Status-Badge: Bewertet (grün), Abgegeben (blau), Zu erledigen (orange)
-        let statusText = item.completionStatus;
+        const hasNoGrade = !item.grade || item.grade === '-';
+        const isAbgegeben = (hasNoGrade && gradedDateDisplay !== '-') || item.completionStatus === 'Abgegeben';
+        let statusText = isAbgegeben ? 'Abgegeben' : item.completionStatus;
         let statusBadgeStyle;
         let statusIcon;
 
         if (item.completionStatus === 'Bewertet') {
             statusBadgeStyle = 'display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 6px; font-size: 0.8em; font-weight: 500; background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7;';
             statusIcon = '<svg width="12" height="12" viewBox="0 0 24 24"><path d="M9 16.2l-3.5-3.5-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z" fill="currentColor"/></svg>';
-        } else if (item.completionStatus === 'Abgegeben') {
+        } else if (isAbgegeben) {
             statusBadgeStyle = 'display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 6px; font-size: 0.8em; font-weight: 500; background: #e3f2fd; color: #1565c0; border: 1px solid #90caf9;';
             statusIcon = '<svg width="12" height="12" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" fill="currentColor"/></svg>';
         } else {
@@ -3851,29 +3830,6 @@ async function updatePflichtTable(data) {
         const rowStyle = item.isPflicht ? '' : 'style="background-color: rgba(149, 165, 166, 0.05);"';
 
         // Extrahiere cmid aus URL und hole Bewertungsdatum
-        let gradedDateDisplay = '-';
-        if (item.url && window.allAssignmentGrades) {
-            const cmidMatch = item.url.match(/[?&]id=(\d+)/);
-            if (cmidMatch) {
-                const cmid = parseInt(cmidMatch[1]);
-                const gradeData = window.allAssignmentGrades.get(cmid);
-                if (gradeData && gradeData.gradedDate) {
-                    // Formatiere Datum: DD.MM.YYYY
-                    // Konvertiere String zu Date, falls nötig (Cache-Serialisierung)
-                    const date = typeof gradeData.gradedDate === 'string'
-                        ? new Date(gradeData.gradedDate)
-                        : gradeData.gradedDate;
-
-                    if (date && !isNaN(date.getTime())) {
-                        const day = String(date.getDate()).padStart(2, '0');
-                        const month = String(date.getMonth() + 1).padStart(2, '0');
-                        const year = date.getFullYear();
-                        gradedDateDisplay = `${day}.${month}.${year}`;
-                    }
-                }
-            }
-        }
-
         html += `<tr data-name="${item.name.toLowerCase()}" data-type="${itemType.toLowerCase()}" data-status="${statusText.toLowerCase()}" data-grade="${item.grade}" ${rowStyle}>
             <td data-label="Name"><a href="${item.url}" target="_blank" title="${item.name}">${item.name}</a>${requirementBadge}</td>
             <td data-label="Typ"><span class="type-badge" style="${typeBadgeStyle}">${typeIcon}${itemType}</span></td>
@@ -4472,17 +4428,13 @@ window.addEventListener('DOMContentLoaded', () => {
 
     // Parallel data loading für bessere Performance
     Promise.all([
-        extractFromChecklistIndex(),
         extractPflichtOverview(),
         loadMitarbeitsnote()
     ]).then(() => {
         // Nach dem Laden aller Daten: Mitarbeitsnoten-Karte aktualisieren
-        // Nur wenn Checklisten bereits vollständig geladen (nicht nur Cache)
-        if (checklistsFullyLoaded) {
-            const gradeData = getCachedData('mitarbeitsnote') || lastMitarbeitsnoteData;
-            if (gradeData) {
-                updateMitarbeitsnoteCard(gradeData);
-            }
+        const gradeData = getCachedData('mitarbeitsnote') || lastMitarbeitsnoteData;
+        if (gradeData) {
+            updateMitarbeitsnoteCard(gradeData);
         }
     }).catch(error => {
         console.error('Fehler beim parallelen Laden der Daten:', error);
@@ -4502,7 +4454,6 @@ window.addEventListener('DOMContentLoaded', () => {
 
                 // Force refresh - keine Cache-Nutzung bei manueller Aktualisierung
                 await Promise.all([
-                    extractFromChecklistIndex(false), // false = kein Cache
                     extractPflichtOverview(false),    // false = kein Cache
                     loadMitarbeitsnote(false)         // false = kein Cache
                 ]);
@@ -4523,11 +4474,4 @@ window.addEventListener('DOMContentLoaded', () => {
         };
     }
 
-    const tabChecklists = document.getElementById('tabChecklists');
-    if (tabChecklists) {
-        tabChecklists.onclick = () => {
-            showTab('checklists');
-            // extractFromChecklistIndex();
-        };
-    }
 });

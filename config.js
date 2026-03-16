@@ -31,8 +31,7 @@ const EXTERNAL_CONFIG = {
         steps: {
             1: { initial: '○ System initialisiert', completed: '✓ System initialisiert' },
             2: { initial: '○ Schiene wird erkannt...', completed: '✓ Schiene erkannt' },
-            3: { initial: '○ Checklisten werden geladen...', completed: '✓ Checklisten geladen' },
-            4: { initial: '○ Pflichtabgaben werden geladen...', completed: '✓ Pflichtabgaben geladen' }
+            3: { initial: '○ Pflichtabgaben werden geladen...', completed: '✓ Pflichtabgaben geladen' }
         },
         progress: {
             detectTrack: 'Erkenne Schiene...',
@@ -180,7 +179,7 @@ const EXTERNAL_CONFIG = {
             'Quantität': 'Prozentuale Erfüllung der Pflicht-Checklisten bis zur Referenzwoche der 1. Mitarbeitsnote. Die Punkte in Klammern zeigen erreichte/mögliche Punkte.',
             'Qualität': 'Durchschnitt aller bis zur 1. Mitarbeitsnote bewerteten Pflichtabgaben.',
             'Review-Talk': 'Bewertung deines ersten Review-Talks.',
-            'gesamt': 'Durchschnitt aller Komponenten (Quantität, Qualität, Review-Talk), die eine Bewertung haben. Komponenten ohne Bewertung werden nicht eingerechnet.'
+            'gesamt': 'Durchschnitt aller Komponenten (Quantität, Qualität, Review-Talk, ggf. Code Reviews), die eine Bewertung haben. Komponenten ohne Bewertung werden nicht eingerechnet.'
         },
         // Prognose 2. Mitarbeitsnote
         prognose: {
