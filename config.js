@@ -157,8 +157,9 @@ const EXTERNAL_CONFIG = {
 
     // Assign-IDs für Prognose-Komponenten
     prognosisAssignments: {
-        reviewTalk2: 83500375,   // Review-Talk 2 Assignment ID
-        codeReview: 80560819     // Code Review Assignment ID
+        reviewTalk2: 89296357,   // Review-Talk 2 Assignment ID
+        reviewTalk3: 89296360,   // Review-Talk 3 Assignment ID
+        codeReview: 89296414     // Code Review Assignment ID
     },
 
     // Hilfetexte für alle Bereiche
@@ -185,9 +186,9 @@ const EXTERNAL_CONFIG = {
         prognose: {
             'Quantität': 'Die erreichten Punkte zeigen deine Leistung zwischen der 1. und 2. Bewertung. Berechnung: Von deinen aktuell erreichten Punkten werden die Punkte der 1. Mitarbeitsnote abgezogen. Falls du dort über 100% erreicht hast, werden diese Bonuspunkte wieder hinzugefügt. Das Ergebnis wird durch die maximal möglichen Punkte im aktuellen Zeitraum geteilt.',
             'Qualität': 'Durchschnitt aller bewerteten Pflichtabgaben seit der 1. Mitarbeitsnote.',
-            'Review-Talk 2': 'Bewertung deines zweiten Review-Talks (falls bereits bewertet und nach der 1. Mitarbeitsnote).',
+            'Review-Talks (2+3)': 'Durchschnitt deiner Review-Talks 2 und 3 (falls bereits bewertet und nach der 1. Mitarbeitsnote).',
             'Code Review': 'Bewertung deines Code Reviews (falls bereits bewertet und nach der 1. Mitarbeitsnote).',
-            'gesamt': 'Durchschnitt aller Komponenten (Quantität, Qualität, Review-Talk 2, Code Review), die eine Bewertung haben. Komponenten ohne Bewertung werden nicht eingerechnet.'
+            'gesamt': 'Durchschnitt aller Komponenten (Quantität, Qualität, Review-Talks (2+3), Code Review), die eine Bewertung haben. Komponenten ohne Bewertung werden nicht eingerechnet.'
         }
     }
 };

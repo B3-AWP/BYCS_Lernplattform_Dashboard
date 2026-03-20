@@ -1765,34 +1765,52 @@ async function updatePrognosisComponents() {
     const reviewTalk2Data = await getAssignmentGrade(EXTERNAL_CONFIG.prognosisAssignments.reviewTalk2).catch(() => null);
     console.log('✅ Review-Talk 2 Ergebnis:', reviewTalk2Data);
 
+    console.log('🔎 Lade Review-Talk 3 (ID:', EXTERNAL_CONFIG.prognosisAssignments.reviewTalk3, ')');
+    const reviewTalk3Data = await getAssignmentGrade(EXTERNAL_CONFIG.prognosisAssignments.reviewTalk3).catch(() => null);
+    console.log('✅ Review-Talk 3 Ergebnis:', reviewTalk3Data);
+
     console.log('🔎 Lade Code Review (ID:', EXTERNAL_CONFIG.prognosisAssignments.codeReview, ')');
     const codeReviewData = await getAssignmentGrade(EXTERNAL_CONFIG.prognosisAssignments.codeReview).catch(() => null);
     console.log('✅ Code Review Ergebnis:', codeReviewData);
 
-    // Prüfe ob Bewertungen nach Referenztermin sind
-    let reviewTalk2Value = 0;
-    let reviewTalk2Display = '-';
-    if (reviewTalk2Data) {
-        // Konvertiere gradedDate zu Date-Objekt, falls es ein String ist (Cache)
-        const reviewTalk2GradedDate = reviewTalk2Data.gradedDate
-            ? (typeof reviewTalk2Data.gradedDate === 'string'
-                ? new Date(reviewTalk2Data.gradedDate)
-                : reviewTalk2Data.gradedDate)
+    // Hilfsfunktion: Bewertung nach Referenztermin prüfen
+    function getValidGradeValue(gradeData, label) {
+        if (!gradeData) return { value: 0, display: '-' };
+        const gradedDate = gradeData.gradedDate
+            ? (typeof gradeData.gradedDate === 'string'
+                ? new Date(gradeData.gradedDate)
+                : gradeData.gradedDate)
             : null;
-
-        if (!referenzDate || !reviewTalk2GradedDate) {
-            // Kein Referenztermin oder kein Bewertungsdatum -> verwende Bewertung
-            reviewTalk2Value = reviewTalk2Data.value;
-            reviewTalk2Display = reviewTalk2Data.display;
-        } else if (reviewTalk2GradedDate > referenzDate) {
-            // Bewertungsdatum ist nach Referenztermin -> verwende Bewertung
-            reviewTalk2Value = reviewTalk2Data.value;
-            reviewTalk2Display = reviewTalk2Data.display;
-            console.log('✓ Review-Talk 2 ist nach Referenztermin');
+        if (!referenzDate || !gradedDate) {
+            return { value: gradeData.value, display: gradeData.display };
+        } else if (gradedDate > referenzDate) {
+            console.log('✓', label, 'ist nach Referenztermin');
+            return { value: gradeData.value, display: gradeData.display };
         } else {
-            // Bewertungsdatum ist vor/am Referenztermin -> ignoriere Bewertung
-            console.log('⚠️ Review-Talk 2 ist vor Referenztermin, wird ignoriert');
+            console.log('⚠️', label, 'ist vor Referenztermin, wird ignoriert');
+            return { value: 0, display: '-' };
         }
+    }
+
+    // Review-Talk 2 ohne Referenztermin-Prüfung (wurde vor 1. MA bewertet, zählt trotzdem)
+    const rt2 = reviewTalk2Data
+        ? { value: reviewTalk2Data.value, display: reviewTalk2Data.display }
+        : { value: 0, display: '-' };
+    const rt3 = getValidGradeValue(reviewTalk3Data, 'Review-Talk 3');
+
+    // Durchschnitt aus beiden Review-Talks bilden
+    let reviewTalkValue = 0;
+    let reviewTalkDisplay = '-';
+    if (rt2.value > 0 && rt3.value > 0) {
+        reviewTalkValue = (rt2.value + rt3.value) / 2;
+        reviewTalkDisplay = `${Math.round(reviewTalkValue)}%`;
+        console.log('✓ Review-Talks Durchschnitt:', reviewTalkValue);
+    } else if (rt2.value > 0) {
+        reviewTalkValue = rt2.value;
+        reviewTalkDisplay = rt2.display;
+    } else if (rt3.value > 0) {
+        reviewTalkValue = rt3.value;
+        reviewTalkDisplay = rt3.display;
     }
 
     let codeReviewValue = 0;
@@ -1861,7 +1879,7 @@ async function updatePrognosisComponents() {
     const components = [
         { name: 'Quantität', value: quantitaet, display: `${Math.round(quantitaet)}%`, points: quantitaetPoints, help: helpTexts['Quantität'] },
         { name: 'Qualität', value: qualitaet, display: `${Math.round(qualitaet)}%`, help: helpTexts['Qualität'] },
-        { name: 'Review-Talk 2', value: reviewTalk2Value, display: reviewTalk2Display, help: helpTexts['Review-Talk 2'] },
+        { name: 'Review-Talks (2+3)', value: reviewTalkValue, display: reviewTalkDisplay, help: helpTexts['Review-Talks (2+3)'] },
         { name: 'Code Review', value: codeReviewValue, display: codeReviewDisplay, help: helpTexts['Code Review'] }
     ];
 
@@ -2139,8 +2157,8 @@ function shouldShowMitarbeitProgressCards() {
     // 2. Slider muss nach der Referenzwoche der 1. Mitarbeitsnote stehen
     if (currentReferenceWeek <= B7) return false;
 
-    // 3. Aktuelle Mitarbeitsnote muss existieren
-    const currentGradeData = getCachedData('mitarbeitsnote');
+    // 3. Aktuelle Mitarbeitsnote muss existieren (Cache oder Fallback)
+    const currentGradeData = getCachedData('mitarbeitsnote') || lastMitarbeitsnoteData;
     if (!currentGradeData) return false;
 
     // 4. Quantität muss in aktueller Mitarbeitsnote vorhanden sein

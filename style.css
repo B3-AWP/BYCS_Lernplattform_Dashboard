@@ -301,7 +301,7 @@ body {
     background: #FFFFFF;
     padding: var(--spacing-md);
     border-radius: var(--radius-md);
-    text-align: center;
+    text-align: left;
     box-shadow: var(--shadow-sm);
     border: 1px solid var(--border-color);
     transition: transform 0.3s ease, opacity 0.3s ease;
@@ -2086,6 +2086,10 @@ h3 {
    Mitarbeitsnote Components
    ================================ */
 
+#mitarbeitProgressRow {
+    grid-template-columns: repeat(2, 1fr);
+}
+
 .mitarbeit-components {
     margin-top: 12px;
     padding-top: 12px;
@@ -2094,8 +2098,8 @@ h3 {
 
 .mitarbeit-component {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
+    align-items: baseline;
+    gap: 12px;
     padding: 6px 0;
     font-size: 0.85rem;
 }
@@ -2103,12 +2107,15 @@ h3 {
 .mitarbeit-component-name {
     color: var(--text-light);
     font-weight: 500;
+    white-space: nowrap;
+    min-width: 150px;
 }
 
 .mitarbeit-component-grade {
     color: var(--text-color);
     font-weight: 600;
     font-size: 0.9rem;
+    text-align: left;
 }
 
 /* IHK Grade Display */
