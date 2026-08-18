@@ -1,7 +1,16 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "schuljahr": "2026/27",
   "stand": "2026-08-18",
+
+  "notenschluessel": [
+    { "note": 1, "name": "sehr gut",      "abProzent": 91, "farbe": "#1e7e34" },
+    { "note": 2, "name": "gut",           "abProzent": 80, "farbe": "#28a745" },
+    { "note": 3, "name": "befriedigend",  "abProzent": 66, "farbe": "#7cb342" },
+    { "note": 4, "name": "ausreichend",   "abProzent": 49, "farbe": "#ffc107" },
+    { "note": 5, "name": "mangelhaft",    "abProzent": 29, "farbe": "#fd7e14" },
+    { "note": 6, "name": "ungenügend",    "abProzent": 0,  "farbe": "#dc3545" }
+  ],
 
   "klassenZuSchiene": {
     "IFA12A": "Schiene1",

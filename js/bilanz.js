@@ -116,6 +116,7 @@ export function berechneBilanz(plan, aufgaben, schienenName, heute = new Date())
     return {
         schiene: schienenName,
         schienenTitel: schiene.titel,
+        notenschluessel: plan.notenschluessel,
         woche,
         wochenGesamt: schiene.wochenGesamt,
         imBlock,
@@ -198,6 +199,30 @@ function zaehleZustaende(aufgaben) {
  */
 function datumOhneZeit(datum) {
     return new Date(datum.getFullYear(), datum.getMonth(), datum.getDate());
+}
+
+/**
+ * Ermittelt die Note zu einem Prozentwert.
+ *
+ * Der Schlüssel ist absteigend sortiert; es gilt die erste Stufe,
+ * deren Schwelle erreicht ist.
+ *
+ * Gerechnet wird mit dem gerundeten Wert, weil genau dieser
+ * angezeigt wird: Bei 65,71 % stünde sonst "66 %" neben einer
+ * Note 4, obwohl der Schlüssel ab 66 die Note 3 vorsieht — für
+ * Lernende ein nicht auflösbarer Widerspruch.
+ *
+ * @param {Object[]|null} notenschluessel - aus dem Plan
+ * @param {number|null} prozent
+ * @returns {{note: number|string, name: string, farbe: string|null}|null}
+ */
+export function ermittleNote(notenschluessel, prozent) {
+    if (!notenschluessel || prozent === null || !Number.isFinite(prozent)) {
+        return null;
+    }
+
+    const angezeigt = Math.round(prozent);
+    return notenschluessel.find(stufe => angezeigt >= stufe.abProzent) ?? null;
 }
 
 /**

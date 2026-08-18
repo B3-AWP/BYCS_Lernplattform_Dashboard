@@ -133,6 +133,24 @@ Pro Unterkurs werden zwei Seiten abgerufen — je eine für Aufgaben und Tests.
 Es gibt kein Caching über die Sitzung hinaus; der Zustand lebt nur im
 Speicher der Seite.
 
+## Notenschlüssel
+
+Neben jedem Prozentwert steht die zugehörige Note. Der Schlüssel liegt in
+`plan.json` unter `notenschluessel`:
+
+```json
+{ "note": 2, "name": "gut", "abProzent": 80, "farbe": "#28a745" }
+```
+
+Es gilt die erste Stufe, deren Schwelle erreicht ist. Die unterste Stufe muss
+`"abProzent": 0` haben, sonst blieben niedrige Werte ohne Note — das meldet
+die Validierung beim Laden. Fehlt der Schlüssel ganz, zeigt das Dashboard nur
+Prozentwerte und rechnet unverändert weiter.
+
+Die Note richtet sich nach dem **angezeigten**, also gerundeten Prozentwert.
+Sonst stünde bei 65,71 % die Anzeige „66 %" neben einer Note 4, obwohl der
+Schlüssel ab 66 die Note 3 vorsieht.
+
 ## Probelauf
 
 Das Dashboard hängt am Datum: Soll steigt nur, wenn eine Blockwoche beginnt.

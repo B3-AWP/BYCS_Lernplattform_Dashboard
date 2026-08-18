@@ -6,7 +6,7 @@
 // und ruft Moodle nicht auf.
 // ============================================================
 
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
 const AUFGABEN_TYPEN = ['assign', 'quiz'];
 
 /**
@@ -68,6 +68,7 @@ export function pruefePlan(rohdaten) {
         );
     }
 
+    const notenschluessel = pruefeNotenschluessel(rohdaten.notenschluessel, fehler);
     const schienen = pruefeSchienen(rohdaten.schienen, fehler);
     const klassenZuSchiene = pruefeKlassenzuordnung(
         rohdaten.klassenZuSchiene, schienen, fehler
@@ -88,12 +89,60 @@ export function pruefePlan(rohdaten) {
         schemaVersion: rohdaten.schemaVersion,
         schuljahr: rohdaten.schuljahr ?? null,
         stand: rohdaten.stand ?? null,
+        notenschluessel,
         schienen,
         klassenZuSchiene,
         kurse,
         stundenGesamt,
         aufgaben: kurse.flatMap(kurs => kurs.aufgaben)
     };
+}
+
+/**
+ * Prüft den Notenschlüssel.
+ *
+ * Absteigend sortiert, damit die erste passende Schwelle gilt.
+ * Ohne Schlüssel bleibt die Notenanzeige einfach aus — das
+ * Dashboard rechnet weiter, es zeigt nur keine Noten.
+ */
+function pruefeNotenschluessel(notenschluessel, fehler) {
+    if (notenschluessel === undefined) return null;
+
+    if (!Array.isArray(notenschluessel) || notenschluessel.length === 0) {
+        fehler.push('notenschluessel ist keine Liste oder leer. Weglassen, wenn keine Noten gezeigt werden sollen.');
+        return null;
+    }
+
+    const stufen = notenschluessel.map((stufe, index) => {
+        const so = `notenschluessel[${index}]`;
+
+        if (typeof stufe?.note !== 'number' && typeof stufe?.note !== 'string') {
+            fehler.push(`${so}.note fehlt.`);
+        }
+        if (typeof stufe?.name !== 'string' || stufe.name.trim() === '') {
+            fehler.push(`${so}.name fehlt.`);
+        }
+        if (typeof stufe?.abProzent !== 'number' || !Number.isFinite(stufe.abProzent)) {
+            fehler.push(`${so}.abProzent muss eine Zahl sein.`);
+        }
+
+        return {
+            note: stufe?.note,
+            name: stufe?.name,
+            abProzent: stufe?.abProzent,
+            farbe: stufe?.farbe ?? null
+        };
+    });
+
+    const sortiert = [...stufen].sort((a, b) => b.abProzent - a.abProzent);
+
+    // Die unterste Stufe muss bei 0 greifen, sonst bleiben schwache
+    // Ergebnisse ohne Note — was schlimmer wäre als gar keine Anzeige.
+    if (sortiert.length > 0 && sortiert[sortiert.length - 1].abProzent > 0) {
+        fehler.push('notenschluessel: Die unterste Stufe muss abProzent 0 haben, sonst bleiben niedrige Werte ohne Note.');
+    }
+
+    return sortiert;
 }
 
 /**

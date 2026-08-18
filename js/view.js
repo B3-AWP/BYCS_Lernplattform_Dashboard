@@ -6,9 +6,14 @@
 // ============================================================
 
 import { ZUSTAND, ZUSTAND_TEXT } from './status.js';
-import { formatStunden, formatProzent } from './bilanz.js';
+import { formatStunden, formatProzent, ermittleNote } from './bilanz.js';
 
 const BASIS = 'https://lernplattform.bycs.de';
+
+// Notenschlüssel der laufenden Darstellung. Wird beim Zeichnen
+// gesetzt, damit die Tabellenzeilen ihn nicht einzeln durchgereicht
+// bekommen müssen.
+let notenschluessel = null;
 
 /**
  * Rendert das gesamte Dashboard.
@@ -17,6 +22,8 @@ const BASIS = 'https://lernplattform.bycs.de';
  * @param {Object} bilanz - Ergebnis aus berechneBilanz
  */
 export function zeichne(wurzel, bilanz) {
+    notenschluessel = bilanz.notenschluessel;
+
     wurzel.replaceChildren(
         kopfzeile(bilanz),
         kursKacheln(bilanz.kurse),
@@ -274,11 +281,26 @@ function qualitaetsKarte({ durchschnitt, anzahl }) {
         'dich zeitlich nicht weiter, und eine schlechte wirft dich nicht zurück.'
     ));
 
+    const wert = el('span', 'qualitaet-wert');
+    if (durchschnitt === null) {
+        wert.textContent = '–';
+    } else {
+        wert.append(document.createTextNode(formatBewertung(durchschnitt)));
+        const stufe = ermittleNote(notenschluessel, durchschnitt);
+        if (stufe) {
+            const marke = el('span', 'note note-gross', String(stufe.note));
+            if (stufe.farbe) {
+                marke.style.color = stufe.farbe;
+                marke.style.borderColor = stufe.farbe;
+            }
+            marke.title = `Note ${stufe.note} — ${stufe.name}`;
+            wert.append(marke);
+        }
+    }
+
     karte.append(
         name,
-        el('span', 'qualitaet-wert',
-            durchschnitt === null ? '–' : formatBewertung(durchschnitt)
-        ),
+        wert,
         el('span', 'qualitaet-fuss',
             anzahl === 0
                 ? 'noch keine Bewertung'
@@ -496,7 +518,7 @@ function aufgabenZeile(aufgabe) {
     const noteZelle = el('td', 'rechts');
     noteZelle.append(
         aufgabe.bewertung !== null
-            ? el('span', 'bewertung', formatBewertung(aufgabe.bewertung))
+            ? bewertungMitNote(aufgabe.bewertung)
             : el('span', 'ohne-wert', '–')
     );
 
@@ -505,8 +527,34 @@ function aufgabenZeile(aufgabe) {
 }
 
 /**
+ * Prozentwert mit der zugehörigen Note.
+ *
+ * Ohne hinterlegten Notenschlüssel bleibt es beim Prozentwert —
+ * die Note ist eine Zugabe, keine Voraussetzung.
+ *
+ * @param {number} wert - Prozentwert
+ * @returns {HTMLElement}
+ */
+function bewertungMitNote(wert) {
+    const behaelter = el('span', 'bewertung-paar');
+    behaelter.append(el('span', 'bewertung', formatBewertung(wert)));
+
+    const stufe = ermittleNote(notenschluessel, wert);
+    if (stufe) {
+        const marke = el('span', 'note', String(stufe.note));
+        if (stufe.farbe) {
+            marke.style.color = stufe.farbe;
+            marke.style.borderColor = stufe.farbe;
+        }
+        marke.title = `Note ${stufe.note} — ${stufe.name}`;
+        behaelter.append(marke);
+    }
+
+    return behaelter;
+}
+
+/**
  * Bewertung als Prozentwert ohne Nachkommastellen.
- * Nicht-numerische Bewertungen (etwa Skalen) bleiben unverändert.
  */
 function formatBewertung(wert) {
     return `${Math.round(wert)} %`;

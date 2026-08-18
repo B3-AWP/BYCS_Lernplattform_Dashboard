@@ -370,6 +370,8 @@ main {
 }
 
 .qualitaet-wert {
+    display: inline-flex;
+    align-items: center;
     font-size: 1.4rem;
     font-weight: 600;
     font-variant-numeric: tabular-nums;
@@ -708,11 +710,39 @@ th[aria-sort] .sortpfeil {
     background: var(--moos);
 }
 
+.bewertung-paar {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--a2);
+}
+
 .bewertung {
     font-size: .9rem;
     font-weight: 600;
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
+}
+
+/* Notenmarke: Farbe kommt aus dem Notenschlüssel im Plan.
+   Rahmen statt Fläche, damit die Farbe in beiden Themes trägt. */
+.note {
+    display: inline-grid;
+    place-items: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    border: 1.5px solid currentColor;
+    border-radius: 4px;
+    font-size: .8rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    cursor: help;
+}
+
+.note-gross {
+    width: 1.85rem;
+    height: 1.85rem;
+    margin-left: var(--a2);
+    font-size: .95rem;
 }
 
 /* ---------- Fehler und Warnungen ---------- */
