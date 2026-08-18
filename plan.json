@@ -3,6 +3,18 @@
   "schuljahr": "2026/27",
   "stand": "2026-08-18",
 
+  "skalen": {
+    "sterne4": {
+      "titel": "Bewertungsskala",
+      "stufen": [
+        { "wert": 1, "name": "Nicht akzeptabel",  "prozent": 25 },
+        { "wert": 2, "name": "Verbesserungsbedarf", "prozent": 50 },
+        { "wert": 3, "name": "Gut",               "prozent": 75 },
+        { "wert": 4, "name": "Exzellent",         "prozent": 100 }
+      ]
+    }
+  },
+
   "notenschluessel": [
     { "note": 1, "name": "sehr gut",      "abProzent": 91, "farbe": "#1e7e34" },
     { "note": 2, "name": "gut",           "abProzent": 80, "farbe": "#28a745" },
@@ -59,6 +71,7 @@
       "aufgaben": [
         {
           "cmid": "94824799",
+          "skala": "sterne4",
           "typ": "assign",
           "titel": "Situation Mitarbeiterverwaltung",
           "lektion": "OOP- Pflichtaufgabe: Von der Idee zum Objekt",
@@ -80,6 +93,7 @@
         },
         {
           "cmid": "91837888",
+          "skala": "sterne4",
           "typ": "assign",
           "titel": "Erstellung einer Skizze",
           "lektion": "HTML/CSS- Frontend Grundlagen",
@@ -101,6 +115,7 @@
         },
         {
           "cmid": "91838047",
+          "skala": "sterne4",
           "typ": "assign",
           "titel": "HTML Formulare",
           "lektion": "HTML/CSS- Formulare",

@@ -69,11 +69,12 @@ export function pruefePlan(rohdaten) {
     }
 
     const notenschluessel = pruefeNotenschluessel(rohdaten.notenschluessel, fehler);
+    const skalen = pruefeSkalen(rohdaten.skalen, fehler);
     const schienen = pruefeSchienen(rohdaten.schienen, fehler);
     const klassenZuSchiene = pruefeKlassenzuordnung(
         rohdaten.klassenZuSchiene, schienen, fehler
     );
-    const kurse = pruefeKurse(rohdaten.kurse, fehler);
+    const kurse = pruefeKurse(rohdaten.kurse, skalen, fehler);
 
     if (fehler.length > 0) {
         throw new PlanFehler(fehler);
@@ -90,6 +91,7 @@ export function pruefePlan(rohdaten) {
         schuljahr: rohdaten.schuljahr ?? null,
         stand: rohdaten.stand ?? null,
         notenschluessel,
+        skalen,
         schienen,
         klassenZuSchiene,
         kurse,
@@ -143,6 +145,59 @@ function pruefeNotenschluessel(notenschluessel, fehler) {
     }
 
     return sortiert;
+}
+
+/**
+ * Prüft die Bewertungsskalen.
+ *
+ * Manche Aufgaben werden nicht in Prozent bewertet, sondern über
+ * eine Moodle-Skala: Der Rohwert ist dann eine Stufennummer
+ * ("1.00000" bis "4.00000"), kein Prozentwert. Ohne Umrechnung
+ * erschiene Stufe 1 von 4 als "1 %" — also als Note 6 statt als
+ * das, was sie ist.
+ */
+function pruefeSkalen(skalen, fehler) {
+    if (skalen === undefined) return {};
+
+    if (!skalen || typeof skalen !== 'object' || Array.isArray(skalen)) {
+        fehler.push('skalen ist kein Objekt. Weglassen, wenn keine Skalen genutzt werden.');
+        return {};
+    }
+
+    const geprueft = {};
+
+    Object.entries(skalen).forEach(([name, skala]) => {
+        const so = `skalen.${name}`;
+
+        if (!Array.isArray(skala?.stufen) || skala.stufen.length === 0) {
+            fehler.push(`${so}.stufen fehlt oder ist leer.`);
+            return;
+        }
+
+        const stufen = skala.stufen.map((stufe, index) => {
+            const to = `${so}.stufen[${index}]`;
+
+            if (typeof stufe?.wert !== 'number' || !Number.isFinite(stufe.wert)) {
+                fehler.push(`${to}.wert muss die Stufennummer aus Moodle sein (Zahl).`);
+            }
+            if (typeof stufe?.name !== 'string' || stufe.name.trim() === '') {
+                fehler.push(`${to}.name fehlt.`);
+            }
+            if (typeof stufe?.prozent !== 'number' || !Number.isFinite(stufe.prozent)) {
+                fehler.push(`${to}.prozent muss eine Zahl sein — darüber wird die Note ermittelt.`);
+            }
+
+            return { wert: stufe?.wert, name: stufe?.name, prozent: stufe?.prozent };
+        });
+
+        geprueft[name] = {
+            name,
+            titel: typeof skala.titel === 'string' ? skala.titel : name,
+            stufen
+        };
+    });
+
+    return geprueft;
 }
 
 /**
@@ -265,7 +320,7 @@ function pruefeKlassenzuordnung(zuordnung, schienen, fehler) {
  * Prüft die Kurse samt Aufgaben. cmid muss über alle Kurse hinweg
  * eindeutig sein, da sie der Schlüssel zur Moodle-Zeile ist.
  */
-function pruefeKurse(kurse, fehler) {
+function pruefeKurse(kurse, skalen, fehler) {
     if (!Array.isArray(kurse) || kurse.length === 0) {
         fehler.push('kurse fehlt oder ist leer.');
         return [];
@@ -318,12 +373,20 @@ function pruefeKurse(kurse, fehler) {
                 fehler.push(`${ao}.stunden muss eine Dezimalzahl größer 0 sein.`);
             }
 
+            if (aufgabe?.skala !== undefined && !(aufgabe.skala in skalen)) {
+                fehler.push(
+                    `${ao}.skala verweist auf "${aufgabe.skala}", ` +
+                    `was unter skalen nicht definiert ist.`
+                );
+            }
+
             const lektion = teileLektion(aufgabe?.lektion);
 
             return {
                 cmid: aufgabe?.cmid,
                 typ: aufgabe?.typ,
                 titel: aufgabe?.titel,
+                skala: aufgabe?.skala ? skalen[aufgabe.skala] ?? null : null,
                 lektion: aufgabe?.lektion ?? null,
                 abschnitt: lektion.abschnitt,
                 lerneinheit: lektion.lerneinheit,

@@ -47,51 +47,85 @@ export function ermittleZustand(aufgabe, rohstatus, kursGesperrt) {
     // Kurs 2 ebenso wie für eine umgezogene oder gelöschte Aktivität.
     // Die Aufgabe bleibt dabei im Nenner.
     if (kursGesperrt || !rohstatus) {
-        return { zustand: ZUSTAND.NICHT_BEGONNEN, bewertung: null, bewertungText: null };
+        return leer();
     }
 
-    const bewertung = parseBewertung(rohstatus.bewertung);
+    const { bewertung, bewertungText } = leseBewertung(aufgabe, rohstatus);
     const hatBewertung = bewertung !== null;
 
     if (aufgabe.typ === 'quiz') {
         // Tests haben keine Abgabespalte. Da alle Pflicht-Tests
         // automatisch bewertet werden, dient die Bewertung als
         // Ersatzsignal für die Abgabe.
-        return {
-            zustand: hatBewertung ? ZUSTAND.BEWERTET : ZUSTAND.NICHT_BEGONNEN,
-            bewertung,
-            bewertungText: hatBewertung ? rohstatus.bewertung : null
-        };
+        return hatBewertung
+            ? { zustand: ZUSTAND.BEWERTET, bewertung, bewertungText }
+            : leer();
     }
 
     // Aufgaben: submissionstatus ist die Leitgröße. completion
     // bedeutet je nach Aktivität etwas anderes und taugt nicht.
     const abgabe = (rohstatus.abgabestatus ?? '').toLowerCase();
 
+    // Eine Bewertung schlägt den Abgabestatus. Lehrkräfte bewerten
+    // auch ohne digitale Abgabe — etwa nach einem Gespräch oder für
+    // etwas auf Papier. Dann steht in Moodle "Keine Abgabe" neben
+    // einer echten Note; diese Bewertung darf nicht verloren gehen.
+    if (hatBewertung) {
+        return { zustand: ZUSTAND.BEWERTET, bewertung, bewertungText };
+    }
+
     if (abgabe === '' || abgabe.includes('keine abgabe')) {
-        return { zustand: ZUSTAND.NICHT_BEGONNEN, bewertung: null, bewertungText: null };
+        return leer();
     }
 
     if (abgabe.includes('zur bewertung abgegeben')) {
-        return {
-            zustand: hatBewertung ? ZUSTAND.BEWERTET : ZUSTAND.ABGEGEBEN,
-            bewertung,
-            bewertungText: hatBewertung ? rohstatus.bewertung : null
-        };
+        return { zustand: ZUSTAND.ABGEGEBEN, bewertung: null, bewertungText: null };
     }
 
     if (abgabe.includes('entwurf')) {
         return { zustand: ZUSTAND.ENTWURF, bewertung: null, bewertungText: null };
     }
 
-    // Unbekannter Wert: defensiv als Entwurf werten (zählt nicht),
-    // den Rohwert aber für die Fehlersuche mitführen.
+    // Unbekannter Wert: defensiv werten (zählt nicht), den Rohwert
+    // aber für die Fehlersuche mitführen.
     console.warn(`Unbekannter Abgabestatus "${rohstatus.abgabestatus}" bei cmid ${aufgabe.cmid}`);
-    return {
-        zustand: ZUSTAND.UNBEKANNT,
-        bewertung,
-        bewertungText: hatBewertung ? rohstatus.bewertung : null
-    };
+    return { zustand: ZUSTAND.UNBEKANNT, bewertung: null, bewertungText: null };
+}
+
+function leer() {
+    return { zustand: ZUSTAND.NICHT_BEGONNEN, bewertung: null, bewertungText: null };
+}
+
+/**
+ * Liest die Bewertung, bei Bedarf über eine Skala.
+ *
+ * Skalenbewertungen liefern im Attribut eine Stufennummer
+ * ("1.00000") und im Text die Beschriftung ("* Nicht akzeptabel").
+ * Ohne Umrechnung erschiene Stufe 1 von 4 als "1 %" und damit als
+ * schlechteste Note, obwohl sie nur die unterste von vier Stufen ist.
+ *
+ * @returns {{bewertung: number|null, bewertungText: string|null}}
+ */
+function leseBewertung(aufgabe, rohstatus) {
+    const roh = parseBewertung(rohstatus.bewertung);
+    if (roh === null) {
+        return { bewertung: null, bewertungText: null };
+    }
+
+    if (!aufgabe.skala) {
+        return { bewertung: roh, bewertungText: rohstatus.bewertung };
+    }
+
+    const stufe = aufgabe.skala.stufen.find(s => s.wert === roh);
+    if (!stufe) {
+        console.warn(
+            `Skalenwert ${roh} bei cmid ${aufgabe.cmid} ist in Skala ` +
+            `"${aufgabe.skala.name}" nicht definiert`
+        );
+        return { bewertung: null, bewertungText: null };
+    }
+
+    return { bewertung: stufe.prozent, bewertungText: stufe.name };
 }
 
 /**

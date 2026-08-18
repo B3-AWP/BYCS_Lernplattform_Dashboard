@@ -538,7 +538,7 @@ function aufgabenZeile(aufgabe) {
     const noteZelle = el('td', 'rechts');
     noteZelle.append(
         aufgabe.bewertung !== null
-            ? bewertungMitNote(aufgabe.bewertung)
+            ? bewertungMitNote(aufgabe.bewertung, aufgabe.skala ? aufgabe.bewertungText : null)
             : el('span', 'ohne-wert', '–')
     );
 
@@ -555,9 +555,18 @@ function aufgabenZeile(aufgabe) {
  * @param {number} wert - Prozentwert
  * @returns {HTMLElement}
  */
-function bewertungMitNote(wert) {
+function bewertungMitNote(wert, skalenText) {
     const behaelter = el('span', 'bewertung-paar');
-    behaelter.append(el('span', 'bewertung', formatBewertung(wert)));
+
+    // Bei Skalenbewertungen sagt die Stufenbezeichnung mehr als der
+    // umgerechnete Prozentwert; dieser steht im title.
+    if (skalenText) {
+        const marke = el('span', 'skalenwert', skalenText);
+        marke.title = `entspricht ${formatBewertung(wert)}`;
+        behaelter.append(marke);
+    } else {
+        behaelter.append(el('span', 'bewertung', formatBewertung(wert)));
+    }
 
     const stufe = ermittleNote(notenschluessel, wert);
     if (stufe) {

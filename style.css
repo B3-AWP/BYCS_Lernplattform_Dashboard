@@ -746,6 +746,13 @@ th[aria-sort] .sortpfeil {
     white-space: nowrap;
 }
 
+.skalenwert {
+    font-size: .84rem;
+    font-weight: 600;
+    text-align: right;
+    cursor: help;
+}
+
 /* Notenmarke: Farbe kommt aus dem Notenschlüssel im Plan.
    Rahmen statt Fläche, damit die Farbe in beiden Themes trägt. */
 .note {
