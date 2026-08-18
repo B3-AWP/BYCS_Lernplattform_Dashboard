@@ -14,29 +14,29 @@
     "Schiene1": {
       "titel": "Schiene 1",
       "schulwochen": [
-        { "woche": 1, "start": "2026-09-28", "ende": "2026-10-02", "stunden": 40 },
-        { "woche": 2, "start": "2026-10-05", "ende": "2026-10-09", "stunden": 40 },
-        { "woche": 3, "start": "2026-11-23", "ende": "2026-11-27", "stunden": 40 },
-        { "woche": 4, "start": "2026-11-30", "ende": "2026-12-04", "stunden": 40 },
-        { "woche": 5, "start": "2026-12-07", "ende": "2026-12-11", "stunden": 40 },
-        { "woche": 6, "start": "2027-02-01", "ende": "2027-02-05", "stunden": 40 },
-        { "woche": 7, "start": "2027-03-15", "ende": "2027-03-19", "stunden": 40 },
-        { "woche": 8, "start": "2027-04-05", "ende": "2027-04-09", "stunden": 40 },
-        { "woche": 9, "start": "2027-04-12", "ende": "2027-04-16", "stunden": 40 }
+        { "woche": 1, "start": "2026-09-28", "ende": "2026-10-02", "stunden": 10 },
+        { "woche": 2, "start": "2026-10-05", "ende": "2026-10-09", "stunden": 14 },
+        { "woche": 3, "start": "2026-11-23", "ende": "2026-11-27", "stunden": 14 },
+        { "woche": 4, "start": "2026-11-30", "ende": "2026-12-04", "stunden": 14 },
+        { "woche": 5, "start": "2026-12-07", "ende": "2026-12-11", "stunden": 14 },
+        { "woche": 6, "start": "2027-02-01", "ende": "2027-02-05", "stunden": 14 },
+        { "woche": 7, "start": "2027-03-15", "ende": "2027-03-19", "stunden": 14 },
+        { "woche": 8, "start": "2027-04-05", "ende": "2027-04-09", "stunden": 14 },
+        { "woche": 9, "start": "2027-04-12", "ende": "2027-04-16", "stunden": 14 }
       ]
     },
     "Schiene3": {
       "titel": "Schiene 3",
       "schulwochen": [
-        { "woche": 1, "start": "2026-09-15", "ende": "2026-09-18", "stunden": 32 },
-        { "woche": 2, "start": "2026-09-21", "ende": "2026-09-25", "stunden": 40 },
-        { "woche": 3, "start": "2026-10-26", "ende": "2026-10-30", "stunden": 40 },
-        { "woche": 4, "start": "2026-11-09", "ende": "2026-11-13", "stunden": 40 },
-        { "woche": 5, "start": "2026-11-16", "ende": "2026-11-20", "stunden": 40 },
-        { "woche": 6, "start": "2027-01-18", "ende": "2027-01-22", "stunden": 40 },
-        { "woche": 7, "start": "2027-02-22", "ende": "2027-02-26", "stunden": 40 },
-        { "woche": 8, "start": "2027-03-01", "ende": "2027-03-05", "stunden": 40 },
-        { "woche": 9, "start": "2027-03-08", "ende": "2027-03-12", "stunden": 40 }
+        { "woche": 1, "start": "2026-09-15", "ende": "2026-09-18", "stunden": 10 },
+        { "woche": 2, "start": "2026-09-21", "ende": "2026-09-25", "stunden": 14 },
+        { "woche": 3, "start": "2026-10-26", "ende": "2026-10-30", "stunden": 14 },
+        { "woche": 4, "start": "2026-11-09", "ende": "2026-11-13", "stunden": 14 },
+        { "woche": 5, "start": "2026-11-16", "ende": "2026-11-20", "stunden": 14 },
+        { "woche": 6, "start": "2027-01-18", "ende": "2027-01-22", "stunden": 14 },
+        { "woche": 7, "start": "2027-02-22", "ende": "2027-02-26", "stunden": 14 },
+        { "woche": 8, "start": "2027-03-01", "ende": "2027-03-05", "stunden": 14 },
+        { "woche": 9, "start": "2027-03-08", "ende": "2027-03-12", "stunden": 14 }
       ]
     }
   },

@@ -133,6 +133,45 @@ Pro Unterkurs werden zwei Seiten abgerufen — je eine für Aufgaben und Tests.
 Es gibt kein Caching über die Sitzung hinaus; der Zustand lebt nur im
 Speicher der Seite.
 
+## Probelauf
+
+Das Dashboard hängt am Datum: Soll steigt nur, wenn eine Blockwoche beginnt.
+Um das zu prüfen, ohne die Systemuhr zu stellen oder auf den nächsten Block
+zu warten, hängt man `?test` an die Adresse. Es erscheint eine auffällige
+Leiste mit Datum, Schiene und Datenquelle.
+
+| Parameter | Wirkung |
+|---|---|
+| `?test` | schaltet den Probelauf ein |
+| `&datum=2026-12-09` | rechnet mit diesem Stichtag |
+| `&schiene=Schiene3` | erzwingt eine Schiene statt der Klassenerkennung |
+| `&daten=haelfte` | Beispieldaten statt echter Moodle-Abrufe |
+
+Für `daten` gibt es `leer`, `haelfte`, `voll` und `gemischt`. Die Muster
+erzeugen Moodle-Rohwerte, die durch die echten Regeln aus `status.js`
+laufen — geprüft wird also die tatsächliche Logik, nicht eine Attrappe.
+Ohne `daten` werden echte Abrufe versucht; außerhalb der Lernplattform
+scheitern die an der Same-Origin-Policy.
+
+Lokal starten:
+
+```bash
+python -m http.server 8731
+# dann http://localhost:8731/?test&daten=gemischt öffnen
+```
+
+Ohne `?test` ist der Probelauf vollständig aus: keine Leiste, keine
+Beispieldaten, kein verändertes Verhalten.
+
+Nützliche Stichtage:
+
+| Datum | Schiene 1 | Schiene 3 |
+|---|---|---|
+| 2026-09-01 | vor Beginn | vor Beginn |
+| 2026-09-16 | vor Beginn | Block 1 läuft |
+| 2026-12-09 | Block 5 läuft | nach Block 5 |
+| 2027-04-14 | Block 9 läuft | nach Block 9 |
+
 ## Kurse
 
 | Kurs | ID | Stand |

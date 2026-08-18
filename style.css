@@ -73,6 +73,76 @@ body {
     -webkit-font-smoothing: antialiased;
 }
 
+/* ---------- Testleiste ----------
+   Nur im Probelauf sichtbar. Bewusst auffällig, damit niemand
+   einen Probelauf für den echten Stand hält. */
+
+.testleiste {
+    display: flex;
+    align-items: center;
+    gap: var(--a3);
+    flex-wrap: wrap;
+    margin: 0 calc(var(--a4) * -1);
+    padding: var(--a2) var(--a4);
+    background: var(--bernstein);
+    color: #FFFFFF;
+    font-size: .82rem;
+}
+
+.testleiste-marke {
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    font-size: .72rem;
+}
+
+.testgruppe {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--a1);
+}
+
+.testgruppe-name {
+    opacity: .85;
+}
+
+.testfeld {
+    padding: .18em .4em;
+    border: 1px solid rgba(255, 255, 255, .45);
+    border-radius: 3px;
+    background: rgba(255, 255, 255, .14);
+    color: #FFFFFF;
+    font: inherit;
+    font-size: .82rem;
+}
+
+.testfeld option {
+    color: var(--tinte);
+    background: var(--flaeche);
+}
+
+.testbeenden {
+    margin-left: auto;
+    padding: .2em .7em;
+    border: 1px solid rgba(255, 255, 255, .5);
+    border-radius: 3px;
+    background: transparent;
+    color: #FFFFFF;
+    font: inherit;
+    font-size: .82rem;
+    cursor: pointer;
+}
+
+.testbeenden:hover {
+    background: rgba(255, 255, 255, .18);
+}
+
+.testfeld:focus-visible,
+.testbeenden:focus-visible {
+    outline: 2px solid #FFFFFF;
+    outline-offset: 2px;
+}
+
 /* ---------- Seitenkopf ---------- */
 
 .seitenkopf {
@@ -384,6 +454,26 @@ main {
     margin: var(--a3) 0 0;
     font-size: 1.2rem;
     letter-spacing: -.01em;
+}
+
+.kurs-trenner {
+    display: flex;
+    align-items: baseline;
+    gap: var(--a2);
+    flex-wrap: wrap;
+    margin: var(--a4) 0 0;
+    padding-bottom: var(--a1);
+    border-bottom: 1px solid var(--linie);
+    font-size: 1rem;
+    letter-spacing: -.005em;
+}
+
+.kurs-trenner-sperre {
+    font-size: .76rem;
+    font-weight: 500;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--bernstein);
 }
 
 .bereich-titel {

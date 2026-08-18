@@ -11,13 +11,21 @@ import { ladeAllenStatus } from './moodle.js';
 import { ermittleSchiene, merkeSchiene } from './schiene.js';
 import { verbinde } from './status.js';
 import { berechneBilanz } from './bilanz.js';
-import { zeichne, zeigeLaden, zeigeFehler, zeigeWarnung, zeigeSchienenAuswahl } from './view.js';
+import {
+    zeichne, zeigeLaden, zeigeFehler, zeigeWarnung,
+    zeigeSchienenAuswahl, zeichneTestleiste
+} from './view.js';
+import {
+    istTestmodus, testDatum, testSchiene, testDaten,
+    baueBeispielStatus, setzeParameter, verlasseTestmodus
+} from './testmodus.js';
 
 // Hauptkurs, in dem das Dashboard und plan.json liegen. Aus ihm
 // wird die Klasse und damit die Schiene erkannt.
 const HAUPTKURS_ID = '2491549';
 
 const wurzel = document.getElementById('dashboard');
+const testleiste = document.getElementById('testleiste');
 const aktualisierenKnopf = document.getElementById('aktualisieren');
 
 // Plan und Schiene ändern sich während einer Sitzung nicht und
@@ -41,26 +49,23 @@ async function starte() {
         }
 
         if (!schiene) {
-            zeigeLaden(wurzel, 'Erkenne Klasse …');
-            const ergebnis = await ermittleSchiene(plan, HAUPTKURS_ID);
+            schiene = await bestimmeSchiene();
 
             // Ohne Schiene lässt sich kein Soll berechnen — hier wird
             // gefragt statt geraten.
-            if (!ergebnis.schiene) {
+            if (!schiene) {
                 zeigeSchienenAuswahl(wurzel, plan.schienen, waehleSchiene);
                 return;
             }
-
-            schiene = ergebnis.schiene;
         }
 
-        zeigeLaden(wurzel, 'Lade Stand aus der Lernplattform …');
-        const { status, fehler } = await ladeAllenStatus(plan.kurse);
+        const { status, fehler } = await holeStatus();
 
         const aufgaben = verbinde(plan, status);
-        const bilanz = berechneBilanz(plan, aufgaben, schiene);
+        const bilanz = berechneBilanz(plan, aufgaben, schiene, stichtag());
 
         zeichne(wurzel, bilanz);
+        zeichneTestleisteFallsNoetig();
 
         // Teilausfälle blockieren die Anzeige nicht — die übrigen
         // Kurse sind ausgewertet, der Rest wird benannt.
@@ -86,10 +91,67 @@ async function starte() {
                 ]
             );
         }
+        zeichneTestleisteFallsNoetig();
     } finally {
         laueft = false;
         setzeKnopfZustand(false);
     }
+}
+
+/**
+ * Ermittelt die Schiene. Im Testmodus hat eine dort gewählte Vorrang.
+ */
+async function bestimmeSchiene() {
+    if (istTestmodus()) {
+        const gewaehlt = testSchiene();
+        if (gewaehlt && gewaehlt in plan.schienen) return gewaehlt;
+        // Ohne Angabe die erste Schiene, damit der Probelauf sofort etwas zeigt
+        return Object.keys(plan.schienen)[0] ?? null;
+    }
+
+    zeigeLaden(wurzel, 'Erkenne Klasse …');
+    const ergebnis = await ermittleSchiene(plan, HAUPTKURS_ID);
+    return ergebnis.schiene;
+}
+
+/**
+ * Holt den Status — echt aus Moodle oder als Beispieldaten,
+ * wenn im Testmodus ein Muster gewählt wurde.
+ */
+async function holeStatus() {
+    const muster = istTestmodus() ? testDaten() : null;
+
+    if (muster) {
+        return { status: baueBeispielStatus(plan, muster), fehler: [] };
+    }
+
+    zeigeLaden(wurzel, 'Lade Stand aus der Lernplattform …');
+    return ladeAllenStatus(plan.kurse);
+}
+
+/**
+ * Stichtag der Berechnung — im Testmodus das eingestellte Datum.
+ */
+function stichtag() {
+    return istTestmodus() ? testDatum() : new Date();
+}
+
+function zeichneTestleisteFallsNoetig() {
+    if (!istTestmodus() || !testleiste) return;
+
+    zeichneTestleiste(
+        testleiste,
+        {
+            datum: testDatum(),
+            schiene,
+            daten: testDaten(),
+            schienen: plan?.schienen ?? {}
+        },
+        {
+            beiAenderung: setzeParameter,
+            beiVerlassen: verlasseTestmodus
+        }
+    );
 }
 
 /**

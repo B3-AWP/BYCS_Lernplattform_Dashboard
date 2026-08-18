@@ -25,6 +25,93 @@ export function zeichne(wurzel, bilanz) {
 }
 
 /**
+ * Zeichnet die Testleiste über dem Dashboard.
+ *
+ * Sie erscheint nur im Testmodus und ist bewusst auffällig, damit
+ * niemand einen Probelauf für den echten Stand hält.
+ *
+ * @param {HTMLElement} ziel - Element für die Leiste
+ * @param {Object} einstellungen - { datum, schiene, daten, schienen }
+ * @param {Object} rueckrufe - { beiAenderung, beiVerlassen }
+ */
+export function zeichneTestleiste(ziel, einstellungen, rueckrufe) {
+    const leiste = el('div', 'testleiste');
+
+    leiste.append(el('span', 'testleiste-marke', 'Probelauf'));
+
+    // Datum
+    const datumFeld = document.createElement('input');
+    datumFeld.type = 'date';
+    datumFeld.className = 'testfeld';
+    datumFeld.value = alsIsoDatum(einstellungen.datum);
+    datumFeld.setAttribute('aria-label', 'Fiktives Datum');
+    datumFeld.addEventListener('change', () => {
+        rueckrufe.beiAenderung('datum', datumFeld.value);
+    });
+    leiste.append(feldGruppe('Datum', datumFeld));
+
+    // Schiene
+    const schienenFeld = document.createElement('select');
+    schienenFeld.className = 'testfeld';
+    schienenFeld.setAttribute('aria-label', 'Schiene');
+    Object.values(einstellungen.schienen).forEach(schiene => {
+        const option = document.createElement('option');
+        option.value = schiene.name;
+        option.textContent = schiene.titel;
+        option.selected = schiene.name === einstellungen.schiene;
+        schienenFeld.append(option);
+    });
+    schienenFeld.addEventListener('change', () => {
+        rueckrufe.beiAenderung('schiene', schienenFeld.value);
+    });
+    leiste.append(feldGruppe('Schiene', schienenFeld));
+
+    // Beispieldaten
+    const datenFeld = document.createElement('select');
+    datenFeld.className = 'testfeld';
+    datenFeld.setAttribute('aria-label', 'Datenquelle');
+    [
+        ['', 'Echte Daten'],
+        ['leer', 'Nichts begonnen'],
+        ['haelfte', 'Halb geschafft'],
+        ['voll', 'Alles abgegeben'],
+        ['gemischt', 'Alle Zustände']
+    ].forEach(([wert, text]) => {
+        const option = document.createElement('option');
+        option.value = wert;
+        option.textContent = text;
+        option.selected = wert === (einstellungen.daten ?? '');
+        datenFeld.append(option);
+    });
+    datenFeld.addEventListener('change', () => {
+        rueckrufe.beiAenderung('daten', datenFeld.value);
+    });
+    leiste.append(feldGruppe('Daten', datenFeld));
+
+    const beenden = document.createElement('button');
+    beenden.type = 'button';
+    beenden.className = 'testbeenden';
+    beenden.textContent = 'Beenden';
+    beenden.addEventListener('click', rueckrufe.beiVerlassen);
+    leiste.append(beenden);
+
+    ziel.replaceChildren(leiste);
+}
+
+function feldGruppe(beschriftung, feld) {
+    const gruppe = el('label', 'testgruppe');
+    gruppe.append(el('span', 'testgruppe-name', beschriftung), feld);
+    return gruppe;
+}
+
+function alsIsoDatum(datum) {
+    const jahr = datum.getFullYear();
+    const monat = String(datum.getMonth() + 1).padStart(2, '0');
+    const tag = String(datum.getDate()).padStart(2, '0');
+    return `${jahr}-${monat}-${tag}`;
+}
+
+/**
  * Fragt die Schiene ab, wenn sie sich nicht aus der Klasse ergibt.
  *
  * @param {HTMLElement} wurzel - Zielelement
@@ -76,11 +163,7 @@ function kopfzeile(bilanz) {
     const skala = Math.max(bilanz.soll, bilanz.ist, 0.01);
 
     abschnitt.append(
-        el('p', 'bilanz-woche',
-            bilanz.woche === 0
-                ? `${bilanz.schienenTitel} · Der Unterricht hat noch nicht begonnen`
-                : `${bilanz.schienenTitel} · Blockwoche ${bilanz.woche} von ${bilanz.wochenGesamt}`
-        ),
+        el('p', 'bilanz-woche', wochenText(bilanz)),
 
         el('p', `delta ${vorsprung ? 'delta-vor' : 'delta-zurueck'}`,
             betrag < 0.05
@@ -101,6 +184,24 @@ function kopfzeile(bilanz) {
     );
 
     return abschnitt;
+}
+
+/**
+ * Beschreibt den Stand im Schuljahr.
+ *
+ * Zwischen zwei Blöcken steht die Wochennummer still — das wird
+ * benannt, damit ein gleichbleibendes Soll nicht als Fehler wirkt.
+ */
+function wochenText(bilanz) {
+    if (bilanz.woche === 0) {
+        return `${bilanz.schienenTitel} · Der Unterricht hat noch nicht begonnen`;
+    }
+
+    const stand = `Blockwoche ${bilanz.woche} von ${bilanz.wochenGesamt}`;
+
+    return bilanz.imBlock
+        ? `${bilanz.schienenTitel} · ${stand} läuft`
+        : `${bilanz.schienenTitel} · nach ${stand}`;
 }
 
 function balken(beschriftung, anteil, stunden, skala, art) {
@@ -208,10 +309,19 @@ function aufgabenListe(kurse) {
     abschnitt.append(el('h2', 'abschnitt-titel', 'Pflichtaufgaben'));
 
     kurse.forEach(kurs => {
-        const gruppen = gruppiereNachBereich(kurs.aufgaben);
+        if (kurs.aufgaben.length === 0) return;
 
-        gruppen.forEach(([bereich, aufgaben]) => {
-            abschnitt.append(el('h3', 'bereich-titel', bereich || kurs.titel));
+        // Kurszugehörigkeit sichtbar machen — sonst laufen die
+        // Bereiche beider Kurse ununterscheidbar ineinander.
+        const kursKopf = el('h3', 'kurs-trenner');
+        kursKopf.append(document.createTextNode(kurs.titel));
+        if (kurs.gesperrt) {
+            kursKopf.append(el('span', 'kurs-trenner-sperre', 'noch gesperrt'));
+        }
+        abschnitt.append(kursKopf);
+
+        gruppiereNachBereich(kurs.aufgaben).forEach(([bereich, aufgaben]) => {
+            if (bereich) abschnitt.append(el('h4', 'bereich-titel', bereich));
 
             const liste = el('ul', 'aufgaben-liste');
             aufgaben.forEach(aufgabe => liste.append(aufgabenZeile(aufgabe)));

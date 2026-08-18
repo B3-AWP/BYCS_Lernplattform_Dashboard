@@ -39,6 +39,31 @@ export function aktuelleWoche(schulwochen, heute = new Date()) {
 }
 
 /**
+ * Läuft der Block der Woche w gerade, oder liegt er schon hinter uns?
+ *
+ * Zwischen zwei Blöcken bleibt die Wochennummer stehen — für die
+ * Rechnung richtig, für die Anzeige aber ein Unterschied: „läuft
+ * gerade" ist etwas anderes als „liegt zurück".
+ *
+ * @param {Object[]} schulwochen
+ * @param {number} woche
+ * @param {Date} heute
+ * @returns {boolean}
+ */
+export function istImBlock(schulwochen, woche, heute = new Date()) {
+    const eintrag = schulwochen.find(w => w.woche === woche);
+    if (!eintrag) return false;
+
+    const stichtag = datumOhneZeit(heute);
+    const beginn = datumOhneZeit(new Date(eintrag.start));
+
+    // Ohne Endedatum gilt die Woche ab Beginn als laufend.
+    if (!eintrag.ende) return stichtag >= beginn;
+
+    return stichtag >= beginn && stichtag <= datumOhneZeit(new Date(eintrag.ende));
+}
+
+/**
  * Soll(w) — Anteil der bis einschließlich Woche w verstrichenen Stunden.
  *
  *   Soll(w) = Σ Stunden Schulwoche 1..w / Σ Stunden gesamt
@@ -76,6 +101,7 @@ export function berechneBilanz(plan, aufgaben, schienenName, heute = new Date())
 
     const woche = aktuelleWoche(schiene.schulwochen, heute);
     const soll = sollAnteil(schiene.schulwochen, woche);
+    const imBlock = istImBlock(schiene.schulwochen, woche, heute);
 
     const stundenGesamt = plan.stundenGesamt;
     const stundenAbgegeben = aufgaben
@@ -92,6 +118,7 @@ export function berechneBilanz(plan, aufgaben, schienenName, heute = new Date())
         schienenTitel: schiene.titel,
         woche,
         wochenGesamt: schiene.wochenGesamt,
+        imBlock,
         soll,
         ist,
         deltaStunden,

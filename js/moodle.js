@@ -82,8 +82,21 @@ async function ladeUebersicht(kursId, typ) {
 
         const html = await antwort.text();
         const dokument = new DOMParser().parseFromString(html, 'text/html');
+        const eintraege = parseUebersicht(dokument, typ);
 
-        return { eintraege: parseUebersicht(dokument, typ), fehler: null };
+        // Der Parameter expand[] sorgt dafür, dass Moodle die Tabelle
+        // serverseitig mitliefert, statt sie erst beim Aufklappen per
+        // AJAX nachzuladen. Fehlt sie trotzdem, ist das ein Hinweis auf
+        // ein geändertes Markup — und darf nicht als "nichts abgegeben"
+        // durchgehen, denn das wäre eine falsche Aussage über den Stand.
+        if (eintraege.size === 0 && !dokument.querySelector(`#${typ}_overview`)) {
+            return {
+                eintraege,
+                fehler: `Übersicht für ${typ} nicht im Seiteninhalt gefunden`
+            };
+        }
+
+        return { eintraege, fehler: null };
 
     } catch (fehler) {
         const grund = fehler.name === 'TimeoutError'
