@@ -61,84 +61,84 @@
           "cmid": "94824799",
           "typ": "assign",
           "titel": "Situation Mitarbeiterverwaltung",
-          "bereich": "OOP — Von der Idee zum Objekt",
+          "lektion": "OOP- Pflichtaufgabe: Von der Idee zum Objekt",
           "stunden": 2.5
         },
         {
           "cmid": "94822693",
           "typ": "quiz",
           "titel": "Test OOP Grundlagen",
-          "bereich": "OOP — Von der Idee zum Objekt",
+          "lektion": "OOP- Pflichtaufgabe: Von der Idee zum Objekt",
           "stunden": 0.5
         },
         {
           "cmid": "95572024",
           "typ": "quiz",
           "titel": "OOP — SOLID",
-          "bereich": "OOP — Sprint 4 SOLID und Refactoring",
+          "lektion": "OOP- Sprint 4 SOLID - Refactoring",
           "stunden": 0.42
         },
         {
           "cmid": "91837888",
           "typ": "assign",
           "titel": "Erstellung einer Skizze",
-          "bereich": "HTML/CSS — Frontend-Grundlagen",
+          "lektion": "HTML/CSS- Frontend Grundlagen",
           "stunden": 0.33
         },
         {
           "cmid": "91837921",
           "typ": "quiz",
           "titel": "Quiz HTML Grundlagen",
-          "bereich": "HTML/CSS — HTML",
+          "lektion": "HTML/CSS- HTML",
           "stunden": 0.33
         },
         {
           "cmid": "94783561",
           "typ": "quiz",
           "titel": "Quiz CSS Grundlagen",
-          "bereich": "HTML/CSS — CSS",
+          "lektion": "HTML/CSS- CSS",
           "stunden": 0.24
         },
         {
           "cmid": "91838047",
           "typ": "assign",
           "titel": "HTML Formulare",
-          "bereich": "HTML/CSS — Formulare",
+          "lektion": "HTML/CSS- Formulare",
           "stunden": 0.75
         },
         {
           "cmid": "94445008",
           "typ": "quiz",
           "titel": "Quiz JavaScript Grundlagen",
-          "bereich": "JavaScript — Sprint 1 Grundlagen",
+          "lektion": "JavaScript- Sprint 1 Grundlagen",
           "stunden": 0.25
         },
         {
           "cmid": "94464154",
           "typ": "quiz",
           "titel": "Quiz JavaScript Funktionen und Datenstrukturen",
-          "bereich": "JavaScript — Sprint 2 Funktionen und Datenstrukturen",
+          "lektion": "JavaScript- Sprint 2 Funktionen und Datenstrukturen",
           "stunden": 0.33
         },
         {
           "cmid": "94478251",
           "typ": "quiz",
           "titel": "Quiz JavaScript DOM",
-          "bereich": "JavaScript — Sprint 3 DOM",
+          "lektion": "JavaScript- Sprint 3 DOM",
           "stunden": 0.33
         },
         {
           "cmid": "94478263",
           "typ": "quiz",
           "titel": "Quiz JavaScript Events",
-          "bereich": "JavaScript — Sprint 4 Events",
+          "lektion": "JavaScript- Sprint 4 Events",
           "stunden": 0.33
         },
         {
           "cmid": "94481707",
           "typ": "quiz",
           "titel": "Quiz JavaScript Async",
-          "bereich": "JavaScript — Sprint 5 Async",
+          "lektion": "JavaScript- Sprint 5 Async",
           "stunden": 0.33
         }
       ]
@@ -154,7 +154,7 @@
           "cmid": "900000001",
           "typ": "assign",
           "titel": "Platzhalter — Pflichtaufgabe 2. Halbjahr",
-          "bereich": "Noch zu pflegen",
+          "lektion": "2. Halbjahr- Noch zu pflegen",
           "stunden": 8
         }
       ]

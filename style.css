@@ -468,7 +468,7 @@ main {
 
 .aufgaben-tabelle {
     width: 100%;
-    min-width: 30rem;
+    min-width: 40rem;
     border-collapse: collapse;
 }
 
@@ -550,11 +550,10 @@ th[aria-sort] .sortpfeil {
     opacity: .6;
 }
 
-.zelle-titel {
-    display: flex;
-    align-items: baseline;
-    gap: var(--a2);
-    flex-wrap: wrap;
+/* Ebenfalls ohne flex — siehe .zelle-lektion. Der Abstand
+   zwischen Titel und Stundenangabe kommt aus dem Textfluss. */
+.zelle-titel .aufgabe-stunden {
+    margin-left: var(--a2);
 }
 
 .aufgaben-link {
@@ -573,6 +572,30 @@ th[aria-sort] .sortpfeil {
     color: var(--tinte-3);
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
+}
+
+/* Kein display:flex auf einer <td> — das hebt das Zellverhalten
+   auf und die Spalte bricht aus dem Tabellenraster aus. Die
+   Kinder stapeln sich stattdessen als Blockelemente. */
+.zelle-lektion {
+    min-width: 9rem;
+}
+
+.lektion-abschnitt {
+    display: block;
+    font-size: .68rem;
+    font-weight: 600;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    color: var(--tinte-3);
+}
+
+.lektion-einheit {
+    display: block;
+    font-size: .84rem;
+    line-height: 1.35;
+    color: var(--tinte-2);
+    text-wrap: pretty;
 }
 
 .ohne-wert {

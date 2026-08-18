@@ -318,11 +318,15 @@ function pruefeKurse(kurse, fehler) {
                 fehler.push(`${ao}.stunden muss eine Dezimalzahl größer 0 sein.`);
             }
 
+            const lektion = teileLektion(aufgabe?.lektion);
+
             return {
                 cmid: aufgabe?.cmid,
                 typ: aufgabe?.typ,
                 titel: aufgabe?.titel,
-                bereich: aufgabe?.bereich ?? null,
+                lektion: aufgabe?.lektion ?? null,
+                abschnitt: lektion.abschnitt,
+                lerneinheit: lektion.lerneinheit,
                 stunden: aufgabe?.stunden,
                 kursId: kurs?.id,
                 kursTitel: kurs?.titel,
@@ -346,4 +350,33 @@ function pruefeKurse(kurse, fehler) {
 
 function istDatum(wert) {
     return typeof wert === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(wert);
+}
+
+/**
+ * Teilt eine Lektionsangabe in Abschnitt und Lerneinheit.
+ *
+ * Moodle schreibt sie als "Abschnitt- Lerneinheit", etwa
+ * "OOP- Sprint 1 Klassen & Objekte". Getrennt wird am ersten
+ * Bindestrich, dem ein Leerzeichen folgt — sonst zerfiele
+ * "HTML/CSS- Frontend Grundlagen" falsch, und Bindestriche
+ * innerhalb der Lerneinheit ("Sprint 4 SOLID - Refactoring")
+ * blieben erhalten.
+ *
+ * Ohne erkennbare Trennung gilt alles als Lerneinheit; der
+ * Abschnitt bleibt leer, statt geraten zu werden.
+ *
+ * @param {string|null|undefined} lektion
+ * @returns {{abschnitt: string|null, lerneinheit: string|null}}
+ */
+export function teileLektion(lektion) {
+    if (typeof lektion !== 'string' || lektion.trim() === '') {
+        return { abschnitt: null, lerneinheit: null };
+    }
+
+    const text = lektion.trim();
+    const treffer = text.match(/^(.+?)-\s+(.+)$/);
+
+    return treffer
+        ? { abschnitt: treffer[1].trim(), lerneinheit: treffer[2].trim() }
+        : { abschnitt: null, lerneinheit: text };
 }

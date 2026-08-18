@@ -114,6 +114,21 @@ Stunden sind Dezimalzahlen: `0.33` für 20 Minuten, `2.5` für zweieinhalb
 Stunden. Das gilt für Aufgaben wie für Blockwochen — eine verkürzte
 Blockwoche bekommt entsprechend weniger Stunden als eine volle.
 
+Das Feld `lektion` übernimmt die Angabe aus Moodle in der dortigen
+Schreibweise `Abschnitt- Lerneinheit`. Das Dashboard teilt sie beim Laden
+auf und zeigt beides in einer eigenen Spalte:
+
+| `lektion` | Abschnitt | Lerneinheit |
+|---|---|---|
+| `Übersicht- Kursübersicht` | Übersicht | Kursübersicht |
+| `OOP- Sprint 1 Klassen & Objekte` | OOP | Sprint 1 Klassen & Objekte |
+| `OOP- Sprint 4 SOLID - Refactoring` | OOP | Sprint 4 SOLID - Refactoring |
+
+Getrennt wird am ersten Bindestrich, dem ein Leerzeichen folgt. Dadurch
+bleiben `HTML/CSS` als Abschnitt und Bindestriche innerhalb der Lerneinheit
+erhalten. Ohne erkennbare Trennung gilt alles als Lerneinheit — der
+Abschnitt bleibt leer, statt geraten zu werden.
+
 Neue Schienen und Klassen werden unter `schienen` und `klassenZuSchiene`
 ergänzt. Verweist eine Klasse auf eine nicht definierte Schiene, meldet die
 Validierung das beim Laden.

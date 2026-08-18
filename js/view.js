@@ -415,6 +415,7 @@ function aufgabenTabelle(aufgaben, neuZeichnen) {
 
     const spalten = [
         { schluessel: 'titel', text: 'Titel' },
+        { schluessel: 'lektion', text: 'Lektion' },
         { schluessel: 'status', text: 'Status' },
         { schluessel: 'bewertung', text: 'Bewertung', rechts: true }
     ];
@@ -478,6 +479,12 @@ function sortiere(aufgaben) {
         let vergleich;
 
         switch (sortierung.spalte) {
+            case 'lektion':
+                // Erst nach Abschnitt, dann nach Lerneinheit — damit
+                // zusammengehörige Lektionen beieinander bleiben.
+                vergleich = (a.abschnitt ?? '').localeCompare(b.abschnitt ?? '', 'de')
+                    || (a.lerneinheit ?? '').localeCompare(b.lerneinheit ?? '', 'de');
+                break;
             case 'status':
                 vergleich = ZUSTAND_RANG[a.zustand] - ZUSTAND_RANG[b.zustand];
                 break;
@@ -512,6 +519,19 @@ function aufgabenZeile(aufgabe) {
     link.title = 'In der Lernplattform öffnen';
     titelZelle.append(link, el('span', 'aufgabe-stunden', `${formatStunden(aufgabe.stunden)} h`));
 
+    // Abschnitt über der Lerneinheit — die Lerneinheit ist die
+    // konkretere Angabe und bekommt deshalb das stärkere Gewicht.
+    const lektionZelle = el('td', 'zelle-lektion');
+    if (aufgabe.abschnitt) {
+        lektionZelle.append(el('span', 'lektion-abschnitt', aufgabe.abschnitt));
+    }
+    if (aufgabe.lerneinheit) {
+        lektionZelle.append(el('span', 'lektion-einheit', aufgabe.lerneinheit));
+    }
+    if (!aufgabe.abschnitt && !aufgabe.lerneinheit) {
+        lektionZelle.append(el('span', 'ohne-wert', '–'));
+    }
+
     const statusZelle = el('td');
     statusZelle.append(zustandsChip(aufgabe.zustand));
 
@@ -522,7 +542,7 @@ function aufgabenZeile(aufgabe) {
             : el('span', 'ohne-wert', '–')
     );
 
-    zeile.append(titelZelle, statusZelle, noteZelle);
+    zeile.append(titelZelle, lektionZelle, statusZelle, noteZelle);
     return zeile;
 }
 
