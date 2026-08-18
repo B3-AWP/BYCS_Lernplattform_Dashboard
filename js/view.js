@@ -390,15 +390,16 @@ function aufgabenListe(kurse) {
     const abschnitt = el('section', 'aufgaben');
     abschnitt.append(el('h2', 'abschnitt-titel', 'Pflichtaufgaben'));
 
-    const alle = kurse.flatMap(kurs => kurs.aufgaben);
-    if (alle.length === 0) return abschnitt;
+    // Kurse ohne Aufgaben bekommen keinen Abschnitt in der Tabelle.
+    const mitAufgaben = kurse.filter(kurs => kurs.aufgaben.length > 0);
+    if (mitAufgaben.length === 0) return abschnitt;
 
     const behaelter = el('div', 'tabelle-rahmen');
 
     // Nach einem Klick auf die Überschrift wird nur die Tabelle neu
     // gezeichnet — die Daten bleiben, nur die Reihenfolge ändert sich.
     const zeichneTabelle = () => {
-        behaelter.replaceChildren(aufgabenTabelle(alle, zeichneTabelle));
+        behaelter.replaceChildren(aufgabenTabelle(mitAufgaben, zeichneTabelle));
     };
     zeichneTabelle();
 
@@ -409,8 +410,13 @@ function aufgabenListe(kurse) {
 /**
  * Baut die Aufgabentabelle. Der Rückruf zeichnet sie nach einem
  * Klick auf eine Spaltenüberschrift neu.
+ *
+ * Je Kurs ein eigener tbody mit vorangestellter Zwischenzeile.
+ * Sortiert wird innerhalb eines Kurses, nicht über alle hinweg:
+ * Ein noch gesperrtes Halbjahr soll sich nicht zwischen die
+ * Aufgaben des laufenden mischen.
  */
-function aufgabenTabelle(aufgaben, neuZeichnen) {
+function aufgabenTabelle(kurse, neuZeichnen) {
     const tabelle = el('table', 'aufgaben-tabelle');
 
     const spalten = [
@@ -459,11 +465,51 @@ function aufgabenTabelle(aufgaben, neuZeichnen) {
     kopf.append(kopfzeile);
     tabelle.append(kopf);
 
-    const koerper = el('tbody');
-    sortiere(aufgaben).forEach(aufgabe => koerper.append(aufgabenZeile(aufgabe)));
-    tabelle.append(koerper);
+    kurse.forEach(kurs => {
+        const koerper = el('tbody', kurs.gesperrt ? 'gruppe-gesperrt' : '');
+        koerper.append(kursZwischenzeile(kurs, spalten.length));
+        sortiere(kurs.aufgaben).forEach(aufgabe => koerper.append(aufgabenZeile(aufgabe)));
+        tabelle.append(koerper);
+    });
 
     return tabelle;
+}
+
+/**
+ * Zwischenzeile, die einen Kursabschnitt der Tabelle einleitet.
+ *
+ * Bei gesperrten Kursen steht hier im Klartext, dass die Aufgaben
+ * noch nicht freigeschaltet sind. Die blasse Darstellung allein
+ * ließe offen, ob nichts abgegeben wurde oder nichts abgegeben
+ * werden konnte — das ist ein Unterschied, den die Zeile benennt.
+ */
+function kursZwischenzeile(kurs, spaltenAnzahl) {
+    const zeile = el('tr', 'kurs-zwischenzeile');
+    const zelle = el('th', 'kurs-zwischenzelle');
+    zelle.colSpan = spaltenAnzahl;
+    zelle.scope = 'colgroup';
+
+    zelle.append(el('span', 'kurs-name', kurs.titel));
+
+    if (kurs.gesperrt) {
+        zelle.append(el(
+            'span',
+            'kurs-sperre',
+            kurs.freischaltung
+                ? `Noch nicht freigeschaltet — ab ${formatDatum(kurs.freischaltung)}`
+                : 'Noch nicht freigeschaltet'
+        ));
+    }
+
+    zelle.append(el(
+        'span',
+        'kurs-umfang',
+        `${kurs.aufgaben.length} ${kurs.aufgaben.length === 1 ? 'Aufgabe' : 'Aufgaben'}`
+        + ` · ${formatStunden(kurs.stundenGeplant)} h`
+    ));
+
+    zeile.append(zelle);
+    return zeile;
 }
 
 /**

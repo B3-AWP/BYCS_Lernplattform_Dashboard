@@ -533,8 +533,58 @@ th[aria-sort] .sortpfeil {
     vertical-align: middle;
 }
 
-.aufgaben-tabelle tbody tr:last-child td {
+/* Nur die letzte Zeile der Tabelle, nicht die jedes Kursblocks —
+   sonst verschwände die Trennlinie vor jeder Zwischenzeile. */
+.aufgaben-tabelle tbody:last-child tr:last-child td {
     border-bottom: none;
+}
+
+/* Zwischenzeile je Kurs ------------------------------------- */
+
+.kurs-zwischenzelle {
+    padding: var(--a3) var(--a3) var(--a2);
+    text-align: left;
+    font-weight: 600;
+    background: var(--flaeche);
+    border-bottom: 1px solid var(--linie);
+}
+
+/* Der erste Kursblock grenzt schon an den Tabellenkopf. */
+.aufgaben-tabelle tbody + tbody .kurs-zwischenzelle {
+    border-top: 1px solid var(--linie);
+    padding-top: var(--a4);
+}
+
+.kurs-name {
+    font-size: .95rem;
+    letter-spacing: -.008em;
+    color: var(--tinte);
+}
+
+.kurs-umfang,
+.kurs-sperre {
+    margin-left: var(--a2);
+    font-size: .78rem;
+    font-weight: 500;
+}
+
+.kurs-umfang {
+    color: var(--tinte-3);
+}
+
+.kurs-sperre {
+    padding: .1em .5em;
+    border: 1px solid var(--bernstein);
+    border-radius: 999px;
+    background: var(--bernstein-zart);
+    color: var(--bernstein);
+    white-space: nowrap;
+}
+
+/* Gesperrte Kursblöcke insgesamt zurücknehmen — die Zwischenzeile
+   bleibt voll lesbar, sie trägt die Begründung. */
+.gruppe-gesperrt td {
+    opacity: .55;
 }
 
 .aufgaben-tabelle tbody tr:hover {
@@ -543,11 +593,6 @@ th[aria-sort] .sortpfeil {
 
 .aufgaben-tabelle td.rechts {
     text-align: right;
-}
-
-.zeile-gesperrt .aufgaben-link,
-.zeile-gesperrt .aufgabe-stunden {
-    opacity: .6;
 }
 
 /* Ebenfalls ohne flex — siehe .zelle-lektion. Der Abstand

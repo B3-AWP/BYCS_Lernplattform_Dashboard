@@ -104,6 +104,7 @@ Ist      = Σ geplante Stunden abgegebener Pflichtaufgaben / Σ Stunden gesamt
 Delta    = (Ist − Soll) × Σ Stunden gesamt        → in Stunden
 Qualität = Ø Bewertung, ungewichtet über bewertete Abgaben
 ```
+
 Das Soll bezieht sich auf den Kalender der eigenen Schiene, das Ist auf die
 Pflichtaufgaben. Zwischen zwei Blöcken bleibt das Soll konstant — es steigt
 nur, wenn eine Blockwoche beginnt.
@@ -140,6 +141,23 @@ Ersatzsignal: liegt eine vor, wurde abgegeben.
 Die Bestehensgrenze prüft Moodle in der Aktivität selbst. Das Dashboard
 unterscheidet nicht zwischen bestanden und nicht bestanden.
 
+## Aufgabentabelle
+
+Die Pflichtaufgaben stehen nach Kurs getrennt, jeder Abschnitt mit einer
+Zwischenzeile aus Kursname, Umfang und — falls zutreffend — dem Sperrhinweis:
+
+```
+1. Halbjahr            13 Aufgaben · 7,3 h
+2. Halbjahr   [Noch nicht freigeschaltet — ab 11. Januar 2027]   12 Aufgaben · 38 h
+```
+
+Die blasse Darstellung allein würde offenlassen, ob nichts abgegeben wurde
+oder nichts abgegeben werden **konnte**. Der Hinweis benennt den Unterschied;
+die Zwischenzeile bleibt dabei voll lesbar, weil sie die Begründung trägt.
+
+Sortiert wird innerhalb eines Kurses, nicht über alle hinweg — ein gesperrtes
+Halbjahr soll sich nicht zwischen die Aufgaben des laufenden mischen.
+
 ## Planungsdatei pflegen
 
 `plan.json` liegt im Hauptkurs neben dem Dashboard. Beim Laden wird sie
@@ -171,6 +189,10 @@ Der gesperrte Kurs wird mit `"gesperrt": true` geführt. Seine Aufgaben werden
 vollständig gepflegt, obwohl der Kurs noch nicht erreichbar ist — diese
 Stunden stehen von Tag eins im Nenner. Ein Statusabruf findet für ihn nicht
 statt.
+
+Das Datum unter `freischaltung` erscheint in der Aufgabentabelle. Fehlt es,
+steht dort nur, dass der Kurs noch gesperrt ist.
+
 Wie ein Kurs im Dashboard heißt, bestimmt `titel` — unabhängig davon, wie er
 in Moodle benannt ist. Die `id` daneben ist nur ein interner Schlüssel und
 taucht nirgends in der Anzeige auf.
@@ -192,6 +214,7 @@ Neben jedem Prozentwert steht die zugehörige Note. Der Schlüssel liegt in
 ```json
 { "note": 2, "name": "gut", "abProzent": 80, "farbe": "#28a745" }
 ```
+
 Es gilt die erste Stufe, deren Schwelle erreicht ist. Die unterste Stufe muss
 `"abProzent": 0` haben, sonst blieben niedrige Werte ohne Note — das meldet
 die Validierung beim Laden. Fehlt der Schlüssel ganz, zeigt das Dashboard nur
@@ -208,6 +231,7 @@ Moodle-Skala. Der Rohwert ist dann eine Stufennummer:
 ```html
 <td data-mdl-overview-value="2.00000">** Verbesserungsbedarf</td>
 ```
+
 Ohne Umrechnung erschiene Stufe 2 von 4 als „2 %" und damit als Note 6. Die
 Skala wird deshalb in `plan.json` hinterlegt und der Aufgabe zugewiesen:
 
@@ -227,6 +251,7 @@ Skala wird deshalb in `plan.json` hinterlegt und der Aufgabe zugewiesen:
 ```json
 { "cmid": "94824799", "skala": "sterne4", ... }
 ```
+
 `wert` ist die Stufennummer aus Moodle, `prozent` der Wert, über den Note und
 Qualität berechnet werden. In der Tabelle steht die Stufenbezeichnung; der
 Prozentwert erscheint im Mouseover.
@@ -258,6 +283,7 @@ Lokal starten:
 python -m http.server 8731
 # dann http://localhost:8731/?test&daten=gemischt öffnen
 ```
+
 Ohne `?test` ist der Probelauf vollständig aus: keine Leiste, keine
 Beispieldaten, kein verändertes Verhalten.
 Nützliche Stichtage:
