@@ -89,7 +89,7 @@ async function ladeUebersicht(kursId, typ) {
         // AJAX nachzuladen. Fehlt sie trotzdem, ist das ein Hinweis auf
         // ein geändertes Markup — und darf nicht als "nichts abgegeben"
         // durchgehen, denn das wäre eine falsche Aussage über den Stand.
-        if (eintraege.size === 0 && !dokument.querySelector(`#${typ}_overview`)) {
+        if (eintraege.size === 0 && !dokument.querySelector('table.course-overview-table')) {
             return {
                 eintraege,
                 fehler: `Übersicht für ${typ} nicht im Seiteninhalt gefunden`
@@ -118,11 +118,8 @@ async function ladeUebersicht(kursId, typ) {
  */
 export function parseUebersicht(dokument, typ) {
     const eintraege = new Map();
-    const zeilen = dokument.querySelectorAll(
-        `#${typ}_overview .course-overview-table tbody tr[data-mdl-overview-cmid]`
-    );
 
-    zeilen.forEach(zeile => {
+    zeilenFinden(dokument, typ).forEach(zeile => {
         const cmid = zeile.getAttribute('data-mdl-overview-cmid');
         if (!cmid) return;
 
@@ -135,6 +132,45 @@ export function parseUebersicht(dokument, typ) {
     });
 
     return eintraege;
+}
+
+/**
+ * Sucht die Statuszeilen einer Übersicht.
+ *
+ * Moodle klammert die Tabelle normalerweise in
+ * <div id="assign_overview"> bzw. <div id="quiz_overview">. Wird
+ * die Seite anders ausgeliefert — etwa nur der Tabellenausschnitt
+ * aus dem AJAX-Nachladen — fehlt diese Hülle. Deshalb zwei Wege:
+ * zuerst der genaue Pfad, sonst die Tabelle über ihre Beschriftung.
+ *
+ * @param {Document} dokument
+ * @param {'assign'|'quiz'} typ
+ * @returns {Element[]} Zeilen mit cmid
+ */
+function zeilenFinden(dokument, typ) {
+    const genau = Array.from(dokument.querySelectorAll(
+        `#${typ}_overview .course-overview-table tbody tr[data-mdl-overview-cmid]`
+    ));
+    if (genau.length > 0) return genau;
+
+    // Rückfall: Aufgaben- und Testtabelle unterscheiden sich durch
+    // die Spalte "submissionstatus", die nur Aufgaben haben.
+    const tabellen = Array.from(dokument.querySelectorAll('table.course-overview-table'));
+
+    for (const tabelle of tabellen) {
+        const hatAbgabespalte = Boolean(
+            tabelle.querySelector('[data-mdl-overview-column="submissionstatus"]')
+        );
+        const passt = typ === 'assign' ? hatAbgabespalte : !hatAbgabespalte;
+        if (!passt) continue;
+
+        const zeilen = Array.from(
+            tabelle.querySelectorAll('tbody tr[data-mdl-overview-cmid]')
+        );
+        if (zeilen.length > 0) return zeilen;
+    }
+
+    return [];
 }
 
 /**
