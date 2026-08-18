@@ -131,9 +131,15 @@ function leseBewertung(aufgabe, rohstatus) {
 /**
  * Parst einen Bewertungswert.
  *
- * Moodle liefert "-", einen leeren Wert oder eine Zahl in
- * deutscher Schreibweise ("82,64"). Werte wie "7,00/10,00"
- * werden auf den erreichten Teil reduziert.
+ * Moodle liefert je nach Bewertungsart Unterschiedliches:
+ *   "-" oder leer      — keine Bewertung
+ *   "82,64"            — Prozent- oder Punktwert, deutsch geschrieben
+ *   "1.234,50"         — mit Tausenderpunkt
+ *   "7,00/10,00"       — erreicht von möglich
+ *   "1.00000"          — Stufennummer einer Skala, englisch geschrieben
+ *
+ * Bei "7,00/10,00" zählt der erreichte Teil; die Umrechnung auf
+ * Prozent leistet diese Funktion nicht.
  *
  * @param {string|null} text
  * @returns {number|null}
@@ -145,8 +151,16 @@ export function parseBewertung(text) {
     if (bereinigt === '' || bereinigt === '-') return null;
 
     const ersterTeil = bereinigt.split('/')[0].trim();
-    const zahl = parseFloat(ersterTeil.replace(',', '.'));
 
+    // Enthält der Wert ein Komma, ist es das Dezimaltrennzeichen und
+    // Punkte sind Tausendertrenner ("1.234,50"). Ohne Komma ist ein
+    // Punkt das Dezimaltrennzeichen — so liefert Moodle Skalenwerte
+    // ("1.00000").
+    const normalisiert = ersterTeil.includes(',')
+        ? ersterTeil.replace(/\./g, '').replace(',', '.')
+        : ersterTeil;
+
+    const zahl = parseFloat(normalisiert);
     return Number.isFinite(zahl) ? zahl : null;
 }
 

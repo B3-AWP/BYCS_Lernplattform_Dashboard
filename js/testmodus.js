@@ -110,9 +110,11 @@ export function baueBeispielStatus(plan, muster) {
  * damit die echten Regeln aus status.js durchlaufen werden.
  */
 function baueEintrag(aufgabe, zustand, index) {
-    // Note zwischen 60 und 95, reproduzierbar statt zufaellig
-    const note = 60 + ((index * 37) % 36);
-    const alsText = note.toLocaleString('de-DE', { minimumFractionDigits: 2 });
+    // Aufgaben mit Skala liefern eine Stufennummer, keinen Prozentwert —
+    // sonst bliebe dieser Fall im Probelauf ungetestet.
+    const alsText = aufgabe.skala
+        ? `${aufgabe.skala.stufen[index % aufgabe.skala.stufen.length].wert}.00000`
+        : (60 + ((index * 37) % 36)).toLocaleString('de-DE', { minimumFractionDigits: 2 });
 
     if (aufgabe.typ === 'quiz') {
         // Tests kennen nur zwei Zustaende

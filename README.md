@@ -89,10 +89,15 @@ der Konfiguration der einzelnen Aufgabe abhängig.
 
 | Abgabestatus | Bewertung | Zustand | zählt |
 |---|---|---|---|
-| Keine Abgabe | – | Nicht begonnen | nein |
-| Entwurf (nicht abgegeben) | – | Entwurf | nein |
+| Keine Abgabe | `-` | Nicht begonnen | nein |
+| Entwurf (nicht abgegeben) | `-` | Entwurf | nein |
 | Zur Bewertung abgegeben | `-` | Abgegeben | ja |
-| Zur Bewertung abgegeben | Wert | Bewertet | ja |
+| beliebig | Wert | Bewertet | ja |
+
+**Eine Bewertung schlägt den Abgabestatus.** Lehrkräfte bewerten auch ohne
+digitale Abgabe — nach einem Gespräch oder für etwas auf Papier. In Moodle
+steht dann „Keine Abgabe" neben einer echten Note. Diese Bewertung zählt und
+wird angezeigt.
 
 **Tests** (`quiz`) — ihre Übersichtstabelle hat keine Abgabespalte. Da alle
 Pflicht-Tests automatisch bewertet werden, dient die Bewertung als
@@ -169,6 +174,42 @@ Prozentwerte und rechnet unverändert weiter.
 Die Note richtet sich nach dem **angezeigten**, also gerundeten Prozentwert.
 Sonst stünde bei 65,71 % die Anzeige „66 %" neben einer Note 4, obwohl der
 Schlüssel ab 66 die Note 3 vorsieht.
+
+## Skalenbewertungen
+
+Manche Aufgaben werden nicht in Prozent bewertet, sondern über eine
+Moodle-Skala. Der Rohwert ist dann eine Stufennummer:
+
+```html
+<td data-mdl-overview-value="2.00000">** Verbesserungsbedarf</td>
+```
+
+Ohne Umrechnung erschiene Stufe 2 von 4 als „2 %" und damit als Note 6. Die
+Skala wird deshalb in `plan.json` hinterlegt und der Aufgabe zugewiesen:
+
+```json
+"skalen": {
+  "sterne4": {
+    "stufen": [
+      { "wert": 1, "name": "Nicht akzeptabel",    "prozent": 25 },
+      { "wert": 2, "name": "Verbesserungsbedarf", "prozent": 50 },
+      { "wert": 3, "name": "Gut",                 "prozent": 75 },
+      { "wert": 4, "name": "Exzellent",           "prozent": 100 }
+    ]
+  }
+}
+```
+
+```json
+{ "cmid": "94824799", "skala": "sterne4", ... }
+```
+
+`wert` ist die Stufennummer aus Moodle, `prozent` der Wert, über den Note und
+Qualität berechnet werden. In der Tabelle steht die Stufenbezeichnung; der
+Prozentwert erscheint im Mouseover.
+
+Aufgaben ohne `skala` werden weiterhin als Prozentwert gelesen. Verweist eine
+Aufgabe auf eine nicht definierte Skala, meldet die Validierung das beim Laden.
 
 ## Probelauf
 

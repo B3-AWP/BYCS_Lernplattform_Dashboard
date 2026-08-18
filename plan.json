@@ -7,9 +7,9 @@
     "sterne4": {
       "titel": "Bewertungsskala",
       "stufen": [
-        { "wert": 1, "name": "Nicht akzeptabel",  "prozent": 25 },
-        { "wert": 2, "name": "Verbesserungsbedarf", "prozent": 50 },
-        { "wert": 3, "name": "Gut",               "prozent": 75 },
+        { "wert": 1, "name": "Nicht akzeptabel",  "prozent": 20 },
+        { "wert": 2, "name": "Verbesserungsbedarf", "prozent": 75 },
+        { "wert": 3, "name": "Solide Umsetzung",  "prozent": 90 },
         { "wert": 4, "name": "Exzellent",         "prozent": 100 }
       ]
     }
@@ -76,13 +76,6 @@
           "titel": "Situation Mitarbeiterverwaltung",
           "lektion": "OOP- Pflichtaufgabe: Von der Idee zum Objekt",
           "stunden": 2.5
-        },
-        {
-          "cmid": "94822693",
-          "typ": "quiz",
-          "titel": "Test OOP Grundlagen",
-          "lektion": "OOP- Pflichtaufgabe: Von der Idee zum Objekt",
-          "stunden": 0.5
         },
         {
           "cmid": "95572024",
@@ -155,6 +148,21 @@
           "titel": "Quiz JavaScript Async",
           "lektion": "JavaScript- Sprint 5 Async",
           "stunden": 0.33
+        },
+        {
+          "cmid": "94800925",
+          "typ": "quiz",
+          "titel": "Quiz UML Grundlagen",
+          "lektion": "UML- Übersicht",
+          "stunden": 0.17
+        },
+        {
+          "cmid": "91838731",
+          "skala": "sterne4",
+          "typ": "assign",
+          "titel": "SD Kontobewegung",
+          "lektion": "UML- Sequenzdiagramm",
+          "stunden": 1
         }
       ]
     },
