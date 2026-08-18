@@ -52,9 +52,9 @@
 
   "kurse": [
     {
-      "id": "oop-frontend",
+      "id": "halbjahr-1",
       "moodleCourseId": "2491549",
-      "titel": "OOP und Frontend",
+      "titel": "1. Halbjahr",
       "gesperrt": false,
       "aufgaben": [
         {
@@ -144,16 +144,16 @@
       ]
     },
     {
-      "id": "backend-db",
+      "id": "halbjahr-2",
       "moodleCourseId": "2491870",
-      "titel": "Backend und Datenbanken",
+      "titel": "2. Halbjahr",
       "gesperrt": true,
       "freischaltung": "2027-01-11",
       "aufgaben": [
         {
           "cmid": "900000001",
           "typ": "assign",
-          "titel": "Platzhalter — Pflichtaufgabe Kurs 2",
+          "titel": "Platzhalter — Pflichtaufgabe 2. Halbjahr",
           "bereich": "Noch zu pflegen",
           "stunden": 8
         }

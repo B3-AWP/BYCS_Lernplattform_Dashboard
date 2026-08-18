@@ -1,7 +1,7 @@
 # Stundenbilanz
 
 Dashboard für Lernende auf der BYCS-Lernplattform. Es zeigt den eigenen Stand
-über alle Kursteile eines Schuljahres: geplante Stunden gegen verstrichene
+über alle Abschnitte eines Schuljahres: geplante Stunden gegen verstrichene
 Schulwochen, ausgewiesen als Rückstand oder Vorsprung in Stunden.
 
 Kein Lehrkraft- oder Klassenblick, keine Fremddaten.
@@ -70,7 +70,7 @@ Pflichtaufgaben. Zwischen zwei Blöcken bleibt das Soll konstant — es steigt
 nur, wenn eine Blockwoche beginnt.
 
 Bezugsgröße des Ist ist immer das gesamte Schuljahr einschließlich noch
-gesperrter Kursteile. Dadurch bleibt der Nenner beim Freischalten konstant —
+gesperrter Abschnitte. Dadurch bleibt der Nenner beim Freischalten konstant —
 es kommt kein Nenner hinzu, es wandern nur Aufgaben von „nicht begonnen" nach
 „abgegeben".
 
@@ -122,6 +122,10 @@ Der gesperrte Kurs wird mit `"gesperrt": true` geführt. Seine Aufgaben werden
 vollständig gepflegt, obwohl der Kurs noch nicht erreichbar ist — diese
 Stunden stehen von Tag eins im Nenner. Ein Statusabruf findet für ihn nicht
 statt.
+
+Wie ein Kurs im Dashboard heißt, bestimmt `titel` — unabhängig davon, wie er
+in Moodle benannt ist. Die `id` daneben ist nur ein interner Schlüssel und
+taucht nirgends in der Anzeige auf.
 
 ## Betrieb
 
@@ -194,5 +198,5 @@ Nützliche Stichtage:
 
 | Kurs | ID | Stand |
 |---|---|---|
-| OOP und Frontend | 2491549 | offen |
-| Backend und Datenbanken | 2491870 | gesperrt |
+| 1. Halbjahr | 2491549 | offen |
+| 2. Halbjahr | 2491870 | gesperrt |

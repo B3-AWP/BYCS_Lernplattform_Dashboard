@@ -194,9 +194,9 @@ function kopfzeile(bilanz) {
         ),
 
         el('p', 'hinweis',
-            'Beide Werte beziehen sich auf das ganze Schuljahr, auch auf Kursteile, ' +
+            'Beide Werte beziehen sich auf das ganze Schuljahr, auch auf Abschnitte, ' +
             'die noch gesperrt sind. Dadurch springt die Anzeige nicht, sobald ein ' +
-            'Kursteil freigeschaltet wird.'
+            'Abschnitt freigeschaltet wird.'
         ),
 
         qualitaetsKarte(bilanz.qualitaet)
