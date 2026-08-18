@@ -143,6 +143,54 @@ main {
     text-align: center;
 }
 
+/* ---------- Schienenauswahl ---------- */
+
+.auswahl {
+    padding: var(--a4);
+    background: var(--flaeche);
+    border: 1px solid var(--linie);
+    border-radius: 6px;
+    box-shadow: var(--schatten);
+}
+
+.auswahl-titel {
+    margin: 0 0 var(--a2);
+    font-size: 1.15rem;
+    letter-spacing: -.01em;
+}
+
+.auswahl-text {
+    margin: 0 0 var(--a3);
+    font-size: .9rem;
+    color: var(--tinte-2);
+    text-wrap: pretty;
+}
+
+.auswahl-knoepfe {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--a2);
+}
+
+.knopf-auswahl {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--a1);
+    padding: var(--a3);
+    text-align: left;
+}
+
+.auswahl-name {
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.auswahl-wochen {
+    font-size: .8rem;
+    color: var(--tinte-3);
+}
+
 /* ---------- Bilanz ---------- */
 
 .bilanz {

@@ -2,11 +2,11 @@
 // plan.js — Laden und Validieren der Planungsdatei
 //
 // Einzige Quelle der Planung: Kurse, Pflichtaufgaben, geplante
-// Stunden, Schulwochenkalender. Kennt keinen Status und ruft
-// Moodle nicht auf.
+// Stunden, Schulwochenkalender je Schiene. Kennt keinen Status
+// und ruft Moodle nicht auf.
 // ============================================================
 
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2;
 const AUFGABEN_TYPEN = ['assign', 'quiz'];
 
 /**
@@ -68,7 +68,10 @@ export function pruefePlan(rohdaten) {
         );
     }
 
-    const schulwochen = pruefeSchulwochen(rohdaten.schulwochen, fehler);
+    const schienen = pruefeSchienen(rohdaten.schienen, fehler);
+    const klassenZuSchiene = pruefeKlassenzuordnung(
+        rohdaten.klassenZuSchiene, schienen, fehler
+    );
     const kurse = pruefeKurse(rohdaten.kurse, fehler);
 
     if (fehler.length > 0) {
@@ -76,40 +79,86 @@ export function pruefePlan(rohdaten) {
     }
 
     const stundenGesamt = kurse.reduce((summe, kurs) => summe + kurs.stundenGeplant, 0);
-    const wochenstundenGesamt = schulwochen.reduce((summe, woche) => summe + woche.stunden, 0);
 
     if (stundenGesamt <= 0) {
         throw new PlanFehler(['Die Summe der geplanten Stunden ist 0 — es gäbe nichts zu messen.']);
-    }
-    if (wochenstundenGesamt <= 0) {
-        throw new PlanFehler(['Die Summe der Wochenstunden ist 0 — Soll wäre nicht berechenbar.']);
     }
 
     return {
         schemaVersion: rohdaten.schemaVersion,
         schuljahr: rohdaten.schuljahr ?? null,
         stand: rohdaten.stand ?? null,
-        schulwochen,
+        schienen,
+        klassenZuSchiene,
         kurse,
         stundenGesamt,
-        wochenstundenGesamt,
         aufgaben: kurse.flatMap(kurs => kurs.aufgaben)
     };
 }
 
 /**
- * Prüft den Schulwochenkalender.
+ * Prüft die Schienen mit ihren Schulwochenkalendern.
+ *
+ * Jede Schiene hat einen eigenen Kalender: Anzahl der Blockwochen und
+ * Stunden je Woche unterscheiden sich zwischen den Schienen.
  */
-function pruefeSchulwochen(schulwochen, fehler) {
+function pruefeSchienen(schienen, fehler) {
+    if (!schienen || typeof schienen !== 'object' || Array.isArray(schienen)) {
+        fehler.push('schienen fehlt oder ist kein Objekt.');
+        return {};
+    }
+
+    const namen = Object.keys(schienen);
+    if (namen.length === 0) {
+        fehler.push('schienen enthält keine Einträge.');
+        return {};
+    }
+
+    const geprueft = {};
+
+    namen.forEach(name => {
+        const schiene = schienen[name];
+        const so = `schienen.${name}`;
+
+        if (!schiene || typeof schiene !== 'object') {
+            fehler.push(`${so} ist kein Objekt.`);
+            return;
+        }
+
+        const schulwochen = pruefeSchulwochen(schiene.schulwochen, so, fehler);
+        const wochenstundenGesamt = schulwochen.reduce((summe, w) => summe + (w.stunden || 0), 0);
+
+        if (schulwochen.length > 0 && wochenstundenGesamt <= 0) {
+            fehler.push(`${so}: Die Summe der Wochenstunden ist 0 — Soll wäre nicht berechenbar.`);
+        }
+
+        geprueft[name] = {
+            name,
+            titel: typeof schiene.titel === 'string' && schiene.titel.trim() !== ''
+                ? schiene.titel
+                : name,
+            schulwochen,
+            wochenGesamt: schulwochen.length,
+            wochenstundenGesamt
+        };
+    });
+
+    return geprueft;
+}
+
+/**
+ * Prüft einen Schulwochenkalender.
+ */
+function pruefeSchulwochen(schulwochen, pfad, fehler) {
     if (!Array.isArray(schulwochen) || schulwochen.length === 0) {
-        fehler.push('schulwochen fehlt oder ist leer.');
+        fehler.push(`${pfad}.schulwochen fehlt oder ist leer.`);
         return [];
     }
 
     const gesehen = new Set();
 
     const geprueft = schulwochen.map((woche, index) => {
-        const wo = `schulwochen[${index}]`;
+        const wo = `${pfad}.schulwochen[${index}]`;
 
         if (!Number.isInteger(woche?.woche) || woche.woche < 1) {
             fehler.push(`${wo}.woche muss eine ganze Zahl ab 1 sein.`);
@@ -119,22 +168,48 @@ function pruefeSchulwochen(schulwochen, fehler) {
             gesehen.add(woche.woche);
         }
 
-        if (typeof woche?.start !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(woche.start)) {
+        if (!istDatum(woche?.start)) {
             fehler.push(`${wo}.start fehlt oder ist kein Datum im Format JJJJ-MM-TT.`);
+        }
+        if (woche?.ende !== undefined && !istDatum(woche.ende)) {
+            fehler.push(`${wo}.ende ist kein Datum im Format JJJJ-MM-TT.`);
         }
 
         if (typeof woche?.stunden !== 'number' || !Number.isFinite(woche.stunden) || woche.stunden < 0) {
-            fehler.push(`${wo}.stunden muss eine Zahl ab 0 sein (Ferienwochen: 0).`);
+            fehler.push(`${wo}.stunden muss eine Zahl ab 0 sein.`);
         }
 
         return {
             woche: woche?.woche,
             start: woche?.start,
+            ende: woche?.ende ?? null,
             stunden: woche?.stunden
         };
     });
 
     return geprueft.sort((a, b) => a.woche - b.woche);
+}
+
+/**
+ * Prüft die Zuordnung Klasse → Schiene.
+ * Jede genannte Schiene muss auch definiert sein.
+ */
+function pruefeKlassenzuordnung(zuordnung, schienen, fehler) {
+    if (!zuordnung || typeof zuordnung !== 'object' || Array.isArray(zuordnung)) {
+        fehler.push('klassenZuSchiene fehlt oder ist kein Objekt.');
+        return {};
+    }
+
+    Object.entries(zuordnung).forEach(([klasse, schiene]) => {
+        if (typeof schiene !== 'string' || !(schiene in schienen)) {
+            fehler.push(
+                `klassenZuSchiene.${klasse} verweist auf "${schiene}", ` +
+                `was unter schienen nicht definiert ist.`
+            );
+        }
+    });
+
+    return { ...zuordnung };
 }
 
 /**
@@ -218,4 +293,8 @@ function pruefeKurse(kurse, fehler) {
             )
         };
     });
+}
+
+function istDatum(wert) {
+    return typeof wert === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(wert);
 }

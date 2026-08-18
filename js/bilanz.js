@@ -5,6 +5,9 @@
 // ohne Netzwerk. Bezugsgröße ist immer das gesamte Schuljahr
 // einschließlich des gesperrten Kurses, damit der Nenner beim
 // Freischalten konstant bleibt.
+//
+// Das Soll hängt an der Schiene: Anzahl und Termine der
+// Blockwochen unterscheiden sich je Schiene.
 // ============================================================
 
 import { zaehltFuerFortschritt, ZUSTAND } from './status.js';
@@ -12,12 +15,13 @@ import { zaehltFuerFortschritt, ZUSTAND } from './status.js';
 /**
  * Ermittelt die laufende Schulwoche zu einem Datum.
  *
- * Vor Beginn des Schuljahres: 0. Nach der letzten Woche: die
- * letzte Woche. Innerhalb: die letzte Woche, deren Start erreicht ist.
+ * Blockwochen liegen weit auseinander. Zwischen zwei Blöcken gilt
+ * der Stand des zuletzt abgeschlossenen Blocks; innerhalb eines
+ * Blocks zählt dieser bereits mit.
  *
  * @param {Object[]} schulwochen - aufsteigend sortierter Kalender
  * @param {Date} [heute]
- * @returns {number} Wochennummer, 0 wenn das Jahr noch nicht begonnen hat
+ * @returns {number} Wochennummer, 0 vor Beginn der ersten Blockwoche
  */
 export function aktuelleWoche(schulwochen, heute = new Date()) {
     const stichtag = datumOhneZeit(heute);
@@ -55,16 +59,23 @@ export function sollAnteil(schulwochen, woche) {
 }
 
 /**
- * Berechnet die vollständige Bilanz.
+ * Berechnet die vollständige Bilanz für eine Schiene.
  *
  * @param {Object} plan - validierter Plan
  * @param {Object[]} aufgaben - ausgewertete Aufgaben aus status.verbinde
+ * @param {string} schienenName - Schiene der lernenden Person
  * @param {Date} [heute]
  * @returns {Object} Bilanz mit Soll, Ist, Delta, Qualität und Kursaufstellung
+ * @throws {Error} wenn die Schiene im Plan nicht existiert
  */
-export function berechneBilanz(plan, aufgaben, heute = new Date()) {
-    const woche = aktuelleWoche(plan.schulwochen, heute);
-    const soll = sollAnteil(plan.schulwochen, woche);
+export function berechneBilanz(plan, aufgaben, schienenName, heute = new Date()) {
+    const schiene = plan.schienen[schienenName];
+    if (!schiene) {
+        throw new Error(`Schiene "${schienenName}" ist im Plan nicht definiert.`);
+    }
+
+    const woche = aktuelleWoche(schiene.schulwochen, heute);
+    const soll = sollAnteil(schiene.schulwochen, woche);
 
     const stundenGesamt = plan.stundenGesamt;
     const stundenAbgegeben = aufgaben
@@ -77,8 +88,10 @@ export function berechneBilanz(plan, aufgaben, heute = new Date()) {
     const deltaStunden = (ist - soll) * stundenGesamt;
 
     return {
+        schiene: schienenName,
+        schienenTitel: schiene.titel,
         woche,
-        wochenGesamt: plan.schulwochen.length,
+        wochenGesamt: schiene.wochenGesamt,
         soll,
         ist,
         deltaStunden,

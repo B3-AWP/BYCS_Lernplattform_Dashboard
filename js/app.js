@@ -8,20 +8,26 @@
 
 import { ladePlan, PlanFehler } from './plan.js';
 import { ladeAllenStatus } from './moodle.js';
+import { ermittleSchiene, merkeSchiene } from './schiene.js';
 import { verbinde } from './status.js';
 import { berechneBilanz } from './bilanz.js';
-import { zeichne, zeigeLaden, zeigeFehler, zeigeWarnung } from './view.js';
+import { zeichne, zeigeLaden, zeigeFehler, zeigeWarnung, zeigeSchienenAuswahl } from './view.js';
+
+// Hauptkurs, in dem das Dashboard und plan.json liegen. Aus ihm
+// wird die Klasse und damit die Schiene erkannt.
+const HAUPTKURS_ID = '2491549';
 
 const wurzel = document.getElementById('dashboard');
 const aktualisierenKnopf = document.getElementById('aktualisieren');
 
-// Der Plan ändert sich während einer Sitzung nicht und wird
-// einmal gehalten; der Status wird bei jeder Aktualisierung neu geholt.
+// Plan und Schiene ändern sich während einer Sitzung nicht und
+// werden gehalten; der Status wird bei jeder Aktualisierung neu geholt.
 let plan = null;
+let schiene = null;
 let laueft = false;
 
 /**
- * Lädt Plan und Status und zeichnet das Dashboard.
+ * Lädt Plan, Schiene und Status und zeichnet das Dashboard.
  */
 async function starte() {
     if (laueft) return;
@@ -34,11 +40,25 @@ async function starte() {
             plan = await ladePlan();
         }
 
+        if (!schiene) {
+            zeigeLaden(wurzel, 'Erkenne Klasse …');
+            const ergebnis = await ermittleSchiene(plan, HAUPTKURS_ID);
+
+            // Ohne Schiene lässt sich kein Soll berechnen — hier wird
+            // gefragt statt geraten.
+            if (!ergebnis.schiene) {
+                zeigeSchienenAuswahl(wurzel, plan.schienen, waehleSchiene);
+                return;
+            }
+
+            schiene = ergebnis.schiene;
+        }
+
         zeigeLaden(wurzel, 'Lade Stand aus der Lernplattform …');
         const { status, fehler } = await ladeAllenStatus(plan.kurse);
 
         const aufgaben = verbinde(plan, status);
-        const bilanz = berechneBilanz(plan, aufgaben);
+        const bilanz = berechneBilanz(plan, aufgaben, schiene);
 
         zeichne(wurzel, bilanz);
 
@@ -70,6 +90,15 @@ async function starte() {
         laueft = false;
         setzeKnopfZustand(false);
     }
+}
+
+/**
+ * Übernimmt die manuell gewählte Schiene und lädt weiter.
+ */
+function waehleSchiene(gewaehlt) {
+    schiene = gewaehlt;
+    merkeSchiene(gewaehlt);
+    starte();
 }
 
 function setzeKnopfZustand(aktiv) {

@@ -11,9 +11,10 @@ Kein Lehrkraft- oder Klassenblick, keine Fremddaten.
 ```
 index.html      Gerüst
 style.css       Darstellung
-plan.json       Planung — Kurse, Pflichtaufgaben, Stunden, Schulwochen
+plan.json       Planung — Schienen, Kurse, Pflichtaufgaben, Stunden
 js/plan.js      Laden und Validieren der Planung
 js/moodle.js    Statusabruf aus den Kursübersichten
+js/schiene.js   Klassenerkennung und Schienenwahl
 js/status.js    Zustandsregeln für assign und quiz
 js/bilanz.js    Soll, Ist, Delta, Qualität
 js/view.js      Darstellung des berechneten Modells
@@ -29,26 +30,48 @@ Die Trennung ist strikt:
 
 | Quelle | Liefert | Liefert nicht |
 |---|---|---|
-| `plan.json` | Kurse, Pflichtaufgaben, geplante Stunden, Anzeigenamen, Schulwochenkalender | keinen Status |
-| Moodle | Abgabestatus und Bewertung je Aufgabe | keine Planung |
+| `plan.json` | Schienen mit Blockwochen, Klassenzuordnung, Kurse, Pflichtaufgaben, geplante Stunden, Anzeigenamen | keinen Status |
+| Moodle | Abgabestatus und Bewertung je Aufgabe, Klasse aus den Kurs-Tabs | keine Planung |
 
 Aufgabennamen in Moodle tragen zwar Stundenangaben, aber uneinheitlich
 (`8h`, `2 Std`, `20 Min`) und teils mehrfach identisch. Auch die
 Pflicht-Kennzeichnung ist dort unzuverlässig. Beides kommt deshalb aus
 `plan.json`, referenziert über `cmid`.
 
+## Schienen
+
+Der Unterricht findet in Blockwochen statt, deren Anzahl und Termine sich je
+Schiene unterscheiden. Die Schiene ergibt sich aus der Klasse:
+
+| Klasse | Schiene |
+|---|---|
+| IFA12A, IFA12C | Schiene 1 |
+| IFA12B, IFA12D | Schiene 3 |
+
+Die Klasse wird aus den Tabs des Hauptkurses gelesen (`a.nav-link[title]`).
+Schlägt das fehl, wählt die lernende Person die Schiene selbst; die Wahl gilt
+für die Sitzung.
+
+Das ist keine Kosmetik: Am selben Tag kann Schiene 1 in Blockwoche 2 stehen
+und Schiene 3 bereits in Blockwoche 3 — bei gleichem Stand ergibt sich damit
+ein anderes Soll und ein anderes Delta.
+
 ## Rechnung
 
 ```
-Soll(w)  = Σ Stunden Schulwoche 1..w / Σ Stunden gesamt
+Soll(w)  = Σ Stunden Blockwoche 1..w / Σ Stunden der Schiene
 Ist      = Σ geplante Stunden abgegebener Pflichtaufgaben / Σ Stunden gesamt
 Delta    = (Ist − Soll) × Σ Stunden gesamt        → in Stunden
 Qualität = Ø Bewertung, ungewichtet über bewertete Abgaben
 ```
 
-Bezugsgröße ist immer das gesamte Schuljahr einschließlich noch gesperrter
-Kursteile. Dadurch bleibt der Nenner beim Freischalten konstant — es kommt
-kein Nenner hinzu, es wandern nur Aufgaben von „nicht begonnen" nach
+Das Soll bezieht sich auf den Kalender der eigenen Schiene, das Ist auf die
+Pflichtaufgaben. Zwischen zwei Blöcken bleibt das Soll konstant — es steigt
+nur, wenn eine Blockwoche beginnt.
+
+Bezugsgröße des Ist ist immer das gesamte Schuljahr einschließlich noch
+gesperrter Kursteile. Dadurch bleibt der Nenner beim Freischalten konstant —
+es kommt kein Nenner hinzu, es wandern nur Aufgaben von „nicht begonnen" nach
 „abgegeben".
 
 Der Fortschritt ist mit geplanter, nicht mit tatsächlich aufgewendeter Zeit
@@ -88,7 +111,12 @@ Die `cmid` einer Aktivität steht in ihrer URL:
 `.../mod/assign/view.php?id=94824799` → `"cmid": "94824799"`.
 
 Stunden sind Dezimalzahlen: `0.33` für 20 Minuten, `2.5` für zweieinhalb
-Stunden. Ferienwochen bleiben mit `"stunden": 0` im Kalender.
+Stunden. Das gilt für Aufgaben wie für Blockwochen — eine verkürzte
+Blockwoche bekommt entsprechend weniger Stunden als eine volle.
+
+Neue Schienen und Klassen werden unter `schienen` und `klassenZuSchiene`
+ergänzt. Verweist eine Klasse auf eine nicht definierte Schiene, meldet die
+Validierung das beim Laden.
 
 Der gesperrte Kurs wird mit `"gesperrt": true` geführt. Seine Aufgaben werden
 vollständig gepflegt, obwohl der Kurs noch nicht erreichbar ist — diese

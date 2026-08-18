@@ -24,6 +24,45 @@ export function zeichne(wurzel, bilanz) {
     );
 }
 
+/**
+ * Fragt die Schiene ab, wenn sie sich nicht aus der Klasse ergibt.
+ *
+ * @param {HTMLElement} wurzel - Zielelement
+ * @param {Object} schienen - Schienen aus dem Plan
+ * @param {(schiene: string) => void} beiAuswahl
+ */
+export function zeigeSchienenAuswahl(wurzel, schienen, beiAuswahl) {
+    const block = el('section', 'auswahl');
+
+    block.append(
+        el('h2', 'auswahl-titel', 'Welche Schiene besuchst du?'),
+        el('p', 'auswahl-text',
+            'Deine Klasse konnte nicht automatisch erkannt werden. Die Schiene ' +
+            'bestimmt, welche Blockwochen für deinen Zeitplan gelten.'
+        )
+    );
+
+    const knoepfe = el('div', 'auswahl-knoepfe');
+
+    Object.values(schienen).forEach(schiene => {
+        const knopf = document.createElement('button');
+        knopf.type = 'button';
+        knopf.className = 'knopf knopf-auswahl';
+        knopf.addEventListener('click', () => beiAuswahl(schiene.name));
+
+        knopf.append(
+            el('span', 'auswahl-name', schiene.titel),
+            el('span', 'auswahl-wochen',
+                `${schiene.wochenGesamt} Blockwochen · ab ${formatDatum(schiene.schulwochen[0]?.start)}`)
+        );
+
+        knoepfe.append(knopf);
+    });
+
+    block.append(knoepfe);
+    wurzel.replaceChildren(block);
+}
+
 // ------------------------------------------------------------
 // Kopfzeile — Soll/Ist-Vergleich und Delta in Stunden
 // ------------------------------------------------------------
@@ -39,8 +78,8 @@ function kopfzeile(bilanz) {
     abschnitt.append(
         el('p', 'bilanz-woche',
             bilanz.woche === 0
-                ? 'Das Schuljahr hat noch nicht begonnen'
-                : `Schulwoche ${bilanz.woche} von ${bilanz.wochenGesamt}`
+                ? `${bilanz.schienenTitel} · Der Unterricht hat noch nicht begonnen`
+                : `${bilanz.schienenTitel} · Blockwoche ${bilanz.woche} von ${bilanz.wochenGesamt}`
         ),
 
         el('p', `delta ${vorsprung ? 'delta-vor' : 'delta-zurueck'}`,
