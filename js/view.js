@@ -171,19 +171,54 @@ function kopfzeile(bilanz) {
                 : `${formatStunden(betrag)} Stunden ${vorsprung ? 'Vorsprung' : 'Rückstand'}`
         ),
 
-        balken('Soll', bilanz.soll, bilanz.stundenSoll, skala, 'soll'),
-        balken('Ist', bilanz.ist, bilanz.stundenAbgegeben, skala, 'ist'),
+        balken(
+            'Bis jetzt eingeplant', bilanz.soll, bilanz.stundenSoll, skala, 'soll',
+            'So viele Unterrichtsstunden sind in deiner Schiene bisher vergangen — ' +
+            'gemessen an den Blockwochen im Schuljahr. Dieser Wert steigt nur, ' +
+            'wenn eine neue Blockwoche beginnt, und sagt nichts darüber aus, ' +
+            'was du getan hast.'
+        ),
+        balken(
+            'Davon abgegeben', bilanz.ist, bilanz.stundenAbgegeben, skala, 'ist',
+            'So viele der eingeplanten Stunden entfallen auf Pflichtaufgaben, ' +
+            'die du bereits abgegeben hast. Gezählt wird die für eine Aufgabe ' +
+            'eingeplante Zeit, nicht die, die du wirklich gebraucht hast. ' +
+            'Ob eine Abgabe schon bewertet wurde, spielt keine Rolle.'
+        ),
 
         el('p', 'hinweis',
-            'Gewichtet mit geplanter, nicht mit tatsächlich aufgewendeter Zeit. ' +
-            'Bezugsgröße ist das gesamte Schuljahr einschließlich noch nicht ' +
-            'freigeschalteter Kursteile.'
+            'Beide Werte beziehen sich auf das ganze Schuljahr, auch auf Kursteile, ' +
+            'die noch gesperrt sind. Dadurch springt die Anzeige nicht, sobald ein ' +
+            'Kursteil freigeschaltet wird.'
         ),
 
         qualitaetsKarte(bilanz.qualitaet)
     );
 
     return abschnitt;
+}
+
+/**
+ * Fragezeichen mit Erklärung bei Mouseover und Tastaturfokus.
+ *
+ * Als <button> statt <span>, damit die Erklärung auch ohne Maus
+ * erreichbar ist; title dient zusätzlich als Rückfall.
+ *
+ * @param {string} text - die Erklärung
+ * @returns {HTMLElement}
+ */
+function hilfe(text) {
+    const behaelter = el('span', 'hilfe');
+
+    const knopf = document.createElement('button');
+    knopf.type = 'button';
+    knopf.className = 'hilfe-zeichen';
+    knopf.textContent = '?';
+    knopf.title = text;
+    knopf.setAttribute('aria-label', `Erklärung: ${text}`);
+
+    behaelter.append(knopf, el('span', 'hilfe-text', text));
+    return behaelter;
 }
 
 /**
@@ -204,12 +239,16 @@ function wochenText(bilanz) {
         : `${bilanz.schienenTitel} · nach ${stand}`;
 }
 
-function balken(beschriftung, anteil, stunden, skala, art) {
+function balken(beschriftung, anteil, stunden, skala, art, erklaerung) {
     const zeile = el('div', 'balken-zeile');
+
+    const name = el('span', 'balken-name');
+    name.append(document.createTextNode(beschriftung));
+    if (erklaerung) name.append(hilfe(erklaerung));
 
     const kopf = el('div', 'balken-kopf');
     kopf.append(
-        el('span', 'balken-name', beschriftung),
+        name,
         el('span', 'balken-wert',
             `${formatStunden(stunden)} h · ${formatProzent(anteil)}`)
     );
@@ -226,12 +265,19 @@ function balken(beschriftung, anteil, stunden, skala, art) {
 function qualitaetsKarte({ durchschnitt, anzahl }) {
     const karte = el('div', 'qualitaet');
 
+    const name = el('span', 'qualitaet-name');
+    name.append(document.createTextNode('Qualität'));
+    name.append(hilfe(
+        'Der Durchschnitt aller Bewertungen, die du bisher bekommen hast. ' +
+        'Jede bewertete Aufgabe zählt gleich viel, unabhängig von ihrem Umfang. ' +
+        'Dieser Wert ist vom Fortschritt getrennt: Eine gute Bewertung bringt ' +
+        'dich zeitlich nicht weiter, und eine schlechte wirft dich nicht zurück.'
+    ));
+
     karte.append(
-        el('span', 'qualitaet-name', 'Qualität'),
+        name,
         el('span', 'qualitaet-wert',
-            durchschnitt === null
-                ? '–'
-                : durchschnitt.toLocaleString('de-DE', { maximumFractionDigits: 1 })
+            durchschnitt === null ? '–' : formatBewertung(durchschnitt)
         ),
         el('span', 'qualitaet-fuss',
             anzahl === 0
@@ -304,85 +350,172 @@ function kennzahl(wert, beschriftung) {
 // Aufgabenliste
 // ------------------------------------------------------------
 
+// Sortierzustand der Tabelle. Er überlebt ein Neuzeichnen, damit
+// eine gewählte Sortierung nach dem Aktualisieren erhalten bleibt.
+let sortierung = { spalte: null, absteigend: false };
+
+// Reihenfolge für die Sortierung nach Status: von "noch nichts
+// getan" zu "fertig", damit Offenes oben steht.
+const ZUSTAND_RANG = {
+    [ZUSTAND.NICHT_BEGONNEN]: 0,
+    [ZUSTAND.UNBEKANNT]: 1,
+    [ZUSTAND.ENTWURF]: 2,
+    [ZUSTAND.ABGEGEBEN]: 3,
+    [ZUSTAND.BEWERTET]: 4
+};
+
 function aufgabenListe(kurse) {
     const abschnitt = el('section', 'aufgaben');
     abschnitt.append(el('h2', 'abschnitt-titel', 'Pflichtaufgaben'));
 
-    kurse.forEach(kurs => {
-        if (kurs.aufgaben.length === 0) return;
+    const alle = kurse.flatMap(kurs => kurs.aufgaben);
+    if (alle.length === 0) return abschnitt;
 
-        // Kurszugehörigkeit sichtbar machen — sonst laufen die
-        // Bereiche beider Kurse ununterscheidbar ineinander.
-        const kursKopf = el('h3', 'kurs-trenner');
-        kursKopf.append(document.createTextNode(kurs.titel));
-        if (kurs.gesperrt) {
-            kursKopf.append(el('span', 'kurs-trenner-sperre', 'noch gesperrt'));
-        }
-        abschnitt.append(kursKopf);
+    const behaelter = el('div', 'tabelle-rahmen');
 
-        gruppiereNachBereich(kurs.aufgaben).forEach(([bereich, aufgaben]) => {
-            if (bereich) abschnitt.append(el('h4', 'bereich-titel', bereich));
+    // Nach einem Klick auf die Überschrift wird nur die Tabelle neu
+    // gezeichnet — die Daten bleiben, nur die Reihenfolge ändert sich.
+    const zeichneTabelle = () => {
+        behaelter.replaceChildren(aufgabenTabelle(alle, zeichneTabelle));
+    };
+    zeichneTabelle();
 
-            const liste = el('ul', 'aufgaben-liste');
-            aufgaben.forEach(aufgabe => liste.append(aufgabenZeile(aufgabe)));
-            abschnitt.append(liste);
-        });
-    });
-
+    abschnitt.append(behaelter);
     return abschnitt;
 }
 
-function aufgabenZeile(aufgabe) {
-    const zeile = el('li', 'aufgabe');
+/**
+ * Baut die Aufgabentabelle. Der Rückruf zeichnet sie nach einem
+ * Klick auf eine Spaltenüberschrift neu.
+ */
+function aufgabenTabelle(aufgaben, neuZeichnen) {
+    const tabelle = el('table', 'aufgaben-tabelle');
 
-    const haupt = el('div', 'aufgabe-haupt');
-    haupt.append(
-        el('span', 'aufgabe-titel', aufgabe.titel),
-        el('span', 'aufgabe-stunden', `${formatStunden(aufgabe.stunden)} h`)
+    const spalten = [
+        { schluessel: 'titel', text: 'Titel' },
+        { schluessel: 'status', text: 'Status' },
+        { schluessel: 'bewertung', text: 'Bewertung', rechts: true }
+    ];
+
+    const kopf = el('thead');
+    const kopfzeile = el('tr');
+
+    spalten.forEach(spalte => {
+        const zelle = el('th', spalte.rechts ? 'rechts' : '');
+        zelle.scope = 'col';
+
+        const knopf = document.createElement('button');
+        knopf.type = 'button';
+        knopf.className = 'sortknopf';
+        knopf.append(document.createTextNode(spalte.text));
+
+        const aktiv = sortierung.spalte === spalte.schluessel;
+        knopf.append(el('span', 'sortpfeil', aktiv ? (sortierung.absteigend ? '▾' : '▴') : '⇅'));
+
+        if (aktiv) {
+            zelle.setAttribute('aria-sort', sortierung.absteigend ? 'descending' : 'ascending');
+        }
+        knopf.setAttribute(
+            'aria-label',
+            `Nach ${spalte.text} sortieren${aktiv ? ' (Richtung umkehren)' : ''}`
+        );
+
+        knopf.addEventListener('click', () => {
+            if (sortierung.spalte === spalte.schluessel) {
+                sortierung.absteigend = !sortierung.absteigend;
+            } else {
+                sortierung = { spalte: spalte.schluessel, absteigend: false };
+            }
+            neuZeichnen();
+        });
+
+        zelle.append(knopf);
+        kopfzeile.append(zelle);
+    });
+
+    kopf.append(kopfzeile);
+    tabelle.append(kopf);
+
+    const koerper = el('tbody');
+    sortiere(aufgaben).forEach(aufgabe => koerper.append(aufgabenZeile(aufgabe)));
+    tabelle.append(koerper);
+
+    return tabelle;
+}
+
+/**
+ * Sortiert nach der gewählten Spalte.
+ * Ohne Wahl bleibt die Reihenfolge aus der Planungsdatei.
+ */
+function sortiere(aufgaben) {
+    if (!sortierung.spalte) return aufgaben;
+
+    const richtung = sortierung.absteigend ? -1 : 1;
+
+    return [...aufgaben].sort((a, b) => {
+        let vergleich;
+
+        switch (sortierung.spalte) {
+            case 'status':
+                vergleich = ZUSTAND_RANG[a.zustand] - ZUSTAND_RANG[b.zustand];
+                break;
+            case 'bewertung':
+                // Unbewertetes sammelt sich am Ende, unabhängig von
+                // der Richtung — sonst verdrängt es die Werte.
+                if (a.bewertung === null && b.bewertung === null) vergleich = 0;
+                else if (a.bewertung === null) return 1;
+                else if (b.bewertung === null) return -1;
+                else vergleich = a.bewertung - b.bewertung;
+                break;
+            default:
+                vergleich = a.titel.localeCompare(b.titel, 'de');
+        }
+
+        // Gleichstand nach Titel auflösen, damit die Reihenfolge stabil ist
+        return vergleich !== 0 ? vergleich * richtung : a.titel.localeCompare(b.titel, 'de');
+    });
+}
+
+function aufgabenZeile(aufgabe) {
+    const zeile = el('tr', aufgabe.kursGesperrt ? 'zeile-gesperrt' : '');
+
+    // Titel als Link auf die Aufgabe in der Lernplattform
+    const titelZelle = el('td', 'zelle-titel');
+    const link = document.createElement('a');
+    link.className = 'aufgaben-link';
+    link.href = `${BASIS}/mod/${aufgabe.typ}/view.php?id=${aufgabe.cmid}`;
+    link.target = '_blank';
+    link.rel = 'noopener';
+    link.textContent = aufgabe.titel;
+    link.title = 'In der Lernplattform öffnen';
+    titelZelle.append(link, el('span', 'aufgabe-stunden', `${formatStunden(aufgabe.stunden)} h`));
+
+    const statusZelle = el('td');
+    statusZelle.append(zustandsChip(aufgabe.zustand));
+
+    const noteZelle = el('td', 'rechts');
+    noteZelle.append(
+        aufgabe.bewertung !== null
+            ? el('span', 'bewertung', formatBewertung(aufgabe.bewertung))
+            : el('span', 'ohne-wert', '–')
     );
 
-    const rand = el('div', 'aufgabe-rand');
-    rand.append(zustandsChip(aufgabe.zustand));
-
-    if (aufgabe.bewertungText !== null) {
-        rand.append(bewertungsLink(aufgabe));
-    }
-
-    zeile.append(haupt, rand);
+    zeile.append(titelZelle, statusZelle, noteZelle);
     return zeile;
+}
+
+/**
+ * Bewertung als Prozentwert ohne Nachkommastellen.
+ * Nicht-numerische Bewertungen (etwa Skalen) bleiben unverändert.
+ */
+function formatBewertung(wert) {
+    return `${Math.round(wert)} %`;
 }
 
 function zustandsChip(zustand) {
     const chip = el('span', `chip chip-${zustand}`);
     chip.append(el('span', 'chip-marke'), document.createTextNode(ZUSTAND_TEXT[zustand]));
     return chip;
-}
-
-/**
- * Bewertung mit Link auf den offiziellen Bewertungsbericht.
- * Die Bewertung im Dashboard ist eine Anzeige, nicht die Quelle.
- */
-function bewertungsLink(aufgabe) {
-    const link = document.createElement('a');
-    link.className = 'bewertung';
-    link.href = `${BASIS}/mod/${aufgabe.typ}/view.php?id=${aufgabe.cmid}`;
-    link.target = '_blank';
-    link.rel = 'noopener';
-    link.textContent = aufgabe.bewertungText;
-    link.title = 'Zum offiziellen Bewertungsbericht';
-    return link;
-}
-
-function gruppiereNachBereich(aufgaben) {
-    const gruppen = new Map();
-
-    aufgaben.forEach(aufgabe => {
-        const schluessel = aufgabe.bereich ?? '';
-        if (!gruppen.has(schluessel)) gruppen.set(schluessel, []);
-        gruppen.get(schluessel).push(aufgabe);
-    });
-
-    return [...gruppen];
 }
 
 // ------------------------------------------------------------

@@ -456,68 +456,114 @@ main {
     letter-spacing: -.01em;
 }
 
-.kurs-trenner {
-    display: flex;
-    align-items: baseline;
-    gap: var(--a2);
-    flex-wrap: wrap;
-    margin: var(--a4) 0 0;
-    padding-bottom: var(--a1);
-    border-bottom: 1px solid var(--linie);
-    font-size: 1rem;
-    letter-spacing: -.005em;
-}
-
-.kurs-trenner-sperre {
-    font-size: .76rem;
-    font-weight: 500;
-    letter-spacing: .06em;
-    text-transform: uppercase;
-    color: var(--bernstein);
-}
-
-.bereich-titel {
-    margin: var(--a3) 0 0;
-    font-size: .78rem;
-    font-weight: 600;
-    letter-spacing: .08em;
-    text-transform: uppercase;
-    color: var(--tinte-3);
-}
-
-.aufgaben-liste {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 1px;
-    background: var(--linie-zart);
+.tabelle-rahmen {
+    overflow-x: auto;
+    background: var(--flaeche);
     border: 1px solid var(--linie);
     border-radius: 6px;
-    overflow: hidden;
+    box-shadow: var(--schatten);
 }
 
-.aufgabe {
-    display: flex;
+.aufgaben-tabelle {
+    width: 100%;
+    min-width: 30rem;
+    border-collapse: collapse;
+}
+
+.aufgaben-tabelle th {
+    padding: 0;
+    text-align: left;
+    border-bottom: 1px solid var(--linie);
+    background: var(--flaeche-2);
+}
+
+.aufgaben-tabelle th.rechts {
+    text-align: right;
+}
+
+.sortknopf {
+    display: inline-flex;
     align-items: center;
-    justify-content: space-between;
-    gap: var(--a3);
-    flex-wrap: wrap;
+    gap: var(--a1);
+    width: 100%;
     padding: var(--a2) var(--a3);
-    background: var(--flaeche);
+    border: none;
+    background: none;
+    color: var(--tinte-3);
+    font: inherit;
+    font-size: .74rem;
+    font-weight: 600;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    cursor: pointer;
 }
 
-.aufgabe-haupt {
+th.rechts .sortknopf {
+    justify-content: flex-end;
+}
+
+.sortknopf:hover {
+    color: var(--kobalt);
+}
+
+.sortknopf:focus-visible {
+    outline: 2px solid var(--kobalt);
+    outline-offset: -2px;
+}
+
+.sortpfeil {
+    font-size: .82rem;
+    opacity: .6;
+}
+
+th[aria-sort] .sortknopf {
+    color: var(--tinte);
+}
+
+th[aria-sort] .sortpfeil {
+    opacity: 1;
+    color: var(--kobalt);
+}
+
+.aufgaben-tabelle td {
+    padding: var(--a2) var(--a3);
+    border-bottom: 1px solid var(--linie-zart);
+    vertical-align: middle;
+}
+
+.aufgaben-tabelle tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.aufgaben-tabelle tbody tr:hover {
+    background: var(--flaeche-2);
+}
+
+.aufgaben-tabelle td.rechts {
+    text-align: right;
+}
+
+.zeile-gesperrt .aufgaben-link,
+.zeile-gesperrt .aufgabe-stunden {
+    opacity: .6;
+}
+
+.zelle-titel {
     display: flex;
     align-items: baseline;
     gap: var(--a2);
-    flex: 1 1 16rem;
-    min-width: 0;
+    flex-wrap: wrap;
 }
 
-.aufgabe-titel {
+.aufgaben-link {
+    color: var(--tinte);
     font-size: .94rem;
+    text-decoration: none;
+}
+
+.aufgaben-link:hover {
+    color: var(--kobalt);
+    text-decoration: underline;
 }
 
 .aufgabe-stunden {
@@ -527,10 +573,78 @@ main {
     white-space: nowrap;
 }
 
-.aufgabe-rand {
-    display: flex;
-    align-items: center;
-    gap: var(--a2);
+.ohne-wert {
+    color: var(--tinte-3);
+}
+
+/* ---------- Hilfe-Erklärungen ---------- */
+
+.hilfe {
+    position: relative;
+    display: inline-flex;
+    margin-left: .35em;
+}
+
+.hilfe-zeichen {
+    width: 1.15em;
+    height: 1.15em;
+    padding: 0;
+    border: 1px solid var(--linie);
+    border-radius: 50%;
+    background: var(--flaeche-2);
+    color: var(--tinte-3);
+    font: inherit;
+    font-size: .8em;
+    line-height: 1;
+    cursor: help;
+}
+
+.hilfe-zeichen:hover {
+    border-color: var(--kobalt);
+    color: var(--kobalt);
+}
+
+.hilfe-zeichen:focus-visible {
+    outline: 2px solid var(--kobalt);
+    outline-offset: 2px;
+}
+
+.hilfe-text {
+    position: absolute;
+    top: calc(100% + .5em);
+    left: 50%;
+    z-index: 10;
+    width: max-content;
+    max-width: 20rem;
+    padding: var(--a2) var(--a3);
+    transform: translateX(-50%);
+    border-radius: 4px;
+    background: var(--tinte);
+    color: var(--papier);
+    font-size: .82rem;
+    font-weight: 400;
+    line-height: 1.45;
+    letter-spacing: normal;
+    text-transform: none;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity .12s ease;
+    pointer-events: none;
+}
+
+.hilfe:hover .hilfe-text,
+.hilfe-zeichen:focus-visible + .hilfe-text {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Am linken Rand nicht aus dem Bild laufen lassen */
+@media (max-width: 32rem) {
+    .hilfe-text {
+        left: 0;
+        transform: none;
+        max-width: min(20rem, 78vw);
+    }
 }
 
 /* Zustandschips: Form und Farbe, damit sie ohne
@@ -595,20 +709,10 @@ main {
 }
 
 .bewertung {
-    padding: .18em .5em;
-    border-radius: 4px;
-    background: var(--flaeche-2);
-    color: var(--tinte);
-    font-size: .84rem;
+    font-size: .9rem;
     font-weight: 600;
     font-variant-numeric: tabular-nums;
-    text-decoration: none;
     white-space: nowrap;
-}
-
-.bewertung:hover {
-    color: var(--kobalt);
-    text-decoration: underline;
 }
 
 /* ---------- Fehler und Warnungen ---------- */
