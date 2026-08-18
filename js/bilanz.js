@@ -1,0 +1,179 @@
+// ============================================================
+// bilanz.js — Die Rechnung
+//
+// Soll, Ist, Delta und Qualität. Reine Funktionen ohne DOM und
+// ohne Netzwerk. Bezugsgröße ist immer das gesamte Schuljahr
+// einschließlich des gesperrten Kurses, damit der Nenner beim
+// Freischalten konstant bleibt.
+// ============================================================
+
+import { zaehltFuerFortschritt, ZUSTAND } from './status.js';
+
+/**
+ * Ermittelt die laufende Schulwoche zu einem Datum.
+ *
+ * Vor Beginn des Schuljahres: 0. Nach der letzten Woche: die
+ * letzte Woche. Innerhalb: die letzte Woche, deren Start erreicht ist.
+ *
+ * @param {Object[]} schulwochen - aufsteigend sortierter Kalender
+ * @param {Date} [heute]
+ * @returns {number} Wochennummer, 0 wenn das Jahr noch nicht begonnen hat
+ */
+export function aktuelleWoche(schulwochen, heute = new Date()) {
+    const stichtag = datumOhneZeit(heute);
+    let aktuell = 0;
+
+    for (const woche of schulwochen) {
+        if (datumOhneZeit(new Date(woche.start)) <= stichtag) {
+            aktuell = woche.woche;
+        } else {
+            break;
+        }
+    }
+
+    return aktuell;
+}
+
+/**
+ * Soll(w) — Anteil der bis einschließlich Woche w verstrichenen Stunden.
+ *
+ *   Soll(w) = Σ Stunden Schulwoche 1..w / Σ Stunden gesamt
+ *
+ * @param {Object[]} schulwochen
+ * @param {number} woche
+ * @returns {number} Anteil zwischen 0 und 1
+ */
+export function sollAnteil(schulwochen, woche) {
+    const gesamt = schulwochen.reduce((summe, w) => summe + w.stunden, 0);
+    if (gesamt <= 0) return 0;
+
+    const bisher = schulwochen
+        .filter(w => w.woche <= woche)
+        .reduce((summe, w) => summe + w.stunden, 0);
+
+    return bisher / gesamt;
+}
+
+/**
+ * Berechnet die vollständige Bilanz.
+ *
+ * @param {Object} plan - validierter Plan
+ * @param {Object[]} aufgaben - ausgewertete Aufgaben aus status.verbinde
+ * @param {Date} [heute]
+ * @returns {Object} Bilanz mit Soll, Ist, Delta, Qualität und Kursaufstellung
+ */
+export function berechneBilanz(plan, aufgaben, heute = new Date()) {
+    const woche = aktuelleWoche(plan.schulwochen, heute);
+    const soll = sollAnteil(plan.schulwochen, woche);
+
+    const stundenGesamt = plan.stundenGesamt;
+    const stundenAbgegeben = aufgaben
+        .filter(aufgabe => zaehltFuerFortschritt(aufgabe.zustand))
+        .reduce((summe, aufgabe) => summe + aufgabe.stunden, 0);
+
+    const ist = stundenGesamt > 0 ? stundenAbgegeben / stundenGesamt : 0;
+
+    // Delta in Stunden — die Größe, die im Dashboard vorne steht.
+    const deltaStunden = (ist - soll) * stundenGesamt;
+
+    return {
+        woche,
+        wochenGesamt: plan.schulwochen.length,
+        soll,
+        ist,
+        deltaStunden,
+        stundenGesamt,
+        stundenAbgegeben,
+        stundenSoll: soll * stundenGesamt,
+        qualitaet: berechneQualitaet(aufgaben),
+        kurse: plan.kurse.map(kurs => kursBilanz(kurs, aufgaben)),
+        zaehlung: zaehleZustaende(aufgaben)
+    };
+}
+
+/**
+ * Qualität — ungewichteter Durchschnitt über bewertete Abgaben.
+ * Fließt nicht in den Fortschritt ein.
+ *
+ * @param {Object[]} aufgaben
+ * @returns {{durchschnitt: number|null, anzahl: number}}
+ */
+export function berechneQualitaet(aufgaben) {
+    const bewertete = aufgaben.filter(
+        aufgabe => aufgabe.zustand === ZUSTAND.BEWERTET && aufgabe.bewertung !== null
+    );
+
+    if (bewertete.length === 0) {
+        return { durchschnitt: null, anzahl: 0 };
+    }
+
+    const summe = bewertete.reduce((wert, aufgabe) => wert + aufgabe.bewertung, 0);
+
+    return {
+        durchschnitt: summe / bewertete.length,
+        anzahl: bewertete.length
+    };
+}
+
+/**
+ * Bilanz eines einzelnen Unterkurses.
+ * Der Anteil bezieht sich auf die Stunden dieses Kurses.
+ */
+function kursBilanz(kurs, aufgaben) {
+    const eigene = aufgaben.filter(aufgabe => aufgabe.kursId === kurs.id);
+    const abgegeben = eigene.filter(aufgabe => zaehltFuerFortschritt(aufgabe.zustand));
+    const stundenAbgegeben = abgegeben.reduce((summe, aufgabe) => summe + aufgabe.stunden, 0);
+
+    return {
+        id: kurs.id,
+        titel: kurs.titel,
+        gesperrt: kurs.gesperrt,
+        freischaltung: kurs.freischaltung,
+        moodleCourseId: kurs.moodleCourseId,
+        stundenGeplant: kurs.stundenGeplant,
+        stundenAbgegeben,
+        anteil: kurs.stundenGeplant > 0 ? stundenAbgegeben / kurs.stundenGeplant : 0,
+        aufgabenGesamt: eigene.length,
+        aufgabenAbgegeben: abgegeben.length,
+        aufgaben: eigene
+    };
+}
+
+/**
+ * Zählt die Aufgaben je Zustand — für die Übersicht.
+ */
+function zaehleZustaende(aufgaben) {
+    const zaehlung = {};
+    for (const zustand of Object.values(ZUSTAND)) {
+        zaehlung[zustand] = 0;
+    }
+    aufgaben.forEach(aufgabe => {
+        zaehlung[aufgabe.zustand] = (zaehlung[aufgabe.zustand] ?? 0) + 1;
+    });
+    return zaehlung;
+}
+
+/**
+ * Schneidet die Uhrzeit ab, damit Wochenvergleiche stabil sind.
+ */
+function datumOhneZeit(datum) {
+    return new Date(datum.getFullYear(), datum.getMonth(), datum.getDate());
+}
+
+/**
+ * Formatiert eine Stundenzahl deutsch, ohne unnötige Nachkommastellen.
+ *
+ * @param {number} stunden
+ * @returns {string} z. B. "12", "3,5"
+ */
+export function formatStunden(stunden) {
+    const gerundet = Math.round(stunden * 10) / 10;
+    return gerundet.toLocaleString('de-DE', { maximumFractionDigits: 1 });
+}
+
+/**
+ * Formatiert einen Anteil als Prozentzahl ohne Nachkommastellen.
+ */
+export function formatProzent(anteil) {
+    return `${Math.round(anteil * 100)} %`;
+}
