@@ -174,11 +174,99 @@
       "freischaltung": "2027-01-11",
       "aufgaben": [
         {
-          "cmid": "900000001",
+          "cmid": "91862122",
+          "skala": "sterne4",
           "typ": "assign",
-          "titel": "Platzhalter — Pflichtaufgabe 2. Halbjahr",
-          "lektion": "2. Halbjahr- Noch zu pflegen",
-          "stunden": 8
+          "titel": "UC Restaurant",
+          "lektion": "UML- Use-Case-Diagramm",
+          "stunden": 2
+        },
+        {
+          "cmid": "91862212",
+          "skala": "sterne4",
+          "typ": "assign",
+          "titel": "AD Kreditvergabe",
+          "lektion": "UML- Aktivitätsdiagramm",
+          "stunden": 2
+        },
+        {
+          "cmid": "91862290",
+          "skala": "sterne4",
+          "typ": "assign",
+          "titel": "ZD Schließsystem",
+          "lektion": "UML- Zustandsdiagramm",
+          "stunden": 2
+        },
+        {
+          "cmid": "91862557",
+          "skala": "sterne4",
+          "typ": "assign",
+          "titel": "Design Pattern Gesamtaufgabe",
+          "lektion": "Design Patterns- Gesamtaufgabe",
+          "stunden": 4
+        },
+        {
+          "cmid": "91862608",
+          "skala": "sterne4",
+          "typ": "assign",
+          "titel": "Domain Workshop",
+          "lektion": "Domain Driven Design- Workshop",
+          "stunden": 4
+        },
+        {
+          "cmid": "91862671",
+          "skala": "sterne4",
+          "typ": "assign",
+          "titel": "Entitäten erschaffen",
+          "lektion": "Domain Driven Design- Entitäten",
+          "stunden": 4
+        },
+        {
+          "cmid": "91862707",
+          "skala": "sterne4",
+          "typ": "assign",
+          "titel": "Anwendungsfälle planen",
+          "lektion": "Domain Driven Design- Anwendungsfälle",
+          "stunden": 4
+        },
+        {
+          "cmid": "91862749",
+          "skala": "sterne4",
+          "typ": "assign",
+          "titel": "Das Pattern dahinter",
+          "lektion": "Domain Driven Design- Patterns",
+          "stunden": 4
+        },
+        {
+          "cmid": "91862800",
+          "skala": "sterne4",
+          "typ": "assign",
+          "titel": "Daten anbinden",
+          "lektion": "Domain Driven Design- Datenanbindung",
+          "stunden": 4
+        },
+        {
+          "cmid": "91862839",
+          "skala": "sterne4",
+          "typ": "assign",
+          "titel": "Controller bauen",
+          "lektion": "Domain Driven Design- Controller",
+          "stunden": 4
+        },
+        {
+          "cmid": "91862881",
+          "typ": "quiz",
+          "titel": "Situation Kryptografie — Audit IT-Secure-Company",
+          "lektion": "IT-Sicherheit- Kryptografie",
+          "stunden": 2
+        },
+        {
+          "cmid": "91862923",
+          "skala": "sterne4",
+          "typ": "assign",
+          "titel": "Situation Identity & Access Management",
+          "lektion": "IT-Sicherheit- Identity und Access Management",
+          "stunden": 2
         }
       ]
     }
