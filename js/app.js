@@ -20,10 +20,6 @@ import {
     baueBeispielStatus, setzeParameter, verlasseTestmodus
 } from './testmodus.js';
 
-// Hauptkurs, in dem das Dashboard und plan.json liegen. Aus ihm
-// wird die Klasse und damit die Schiene erkannt.
-const HAUPTKURS_ID = '2491549';
-
 const wurzel = document.getElementById('dashboard');
 const testleiste = document.getElementById('testleiste');
 const aktualisierenKnopf = document.getElementById('aktualisieren');
@@ -109,8 +105,8 @@ async function bestimmeSchiene() {
         return Object.keys(plan.schienen)[0] ?? null;
     }
 
-    zeigeLaden(wurzel, 'Erkenne Klasse …');
-    const ergebnis = await ermittleSchiene(plan, HAUPTKURS_ID);
+    zeigeLaden(wurzel, 'Ermittle deine Klasse …');
+    const ergebnis = await ermittleSchiene(plan);
     return ergebnis.schiene;
 }
 
