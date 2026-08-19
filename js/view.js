@@ -38,6 +38,24 @@ export function zeichne(wurzel, bilanz) {
 }
 
 /**
+ * Setzt den Zeitraum unter die Überschrift.
+ *
+ * Steht in der Kopfzeile ohnehin schon "1. Halbjahr", muss es der
+ * Untertitel nicht wiederholen — er nennt den Zeitraum nur, wenn
+ * das Dashboard einen Ausschnitt des Schuljahrs zeigt.
+ *
+ * @param {HTMLElement} ziel - Absatz unter der Überschrift
+ * @param {Object} bilanz - Ergebnis aus berechneBilanz
+ */
+export function zeigeZeitraum(ziel, bilanz) {
+    if (!ziel) return;
+
+    ziel.textContent = bilanz.nurTeilzeitraum
+        ? (bilanz.zeitraumTitel ?? 'Laufender Abschnitt')
+        : `Schuljahr ${bilanz.schuljahr ?? ''}`.trim();
+}
+
+/**
  * Zeichnet die Testleiste über dem Dashboard.
  *
  * Sie erscheint nur im Testmodus und ist bewusst auffällig, damit

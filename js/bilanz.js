@@ -137,6 +137,7 @@ export function berechneBilanz(plan, aufgaben, schienenName, heute = new Date())
     return {
         schiene: schienenName,
         schienenTitel: schiene.titel,
+        schuljahr: plan.schuljahr ?? null,
         notenschluessel: plan.notenschluessel,
         woche,
         wochenGesamt: wochen.length,

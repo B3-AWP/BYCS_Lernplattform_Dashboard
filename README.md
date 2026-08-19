@@ -1,4 +1,4 @@
-# Stundenbilanz
+# Dein Lernfortschritt
 
 Dashboard für Lernende auf der BYCS-Lernplattform. Es zeigt den eigenen Stand
 über alle Abschnitte eines Schuljahres: geplante Stunden gegen verstrichene

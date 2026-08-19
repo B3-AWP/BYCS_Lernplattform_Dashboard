@@ -13,7 +13,7 @@ import { verbinde } from './status.js';
 import { berechneBilanz } from './bilanz.js';
 import {
     zeichne, zeigeLaden, zeigeFehler, zeigeWarnung,
-    zeigeSchienenAuswahl, zeichneTestleiste
+    zeigeSchienenAuswahl, zeichneTestleiste, zeigeZeitraum
 } from './view.js';
 import {
     istTestmodus, testDatum, testSchiene, testDaten, testAlleKurse,
@@ -23,6 +23,7 @@ import {
 const wurzel = document.getElementById('dashboard');
 const testleiste = document.getElementById('testleiste');
 const aktualisierenKnopf = document.getElementById('aktualisieren');
+const zeitraum = document.getElementById('zeitraum');
 
 // Plan und Schiene ändern sich während einer Sitzung nicht und
 // werden gehalten; der Status wird bei jeder Aktualisierung neu geholt.
@@ -66,6 +67,7 @@ async function starte() {
         const bilanz = berechneBilanz(sicht, aufgaben, schiene, stichtag());
 
         zeichne(wurzel, bilanz);
+        zeigeZeitraum(zeitraum, bilanz);
         zeichneTestleisteFallsNoetig();
 
         // Teilausfälle blockieren die Anzeige nicht — die übrigen
