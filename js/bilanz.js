@@ -99,9 +99,15 @@ export function berechneBilanz(plan, aufgaben, schienenName, heute = new Date())
         throw new Error(`Schiene "${schienenName}" ist im Plan nicht definiert.`);
     }
 
-    const woche = aktuelleWoche(schiene.schulwochen, heute);
-    const soll = sollAnteil(schiene.schulwochen, woche);
-    const imBlock = istImBlock(schiene.schulwochen, woche, heute);
+    // Nur die Blockwochen der angezeigten Kurse. alleKurse trägt den
+    // ungefilterten Plan; ohne das Feld gilt der Plan als vollständig.
+    const wochen = begrenzeSchulwochen(
+        schiene.schulwochen, plan.kurse, plan.alleKurse ?? plan.kurse
+    );
+
+    const woche = aktuelleWoche(wochen, heute);
+    const soll = sollAnteil(wochen, woche);
+    const imBlock = istImBlock(wochen, woche, heute);
 
     const stundenGesamt = plan.stundenGesamt;
     const stundenAbgegeben = aufgaben
@@ -112,17 +118,30 @@ export function berechneBilanz(plan, aufgaben, schienenName, heute = new Date())
 
     // Unterrichtsstunden je Halbjahr — hängt an der Schiene, deshalb
     // erst hier und nicht schon beim Einlesen des Plans.
-    const unterrichtsstunden = verteileUnterrichtsstunden(plan.kurse, schiene.schulwochen);
+    const unterrichtsstunden = verteileUnterrichtsstunden(
+        plan.alleKurse ?? plan.kurse, schiene.schulwochen
+    );
 
     // Delta in Stunden — die Größe, die im Dashboard vorne steht.
     const deltaStunden = (ist - soll) * stundenGesamt;
+
+    // Wird nur ein Teil des Schuljahrs gezeigt, benennen die Texte
+    // ihn statt vom "Schuljahr" zu sprechen. Bei genau einem Kurs
+    // trägt dessen Titel ("1. Halbjahr"), sonst bleibt es allgemein.
+    const alleKurse = plan.alleKurse ?? plan.kurse;
+    const nurTeilzeitraum = plan.kurse.length < alleKurse.length;
+    const zeitraumTitel = nurTeilzeitraum && plan.kurse.length === 1
+        ? plan.kurse[0].titel
+        : null;
 
     return {
         schiene: schienenName,
         schienenTitel: schiene.titel,
         notenschluessel: plan.notenschluessel,
         woche,
-        wochenGesamt: schiene.wochenGesamt,
+        wochenGesamt: wochen.length,
+        nurTeilzeitraum,
+        zeitraumTitel,
         imBlock,
         soll,
         ist,
@@ -160,6 +179,46 @@ export function berechneQualitaet(aufgaben) {
         durchschnitt: summe / bewertete.length,
         anzahl: bewertete.length
     };
+}
+
+/**
+ * Beschneidet den Wochenkalender auf die angezeigten Kurse.
+ *
+ * Wird nur das 1. Halbjahr gezeigt, darf sich das Soll nicht auf
+ * Blockwochen stützen, die zum ausgeblendeten 2. Halbjahr gehören —
+ * sonst bliebe der Balken dauerhaft unter 100 %, obwohl alles
+ * Sichtbare geschafft ist.
+ *
+ * Geschnitten wird am Freischaltdatum des ersten ausgeblendeten
+ * Kurses. Sind alle Kurse sichtbar, bleibt der Kalender ganz.
+ *
+ * @param {Object[]} schulwochen - Blockwochen der Schiene
+ * @param {Object[]} kurse - die angezeigten Kurse
+ * @param {Object[]} alleKurse - alle Kurse des Plans
+ * @returns {Object[]} Blockwochen bis zum Schnitt
+ */
+export function begrenzeSchulwochen(schulwochen, kurse, alleKurse) {
+    if (!Array.isArray(schulwochen) || schulwochen.length === 0) return schulwochen;
+    if (!Array.isArray(alleKurse) || alleKurse.length === 0) return schulwochen;
+
+    const gezeigt = new Set(kurse.map(kurs => kurs.id));
+
+    // Der erste ausgeblendete Kurs, der ein Freischaltdatum trägt.
+    const versteckt = alleKurse.find(
+        kurs => !gezeigt.has(kurs.id) && kurs.freischaltung
+    );
+    if (!versteckt) return schulwochen;
+
+    const schnitt = datumOhneZeit(new Date(versteckt.freischaltung));
+    if (Number.isNaN(schnitt.getTime())) return schulwochen;
+
+    const begrenzt = schulwochen.filter(
+        woche => datumOhneZeit(new Date(woche.start)) < schnitt
+    );
+
+    // Bliebe nichts übrig, wäre kein Soll mehr berechenbar — dann
+    // lieber der volle Kalender als eine Division durch null.
+    return begrenzt.length > 0 ? begrenzt : schulwochen;
 }
 
 /**

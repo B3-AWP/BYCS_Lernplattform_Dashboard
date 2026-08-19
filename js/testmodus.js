@@ -55,6 +55,19 @@ export function testDaten() {
 }
 
 /**
+ * Sollen auch die Kurse erscheinen, die im Regelbetrieb
+ * ausgeblendet sind ("anzeigen": false)?
+ *
+ * Damit laesst sich der Stand nach der Freischaltung des naechsten
+ * Halbjahrs ansehen, ohne plan.json anzufassen.
+ *
+ * @returns {boolean}
+ */
+export function testAlleKurse() {
+    return new URLSearchParams(location.search).get('kurse') === 'alle';
+}
+
+/**
  * Baut einen Status aus Beispieldaten.
  *
  * Muster:

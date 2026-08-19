@@ -101,6 +101,46 @@ export function pruefePlan(rohdaten) {
 }
 
 /**
+ * Wählt die anzuzeigenden Kurse aus und rechnet die Summen neu.
+ *
+ * Gefiltert wird erst hier und nicht schon beim Einlesen: Der volle
+ * Plan bleibt erhalten, damit der Probelauf ohne Neuladen zwischen
+ * beiden Sichten wechseln kann.
+ *
+ * @param {Object} plan - validierter Plan
+ * @param {boolean} [alleZeigen] - true blendet auch verborgene Kurse ein
+ * @returns {Object} Plan mit reduzierter Kurs- und Aufgabenliste
+ * @throws {PlanFehler} wenn nichts übrig bleibt, womit zu rechnen wäre
+ */
+export function waehleKurse(plan, alleZeigen = false) {
+    if (alleZeigen) return plan;
+
+    const kurse = plan.kurse.filter(kurs => kurs.anzeigen);
+
+    if (kurse.length === 0) {
+        throw new PlanFehler([
+            'Kein Kurs ist zur Anzeige freigegeben — es gäbe nichts darzustellen. ' +
+            'Mindestens ein Kurs in plan.json braucht "anzeigen": true.'
+        ]);
+    }
+
+    const stundenGesamt = kurse.reduce((summe, kurs) => summe + kurs.stundenGeplant, 0);
+
+    if (stundenGesamt <= 0) {
+        throw new PlanFehler([
+            'Die angezeigten Kurse haben zusammen 0 geplante Stunden — es gäbe nichts zu messen.'
+        ]);
+    }
+
+    return {
+        ...plan,
+        kurse,
+        stundenGesamt,
+        aufgaben: kurse.flatMap(kurs => kurs.aufgaben)
+    };
+}
+
+/**
  * Prüft den Notenschlüssel.
  *
  * Absteigend sortiert, damit die erste passende Schwelle gilt.
@@ -343,6 +383,11 @@ function pruefeKurse(kurse, skalen, fehler) {
         if (typeof kurs?.gesperrt !== 'boolean') {
             fehler.push(`${ko}.gesperrt muss true oder false sein.`);
         }
+        // anzeigen darf fehlen — Pläne ohne das Feld zeigen wie bisher
+        // alle Kurse. Nur ein falscher Typ ist ein Fehler.
+        if (kurs?.anzeigen !== undefined && typeof kurs.anzeigen !== 'boolean') {
+            fehler.push(`${ko}.anzeigen muss true oder false sein, wenn angegeben.`);
+        }
 
         const aufgaben = Array.isArray(kurs?.aufgaben) ? kurs.aufgaben : [];
         if (!Array.isArray(kurs?.aufgaben)) {
@@ -402,6 +447,7 @@ function pruefeKurse(kurse, skalen, fehler) {
             moodleCourseId: kurs?.moodleCourseId,
             titel: kurs?.titel,
             gesperrt: kurs?.gesperrt === true,
+            anzeigen: kurs?.anzeigen !== false,
             freischaltung: kurs?.freischaltung ?? null,
             aufgaben: geprüfteAufgaben,
             stundenGeplant: geprüfteAufgaben.reduce(

@@ -16,11 +16,11 @@
   },
 
   "notenschluessel": [
-    { "note": 1, "name": "sehr gut",      "abProzent": 91, "farbe": "#1e7e34" },
-    { "note": 2, "name": "gut",           "abProzent": 80, "farbe": "#28a745" },
-    { "note": 3, "name": "befriedigend",  "abProzent": 66, "farbe": "#7cb342" },
-    { "note": 4, "name": "ausreichend",   "abProzent": 49, "farbe": "#ffc107" },
-    { "note": 5, "name": "mangelhaft",    "abProzent": 29, "farbe": "#fd7e14" },
+    { "note": 1, "name": "sehr gut",      "abProzent": 92, "farbe": "#1e7e34" },
+    { "note": 2, "name": "gut",           "abProzent": 81, "farbe": "#28a745" },
+    { "note": 3, "name": "befriedigend",  "abProzent": 67, "farbe": "#7cb342" },
+    { "note": 4, "name": "ausreichend",   "abProzent": 50, "farbe": "#ffc107" },
+    { "note": 5, "name": "mangelhaft",    "abProzent": 30, "farbe": "#fd7e14" },
     { "note": 6, "name": "ungenügend",    "abProzent": 0,  "farbe": "#dc3545" }
   ],
 
@@ -68,6 +68,7 @@
       "moodleCourseId": "2491549",
       "titel": "1. Halbjahr",
       "gesperrt": false,
+      "anzeigen": true,
       "aufgaben": [
         {
           "cmid": "94824799",
@@ -180,6 +181,7 @@
       "moodleCourseId": "2491870",
       "titel": "2. Halbjahr",
       "gesperrt": true,
+      "anzeigen": false,
       "freischaltung": "2027-01-11",
       "aufgaben": [
          {

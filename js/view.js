@@ -44,7 +44,7 @@ export function zeichne(wurzel, bilanz) {
  * niemand einen Probelauf für den echten Stand hält.
  *
  * @param {HTMLElement} ziel - Element für die Leiste
- * @param {Object} einstellungen - { datum, schiene, daten, schienen }
+ * @param {Object} einstellungen - { datum, schiene, daten, kurse, schienen }
  * @param {Object} rueckrufe - { beiAenderung, beiVerlassen }
  */
 export function zeichneTestleiste(ziel, einstellungen, rueckrufe) {
@@ -100,6 +100,25 @@ export function zeichneTestleiste(ziel, einstellungen, rueckrufe) {
         rueckrufe.beiAenderung('daten', datenFeld.value);
     });
     leiste.append(feldGruppe('Daten', datenFeld));
+
+    // Kurse
+    const kurseFeld = document.createElement('select');
+    kurseFeld.className = 'testfeld';
+    kurseFeld.setAttribute('aria-label', 'Sichtbare Kurse');
+    [
+        ['', 'Nur sichtbare'],
+        ['alle', 'Alle Halbjahre']
+    ].forEach(([wert, text]) => {
+        const option = document.createElement('option');
+        option.value = wert;
+        option.textContent = text;
+        option.selected = wert === (einstellungen.kurse ?? '');
+        kurseFeld.append(option);
+    });
+    kurseFeld.addEventListener('change', () => {
+        rueckrufe.beiAenderung('kurse', kurseFeld.value);
+    });
+    leiste.append(feldGruppe('Kurse', kurseFeld));
 
     const beenden = document.createElement('button');
     beenden.type = 'button';
@@ -183,10 +202,10 @@ function kopfzeile(bilanz) {
         balken(
             'Bis jetzt vorgesehen', bilanz.soll, bilanz.stundenSoll,
             bilanz.stundenGesamt, skala, 'soll',
-            'So viele Unterrichtsstunden sind in deiner Schiene bisher vergangen — ' +
-            'gemessen an den Blockwochen im Schuljahr. Dieser Wert steigt nur, ' +
-            'wenn eine neue Blockwoche beginnt, und sagt nichts darüber aus, ' +
-            'was du getan hast.'
+            'So viele Unterrichtsstunden sind bisher vergangen — gemessen an ' +
+            'den Blockwochen deiner Schiene in diesem Zeitraum. Dieser Wert ' +
+            'steigt nur, wenn eine neue Blockwoche beginnt, und sagt nichts ' +
+            'darüber aus, was du getan hast.'
         ),
         balken(
             'Von dir abgegeben', bilanz.ist, bilanz.stundenAbgegeben,
@@ -197,13 +216,7 @@ function kopfzeile(bilanz) {
             'bewertet wurde, spielt keine Rolle.'
         ),
 
-        el('p', 'hinweis',
-            'Beide Balken messen dasselbe Schuljahr: oben, wie weit der Unterricht ' +
-            'ist, unten, wie weit du bist. Der eine Wert ist kein Teil des anderen. ' +
-            'Gezählt wird jeweils das ganze Schuljahr, auch Abschnitte, die noch ' +
-            'gesperrt sind — dadurch springt die Anzeige nicht, sobald ein Abschnitt ' +
-            'freigeschaltet wird.'
-        ),
+        el('p', 'hinweis', hinweisText(bilanz)),
 
         qualitaetsKarte(bilanz.qualitaet, bilanz.notenschluessel)
     );
@@ -225,9 +238,10 @@ function kopfzeile(bilanz) {
  *
  * @param {string} text - die Erklärung
  * @param {string} thema - worauf sich die Erklärung bezieht
+ * @param {HTMLElement} [zusatz] - Inhalt unter der Erklärung
  * @returns {HTMLElement}
  */
-function hilfe(text, thema) {
+function hilfe(text, thema, zusatz) {
     const behaelter = el('span', 'hilfe');
     const kennung = `hilfe-${++hilfeZaehler}`;
 
@@ -239,8 +253,10 @@ function hilfe(text, thema) {
     knopf.setAttribute('aria-describedby', kennung);
     knopf.setAttribute('aria-expanded', 'false');
 
-    const erklaerung = el('span', 'hilfe-text', text);
+    const erklaerung = el('span', 'hilfe-text');
     erklaerung.id = kennung;
+    erklaerung.append(el('span', 'hilfe-satz', text));
+    if (zusatz) erklaerung.append(zusatz);
 
     // Klick hält die Erklärung offen — für alle, die zum Lesen nicht
     // auf dem Knopf stehen bleiben können oder wollen.
@@ -261,6 +277,28 @@ function hilfe(text, thema) {
 
     behaelter.append(knopf, erklaerung);
     return behaelter;
+}
+
+/**
+ * Der erklärende Satz unter den Balken.
+ *
+ * Wird nur ein Teil des Schuljahrs gezeigt, darf hier nicht mehr
+ * "ganzes Schuljahr" stehen — der Nenner ist dann kleiner, und ein
+ * falscher Bezug wäre schlimmer als gar keiner.
+ */
+function hinweisText(bilanz) {
+    const gemeinsam = 'Beide Balken messen denselben Zeitraum: oben, wie weit der '
+        + 'Unterricht ist, unten, wie weit du bist. Der eine Wert ist kein Teil '
+        + 'des anderen.';
+
+    if (bilanz.nurTeilzeitraum) {
+        return `${gemeinsam} Gezählt wird ${bilanz.zeitraumTitel ?? 'der laufende Abschnitt'} `
+            + '— spätere Abschnitte bleiben außen vor, bis sie an der Reihe sind.';
+    }
+
+    return `${gemeinsam} Gezählt wird das ganze Schuljahr, auch Abschnitte, die `
+        + 'noch gesperrt sind — dadurch springt die Anzeige nicht, sobald ein '
+        + 'Abschnitt freigeschaltet wird.';
 }
 
 /**
@@ -294,6 +332,14 @@ function deltaText(bilanz) {
 function wochenText(bilanz) {
     if (bilanz.woche === 0) {
         return `${bilanz.schienenTitel} · Der Unterricht hat noch nicht begonnen`;
+    }
+
+    // Letzte Blockwoche vorbei: Zwischen dem Ende des Zeitraums und
+    // der Freischaltung des nächsten stünde sonst wochenlang
+    // "nach Blockwoche 5 von 5" bei vollem Soll-Balken — das liest
+    // sich wie ein hängengebliebener Zähler, nicht wie ein Abschluss.
+    if (bilanz.woche === bilanz.wochenGesamt && !bilanz.imBlock) {
+        return `${bilanz.schienenTitel} · ${bilanz.zeitraumTitel ?? 'Schuljahr'} abgeschlossen`;
     }
 
     const stand = `Blockwoche ${bilanz.woche} von ${bilanz.wochenGesamt}`;
@@ -449,12 +495,13 @@ function kursKachel(kurs) {
     }
 
     zahlen.append(
-        // "Pflichtaufgaben", nicht "geplant": in der Kopfzeile steht
-        // "vorgesehen" für den Zeitverlauf. Dasselbe Wort für zwei
-        // verschiedene Größen wäre die häufigste Verwechslung hier.
+        // "Aufwand", nicht "geplant" oder "Pflichtaufgaben": in der
+        // Kopfzeile steht "vorgesehen" für den Zeitverlauf, und ein
+        // Wort in Versalien muss in eine Rasterspalte passen. Was
+        // gemeint ist, sagt die Erklärung.
         kennzahl(
             `${formatStunden(kurs.stundenGeplant)} h`,
-            'Pflichtaufgaben',
+            'Aufwand',
             'So viel Zeit ist für die Pflichtaufgaben dieses Halbjahrs '
             + 'veranschlagt. Nur diese Stunden zählen für deinen Fortschritt.'
         ),
@@ -464,7 +511,7 @@ function kursKachel(kurs) {
         ),
         kennzahl(
             kurs.gesperrt ? '–' : `${kurs.aufgabenAbgegeben} / ${kurs.aufgabenGesamt}`,
-            'Aufgaben'
+            'erledigt'
         )
     );
     karte.append(zahlen);

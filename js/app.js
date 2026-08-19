@@ -6,7 +6,7 @@
 // der Zustand lebt nur im Speicher dieser Seite.
 // ============================================================
 
-import { ladePlan, PlanFehler } from './plan.js';
+import { ladePlan, waehleKurse, PlanFehler } from './plan.js';
 import { ladeAllenStatus } from './moodle.js';
 import { ermittleSchiene, merkeSchiene } from './schiene.js';
 import { verbinde } from './status.js';
@@ -16,7 +16,7 @@ import {
     zeigeSchienenAuswahl, zeichneTestleiste
 } from './view.js';
 import {
-    istTestmodus, testDatum, testSchiene, testDaten,
+    istTestmodus, testDatum, testSchiene, testDaten, testAlleKurse,
     baueBeispielStatus, setzeParameter, verlasseTestmodus
 } from './testmodus.js';
 
@@ -55,10 +55,15 @@ async function starte() {
             }
         }
 
-        const { status, fehler } = await holeStatus();
+        // Nur die zur Anzeige freigegebenen Kurse — im Probelauf auf Wunsch alle.
+        // Der volle Plan reist als alleKurse mit, damit die Bilanz die
+        // Blockwochen am ausgeblendeten Halbjahr abschneiden kann.
+        const sicht = { ...waehleKurse(plan, zeigeAlleKurse()), alleKurse: plan.kurse };
 
-        const aufgaben = verbinde(plan, status);
-        const bilanz = berechneBilanz(plan, aufgaben, schiene, stichtag());
+        const { status, fehler } = await holeStatus(sicht);
+
+        const aufgaben = verbinde(sicht, status);
+        const bilanz = berechneBilanz(sicht, aufgaben, schiene, stichtag());
 
         zeichne(wurzel, bilanz);
         zeichneTestleisteFallsNoetig();
@@ -114,15 +119,22 @@ async function bestimmeSchiene() {
  * Holt den Status — echt aus Moodle oder als Beispieldaten,
  * wenn im Testmodus ein Muster gewählt wurde.
  */
-async function holeStatus() {
+async function holeStatus(sicht) {
     const muster = istTestmodus() ? testDaten() : null;
 
     if (muster) {
-        return { status: baueBeispielStatus(plan, muster), fehler: [] };
+        return { status: baueBeispielStatus(sicht, muster), fehler: [] };
     }
 
     zeigeLaden(wurzel, 'Lade Stand aus der Lernplattform …');
-    return ladeAllenStatus(plan.kurse);
+    return ladeAllenStatus(sicht.kurse);
+}
+
+/**
+ * Sollen auch verborgene Kurse erscheinen? Nur im Probelauf möglich.
+ */
+function zeigeAlleKurse() {
+    return istTestmodus() && testAlleKurse();
 }
 
 /**
@@ -141,6 +153,7 @@ function zeichneTestleisteFallsNoetig() {
             datum: testDatum(),
             schiene,
             daten: testDaten(),
+            kurse: testAlleKurse() ? 'alle' : '',
             schienen: plan?.schienen ?? {}
         },
         {

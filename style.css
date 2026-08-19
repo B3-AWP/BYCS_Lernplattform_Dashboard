@@ -425,17 +425,32 @@ main {
     color: var(--bernstein);
 }
 
-/* Vier Kennzahlen passen bei schmalen Kacheln nicht mehr in eine
-   Zeile — Raster statt fester Reihe, damit sie sauber umbrechen. */
+/* Vier Kennzahlen in einer Reihe überlappen, sobald die Kachel
+   schmal wird. Zwei feste Spalten sind die ruhigere Antwort als ein
+   auto-fit, das je nach Breite auch mal drei zeigt und die vierte
+   allein umbrechen lässt. Erst wenn wirklich Platz ist, alle vier
+   nebeneinander. */
 .kachel-zahlen {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(5.5rem, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: var(--a2) var(--a3);
 }
 
+@media (min-width: 60rem) {
+    .kachel-zahlen {
+        grid-template-columns: repeat(4, minmax(0, auto));
+        justify-content: start;
+        gap: var(--a2) var(--a4);
+    }
+}
+
+/* min-width:0 hebt die Vorgabe auf, dass ein Rasterfeld mindestens
+   so breit wie sein Inhalt ist — ohne sie schiebt eine lange
+   Beschriftung die Nachbarspalte zu und die Texte überlappen. */
 .kennzahl {
     display: flex;
     flex-direction: column;
+    min-width: 0;
 }
 
 .kennzahl-wert {
@@ -447,14 +462,22 @@ main {
 .kennzahl-name {
     display: inline-flex;
     align-items: center;
+    gap: .15em;
+    min-width: 0;
     font-size: .76rem;
     letter-spacing: .06em;
     text-transform: uppercase;
     color: var(--tinte-3);
+    /* Umbrechen statt überlaufen, wenn es doch einmal eng wird. */
+    overflow-wrap: anywhere;
 }
 
 /* In der Kennzahl sitzt das Fragezeichen neben kleinen Versalien —
    ohne Rücknahme überstrahlt es die Beschriftung. */
+.kennzahl-name .hilfe {
+    flex-shrink: 0;
+}
+
 .kennzahl-name .hilfe-zeichen {
     font-size: .72rem;
 }
