@@ -790,6 +790,79 @@ th[aria-sort] .sortpfeil {
     visibility: visible;
 }
 
+/* Der Erklärsatz ist ein Block, damit ein angehängter Inhalt
+   (etwa der Notenschlüssel) darunter beginnt statt daneben. */
+.hilfe-satz {
+    display: block;
+}
+
+/* Notenschlüssel in der Hilfe ------------------------------- */
+
+.schluessel {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: .25em .6em;
+    align-items: center;
+    margin-top: var(--a2);
+    padding-top: var(--a2);
+    /* currentColor folgt der Textfarbe des Kastens und trägt damit
+       in beiden Themes, anders als ein fester Weißton. */
+    border-top: 1px solid currentColor;
+    border-color: color-mix(in srgb, currentColor 22%, transparent);
+}
+
+/* Jede Zeile spannt das Raster der Elternebene auf, damit Note,
+   Name und Spanne über alle Zeilen hinweg bündig stehen. */
+.schluessel-zeile {
+    display: grid;
+    grid-column: 1 / -1;
+    grid-template-columns: subgrid;
+}
+
+/* Der Kasten kehrt sich im Dunkelmodus um: dort stünden die
+   Notenfarben aus dem Plan auf hellem Grund und fielen bis auf
+   1,4:1 ab. Eine eigene helle Fläche macht die Marke vom Grund des
+   Kastens unabhängig — auf ihr erreichen alle Stufen mindestens
+   3,4:1. Die Bedeutung steht ohnehin als Wort daneben. */
+.schluessel-note {
+    display: inline-grid;
+    place-items: center;
+    width: 1.35em;
+    height: 1.35em;
+    border: 1.5px solid currentColor;
+    border-radius: 3px;
+    background: #FFFFFF;
+    font-size: .9em;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+.schluessel-name {
+    font-size: .95em;
+}
+
+.schluessel-spanne {
+    font-size: .95em;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    white-space: nowrap;
+    opacity: .8;
+}
+
+/* Fällt subgrid aus, tragen feste Spalten die Bündigkeit. */
+@supports not (grid-template-columns: subgrid) {
+    .schluessel {
+        display: block;
+    }
+
+    .schluessel-zeile {
+        display: grid;
+        grid-template-columns: 1.35em 1fr auto;
+        gap: .25em .6em;
+        align-items: center;
+    }
+}
+
 /* Angeheftet: der Knopf bleibt sichtbar gedrückt, solange die
    Erklärung offensteht. */
 .hilfe-offen .hilfe-zeichen {

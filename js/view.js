@@ -412,6 +412,50 @@ function fortschrittsSpur(anteil, art, name, text, wertAnteil = anteil) {
     return spur;
 }
 
+/**
+ * Der Notenschlüssel als kleine Tabelle für die Hilfe.
+ *
+ * Gezeigt wird die volle Spanne je Note, nicht nur die untere
+ * Schwelle: "80–90 %" beantwortet die Frage "welche Note habe ich
+ * bei 85 %?" ohne Kopfrechnen, "ab 80 %" nicht.
+ *
+ * Der Schlüssel ist absteigend sortiert, die Obergrenze einer Stufe
+ * ist also die Schwelle der vorigen minus eins.
+ *
+ * @param {Object[]|null} notenschluessel
+ * @returns {HTMLElement|null}
+ */
+function notenschluesselTabelle(notenschluessel) {
+    if (!Array.isArray(notenschluessel) || notenschluessel.length === 0) return null;
+
+    const liste = el('span', 'schluessel');
+
+    notenschluessel.forEach((stufe, index) => {
+        const zeile = el('span', 'schluessel-zeile');
+
+        const marke = el('span', 'schluessel-note', String(stufe.note));
+        if (stufe.farbe) {
+            marke.style.color = stufe.farbe;
+            marke.style.borderColor = stufe.farbe;
+        }
+
+        // Oberste Stufe reicht bis 100 %, die unterste beginnt bei 0.
+        const obergrenze = index === 0 ? 100 : notenschluessel[index - 1].abProzent - 1;
+        const spanne = stufe.abProzent >= obergrenze
+            ? `${obergrenze} %`
+            : `${stufe.abProzent}–${obergrenze} %`;
+
+        zeile.append(
+            marke,
+            el('span', 'schluessel-name', stufe.name),
+            el('span', 'schluessel-spanne', spanne)
+        );
+        liste.append(zeile);
+    });
+
+    return liste;
+}
+
 function qualitaetsKarte({ durchschnitt, anzahl }, notenschluessel) {
     const karte = el('div', 'qualitaet');
 
@@ -422,7 +466,8 @@ function qualitaetsKarte({ durchschnitt, anzahl }, notenschluessel) {
         'Jede bewertete Aufgabe zählt gleich viel, unabhängig von ihrem Umfang. ' +
         'Dieser Wert ist vom Fortschritt getrennt: Eine gute Bewertung bringt ' +
         'dich zeitlich nicht weiter, und eine schlechte wirft dich nicht zurück.',
-        'Bewertungsschnitt'
+        'Bewertungsschnitt',
+        notenschluesselTabelle(notenschluessel)
     ));
 
     const wert = el('span', 'qualitaet-wert');
