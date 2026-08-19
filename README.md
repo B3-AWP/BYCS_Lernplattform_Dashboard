@@ -5,6 +5,7 @@ Dashboard für Lernende auf der BYCS-Lernplattform. Es zeigt den eigenen Stand
 Schulwochen, ausgewiesen als Rückstand oder Vorsprung in Stunden.
 
 Kein Lehrkraft- oder Klassenblick, keine Fremddaten.
+<img width="1932" height="1124" alt="image" src="https://github.com/user-attachments/assets/6ac3d719-07fa-483e-83a4-13003591f7cc" />
 
 ## Aufbau
 
