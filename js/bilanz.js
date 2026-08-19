@@ -110,6 +110,10 @@ export function berechneBilanz(plan, aufgaben, schienenName, heute = new Date())
 
     const ist = stundenGesamt > 0 ? stundenAbgegeben / stundenGesamt : 0;
 
+    // Unterrichtsstunden je Halbjahr — hängt an der Schiene, deshalb
+    // erst hier und nicht schon beim Einlesen des Plans.
+    const unterrichtsstunden = verteileUnterrichtsstunden(plan.kurse, schiene.schulwochen);
+
     // Delta in Stunden — die Größe, die im Dashboard vorne steht.
     const deltaStunden = (ist - soll) * stundenGesamt;
 
@@ -127,7 +131,9 @@ export function berechneBilanz(plan, aufgaben, schienenName, heute = new Date())
         stundenAbgegeben,
         stundenSoll: soll * stundenGesamt,
         qualitaet: berechneQualitaet(aufgaben),
-        kurse: plan.kurse.map(kurs => kursBilanz(kurs, aufgaben)),
+        kurse: plan.kurse.map(
+            kurs => kursBilanz(kurs, aufgaben, unterrichtsstunden.get(kurs.id))
+        ),
         zaehlung: zaehleZustaende(aufgaben)
     };
 }
@@ -157,10 +163,61 @@ export function berechneQualitaet(aufgaben) {
 }
 
 /**
+ * Verteilt die Unterrichtsstunden der Schiene auf die Kurse.
+ *
+ * Die Blockwochen hängen an der Schiene, die Halbjahre an den
+ * Kursen — verbunden werden beide über das Freischaltdatum: Wochen
+ * davor gehören zum ersten Halbjahr, Wochen ab dem Datum zum
+ * zweiten. Für die vorliegenden Schienen fällt die Grenze zwischen
+ * zwei Blöcke, es wird also keine Blockwoche zerschnitten.
+ *
+ * Ohne Freischaltdatum lässt sich nicht trennen; dann bekommt kein
+ * Kurs eine Angabe, statt eine erfundene zu zeigen.
+ *
+ * @param {Object[]} kurse - Kurse aus dem Plan, in Reihenfolge
+ * @param {Object[]} schulwochen - Blockwochen der Schiene
+ * @returns {Map<string, number>} Kurs-Id → Unterrichtsstunden
+ */
+export function verteileUnterrichtsstunden(kurse, schulwochen) {
+    const verteilung = new Map();
+    if (!Array.isArray(schulwochen) || schulwochen.length === 0) return verteilung;
+
+    // Grenzen aus den Freischaltdaten: jeder Kurs mit Datum eröffnet
+    // einen neuen Zeitraum, der bis zum nächsten Datum reicht.
+    const grenzen = kurse.map(kurs => ({
+        id: kurs.id,
+        ab: kurs.freischaltung ? datumOhneZeit(new Date(kurs.freischaltung)) : null
+    }));
+
+    // Nur der erste Kurs darf ohne Datum auskommen — er beginnt mit
+    // dem Schuljahr. Fehlt bei einem späteren das Datum, ist die
+    // Zuordnung nicht eindeutig.
+    if (grenzen.slice(1).some(g => g.ab === null || Number.isNaN(g.ab?.getTime()))) {
+        return verteilung;
+    }
+
+    grenzen.forEach(g => verteilung.set(g.id, 0));
+
+    schulwochen.forEach(woche => {
+        const start = datumOhneZeit(new Date(woche.start));
+
+        // Der letzte Kurs, dessen Freischaltung schon erreicht ist.
+        let treffer = grenzen[0];
+        for (const g of grenzen) {
+            if (g.ab && start >= g.ab) treffer = g;
+        }
+
+        verteilung.set(treffer.id, verteilung.get(treffer.id) + (woche.stunden || 0));
+    });
+
+    return verteilung;
+}
+
+/**
  * Bilanz eines einzelnen Unterkurses.
  * Der Anteil bezieht sich auf die Stunden dieses Kurses.
  */
-function kursBilanz(kurs, aufgaben) {
+function kursBilanz(kurs, aufgaben, unterrichtsstunden) {
     const eigene = aufgaben.filter(aufgabe => aufgabe.kursId === kurs.id);
     const abgegeben = eigene.filter(aufgabe => zaehltFuerFortschritt(aufgabe.zustand));
     const stundenAbgegeben = abgegeben.reduce((summe, aufgabe) => summe + aufgabe.stunden, 0);
@@ -172,6 +229,7 @@ function kursBilanz(kurs, aufgaben) {
         freischaltung: kurs.freischaltung,
         moodleCourseId: kurs.moodleCourseId,
         stundenGeplant: kurs.stundenGeplant,
+        stundenUnterricht: unterrichtsstunden ?? null,
         stundenAbgegeben,
         anteil: kurs.stundenGeplant > 0 ? stundenAbgegeben / kurs.stundenGeplant : 0,
         aufgabenGesamt: eigene.length,

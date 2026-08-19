@@ -12,7 +12,9 @@
     --flaeche-2:  #E8ECF2;
     --tinte:      #151A21;
     --tinte-2:    #4A5462;
-    --tinte-3:    #7A8494;
+    /* Auf allen drei Flächen über 4,5:1 — der Ton trägt auch bei
+       kleinem Text (Kennzahlen, Lektionsangaben, Fußzeilen). */
+    --tinte-3:    #616A79;
     --linie:      #D3DAE3;
     --linie-zart: #E2E7EE;
 
@@ -41,7 +43,7 @@
         --flaeche-2:  #1E2630;
         --tinte:      #E8ECF2;
         --tinte-2:    #A8B3C1;
-        --tinte-3:    #74808F;
+        --tinte-3:    #8A95A3;
         --linie:      #2A333F;
         --linie-zart: #212A34;
 
@@ -299,12 +301,15 @@ main {
     color: var(--rost);
 }
 
+/* Die zentrale Lesehilfe für beide Balken — sie erklärt, warum der
+   untere Wert kein Teil des oberen ist. Deshalb im normalen Textton
+   statt im zarten Grau der Nebenangaben. */
 .hinweis {
     margin: 0;
     padding-top: var(--a2);
     border-top: 1px solid var(--linie-zart);
-    font-size: .84rem;
-    color: var(--tinte-3);
+    font-size: .86rem;
+    color: var(--tinte-2);
     text-wrap: pretty;
 }
 
@@ -420,10 +425,12 @@ main {
     color: var(--bernstein);
 }
 
+/* Vier Kennzahlen passen bei schmalen Kacheln nicht mehr in eine
+   Zeile — Raster statt fester Reihe, damit sie sauber umbrechen. */
 .kachel-zahlen {
-    display: flex;
-    gap: var(--a4);
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(5.5rem, 1fr));
+    gap: var(--a2) var(--a3);
 }
 
 .kennzahl {
@@ -438,10 +445,22 @@ main {
 }
 
 .kennzahl-name {
+    display: inline-flex;
+    align-items: center;
     font-size: .76rem;
     letter-spacing: .06em;
     text-transform: uppercase;
     color: var(--tinte-3);
+}
+
+/* In der Kennzahl sitzt das Fragezeichen neben kleinen Versalien —
+   ohne Rücknahme überstrahlt es die Beschriftung. */
+.kennzahl-name .hilfe-zeichen {
+    font-size: .72rem;
+}
+
+.kennzahl-name .hilfe-text {
+    letter-spacing: normal;
 }
 
 /* ---------- Aufgabenliste ---------- */
@@ -464,6 +483,26 @@ main {
     border: 1px solid var(--linie);
     border-radius: 6px;
     box-shadow: var(--schatten);
+}
+
+/* Der Scrollbereich ist fokussierbar, damit die Tabelle auch ohne
+   Maus seitlich bewegt werden kann. */
+.tabelle-rahmen:focus-visible {
+    outline: 2px solid var(--kobalt);
+    outline-offset: 2px;
+}
+
+/* Nur für Screenreader — trägt die Ansage nach dem Sortieren. */
+.nur-vorlesen {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
 }
 
 .aufgaben-tabelle {
@@ -581,10 +620,23 @@ th[aria-sort] .sortpfeil {
     white-space: nowrap;
 }
 
-/* Gesperrte Kursblöcke insgesamt zurücknehmen — die Zwischenzeile
-   bleibt voll lesbar, sie trägt die Begründung. */
+/* Gesperrte Kursblöcke zurücknehmen — aber lesbar. opacity würde
+   den ohnehin schon zarten Text unter jedes Kontrastminimum drücken
+   (aus 3,7:1 würden rund 2:1). Stattdessen eine gedämpfte, aber
+   geprüfte Textfarbe und eine leicht abgesetzte Fläche. */
 .gruppe-gesperrt td {
-    opacity: .55;
+    background: color-mix(in srgb, var(--bernstein-zart) 45%, var(--flaeche));
+    color: var(--tinte-2);
+}
+
+.gruppe-gesperrt .aufgaben-link {
+    color: var(--tinte-2);
+}
+
+.gruppe-gesperrt .aufgabe-stunden,
+.gruppe-gesperrt .lektion-abschnitt,
+.gruppe-gesperrt .ohne-wert {
+    color: var(--tinte-3);
 }
 
 .aufgaben-tabelle tbody tr:hover {
@@ -696,16 +748,31 @@ th[aria-sort] .sortpfeil {
     line-height: 1.45;
     letter-spacing: normal;
     text-transform: none;
+    text-align: left;
     opacity: 0;
     visibility: hidden;
     transition: opacity .12s ease;
-    pointer-events: none;
+
+    /* Bewusst nicht pointer-events:none — wer den Text vergrößert
+       oder mit der Maus hineinfährt, um ihn zu lesen, darf ihn nicht
+       verlieren (WCAG 1.4.13, "hoverable"). */
 }
 
+/* focus-within statt des +-Nachbarselektors: der bräche, sobald
+   sich die Reihenfolge im Behälter ändert. */
 .hilfe:hover .hilfe-text,
-.hilfe-zeichen:focus-visible + .hilfe-text {
+.hilfe:focus-within .hilfe-text,
+.hilfe-offen .hilfe-text {
     opacity: 1;
     visibility: visible;
+}
+
+/* Angeheftet: der Knopf bleibt sichtbar gedrückt, solange die
+   Erklärung offensteht. */
+.hilfe-offen .hilfe-zeichen {
+    border-color: var(--kobalt);
+    background: var(--kobalt-zart);
+    color: var(--kobalt);
 }
 
 /* Am linken Rand nicht aus dem Bild laufen lassen */

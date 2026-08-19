@@ -5,15 +5,23 @@
 // berechneten Modell. Kein Fetch, keine Rechnung.
 // ============================================================
 
-import { ZUSTAND, ZUSTAND_TEXT } from './status.js';
+import { ZUSTAND, ZUSTAND_TEXT, ZUSTAND_HINWEIS } from './status.js';
 import { formatStunden, formatProzent, ermittleNote } from './bilanz.js';
 
 const BASIS = 'https://lernplattform.bycs.de';
 
-// Notenschlüssel der laufenden Darstellung. Wird beim Zeichnen
-// gesetzt, damit die Tabellenzeilen ihn nicht einzeln durchgereicht
-// bekommen müssen.
-let notenschluessel = null;
+// Fortlaufende Nummer für die Verknüpfung von Hilfeknopf und
+// Erklärungstext über aria-describedby.
+let hilfeZaehler = 0;
+
+// Ein Klick irgendwo sonst schließt offene Erklärungen wieder.
+document.addEventListener('click', ereignis => {
+    document.querySelectorAll('.hilfe-offen').forEach(offen => {
+        if (offen.contains(ereignis.target)) return;
+        offen.classList.remove('hilfe-offen');
+        offen.querySelector('.hilfe-zeichen')?.setAttribute('aria-expanded', 'false');
+    });
+});
 
 /**
  * Rendert das gesamte Dashboard.
@@ -22,12 +30,10 @@ let notenschluessel = null;
  * @param {Object} bilanz - Ergebnis aus berechneBilanz
  */
 export function zeichne(wurzel, bilanz) {
-    notenschluessel = bilanz.notenschluessel;
-
     wurzel.replaceChildren(
         kopfzeile(bilanz),
         kursKacheln(bilanz.kurse),
-        aufgabenListe(bilanz.kurse)
+        aufgabenListe(bilanz.kurse, bilanz.notenschluessel)
     );
 }
 
@@ -172,34 +178,34 @@ function kopfzeile(bilanz) {
     abschnitt.append(
         el('p', 'bilanz-woche', wochenText(bilanz)),
 
-        el('p', `delta ${vorsprung ? 'delta-vor' : 'delta-zurueck'}`,
-            betrag < 0.05
-                ? 'Genau im Plan'
-                : `${formatStunden(betrag)} Stunden ${vorsprung ? 'Vorsprung' : 'Rückstand'}`
-        ),
+        el('p', `delta ${vorsprung ? 'delta-vor' : 'delta-zurueck'}`, deltaText(bilanz)),
 
         balken(
-            'Bis jetzt eingeplant', bilanz.soll, bilanz.stundenSoll, skala, 'soll',
+            'Bis jetzt vorgesehen', bilanz.soll, bilanz.stundenSoll,
+            bilanz.stundenGesamt, skala, 'soll',
             'So viele Unterrichtsstunden sind in deiner Schiene bisher vergangen — ' +
             'gemessen an den Blockwochen im Schuljahr. Dieser Wert steigt nur, ' +
             'wenn eine neue Blockwoche beginnt, und sagt nichts darüber aus, ' +
             'was du getan hast.'
         ),
         balken(
-            'Davon abgegeben', bilanz.ist, bilanz.stundenAbgegeben, skala, 'ist',
-            'So viele der eingeplanten Stunden entfallen auf Pflichtaufgaben, ' +
-            'die du bereits abgegeben hast. Gezählt wird die für eine Aufgabe ' +
-            'eingeplante Zeit, nicht die, die du wirklich gebraucht hast. ' +
-            'Ob eine Abgabe schon bewertet wurde, spielt keine Rolle.'
+            'Von dir abgegeben', bilanz.ist, bilanz.stundenAbgegeben,
+            bilanz.stundenGesamt, skala, 'ist',
+            'So viele Stunden entfallen auf Pflichtaufgaben, die du bereits ' +
+            'abgegeben hast. Gezählt wird die für eine Aufgabe vorgesehene Zeit, ' +
+            'nicht die, die du wirklich gebraucht hast. Ob eine Abgabe schon ' +
+            'bewertet wurde, spielt keine Rolle.'
         ),
 
         el('p', 'hinweis',
-            'Beide Werte beziehen sich auf das ganze Schuljahr, auch auf Abschnitte, ' +
-            'die noch gesperrt sind. Dadurch springt die Anzeige nicht, sobald ein ' +
-            'Abschnitt freigeschaltet wird.'
+            'Beide Balken messen dasselbe Schuljahr: oben, wie weit der Unterricht ' +
+            'ist, unten, wie weit du bist. Der eine Wert ist kein Teil des anderen. ' +
+            'Gezählt wird jeweils das ganze Schuljahr, auch Abschnitte, die noch ' +
+            'gesperrt sind — dadurch springt die Anzeige nicht, sobald ein Abschnitt ' +
+            'freigeschaltet wird.'
         ),
 
-        qualitaetsKarte(bilanz.qualitaet)
+        qualitaetsKarte(bilanz.qualitaet, bilanz.notenschluessel)
     );
 
     return abschnitt;
@@ -209,23 +215,74 @@ function kopfzeile(bilanz) {
  * Fragezeichen mit Erklärung bei Mouseover und Tastaturfokus.
  *
  * Als <button> statt <span>, damit die Erklärung auch ohne Maus
- * erreichbar ist; title dient zusätzlich als Rückfall.
+ * erreichbar ist. Kein title: der würde als zweiter, konkurrierender
+ * Tooltip über dem eigenen Kasten liegen und den Text zusätzlich ein
+ * weiteres Mal in den Accessibility-Tree bringen.
+ *
+ * Der Text hängt über aria-describedby am Knopf — als Beschreibung,
+ * nicht als Name. So heißt der Knopf schlicht "Erklärung" und der
+ * Absatz wird genau einmal vorgelesen.
  *
  * @param {string} text - die Erklärung
+ * @param {string} thema - worauf sich die Erklärung bezieht
  * @returns {HTMLElement}
  */
-function hilfe(text) {
+function hilfe(text, thema) {
     const behaelter = el('span', 'hilfe');
+    const kennung = `hilfe-${++hilfeZaehler}`;
 
     const knopf = document.createElement('button');
     knopf.type = 'button';
     knopf.className = 'hilfe-zeichen';
     knopf.textContent = '?';
-    knopf.title = text;
-    knopf.setAttribute('aria-label', `Erklärung: ${text}`);
+    knopf.setAttribute('aria-label', thema ? `Erklärung: ${thema}` : 'Erklärung');
+    knopf.setAttribute('aria-describedby', kennung);
+    knopf.setAttribute('aria-expanded', 'false');
 
-    behaelter.append(knopf, el('span', 'hilfe-text', text));
+    const erklaerung = el('span', 'hilfe-text', text);
+    erklaerung.id = kennung;
+
+    // Klick hält die Erklärung offen — für alle, die zum Lesen nicht
+    // auf dem Knopf stehen bleiben können oder wollen.
+    knopf.addEventListener('click', () => {
+        const offen = behaelter.classList.toggle('hilfe-offen');
+        knopf.setAttribute('aria-expanded', String(offen));
+    });
+
+    // Esc schließt, solange der Fokus im Bereich liegt (WCAG 1.4.13).
+    behaelter.addEventListener('keydown', ereignis => {
+        if (ereignis.key !== 'Escape') return;
+        if (!behaelter.classList.contains('hilfe-offen')) return;
+        behaelter.classList.remove('hilfe-offen');
+        knopf.setAttribute('aria-expanded', 'false');
+        knopf.focus();
+        ereignis.stopPropagation();
+    });
+
+    behaelter.append(knopf, erklaerung);
     return behaelter;
+}
+
+/**
+ * Die große Zahl über den Balken.
+ *
+ * Vor Beginn der ersten Blockwoche ist das Soll null, also ist jede
+ * Abgabe rechnerisch "Vorsprung" — ein Vergleich mit nichts. Dann
+ * wird nur benannt, was schon geschafft ist.
+ */
+function deltaText(bilanz) {
+    const betrag = Math.abs(bilanz.deltaStunden);
+
+    if (bilanz.woche === 0) {
+        return betrag < 0.05
+            ? 'Noch nichts abgegeben'
+            : `${formatStunden(bilanz.stundenAbgegeben)} Stunden schon geschafft`;
+    }
+
+    if (betrag < 0.05) return 'Genau im Plan';
+
+    return `${formatStunden(betrag)} Stunden `
+        + (bilanz.deltaStunden >= 0 ? 'Vorsprung' : 'Rückstand');
 }
 
 /**
@@ -246,12 +303,12 @@ function wochenText(bilanz) {
         : `${bilanz.schienenTitel} · nach ${stand}`;
 }
 
-function balken(beschriftung, anteil, stunden, skala, art, erklaerung) {
+function balken(beschriftung, anteil, stunden, gesamt, skala, art, erklaerung) {
     const zeile = el('div', 'balken-zeile');
 
     const name = el('span', 'balken-name');
     name.append(document.createTextNode(beschriftung));
-    if (erklaerung) name.append(hilfe(erklaerung));
+    if (erklaerung) name.append(hilfe(erklaerung, beschriftung));
 
     const kopf = el('div', 'balken-kopf');
     kopf.append(
@@ -260,25 +317,66 @@ function balken(beschriftung, anteil, stunden, skala, art, erklaerung) {
             `${formatStunden(stunden)} h · ${formatProzent(anteil)}`)
     );
 
-    const spur = el('div', 'balken-spur');
-    const fuellung = el('div', `balken-fuellung balken-${art}`);
-    fuellung.style.width = `${Math.min(100, (anteil / skala) * 100)}%`;
-    spur.append(fuellung);
+    // Die Breite folgt der gemeinsamen Skala beider Balken, der
+    // angesagte Wert dem angezeigten Prozentsatz — sonst meldete der
+    // Screenreader "100 %", wo "11 %" steht.
+    const spur = fortschrittsSpur(
+        anteil / skala,
+        art,
+        beschriftung,
+        `${formatStunden(stunden)} von ${formatStunden(gesamt)} Stunden`,
+        anteil
+    );
 
     zeile.append(kopf, spur);
     return zeile;
 }
 
-function qualitaetsKarte({ durchschnitt, anzahl }) {
+/**
+ * Ein Fortschrittsbalken mit Semantik.
+ *
+ * Ohne role/aria-value* ist der Balken für Screenreader ein leeres
+ * div — die Information steckt allein in der CSS-Breite. Bei den
+ * Kacheln gibt es daneben keinen Zahlenwert, dort wäre sie sonst
+ * ganz verloren.
+ *
+ * @param {number} anteil - 0..1, bestimmt die gezeichnete Breite
+ * @param {string} art - 'soll' oder 'ist'
+ * @param {string} name - Beschriftung für die Ansage
+ * @param {string} [text] - Klartext statt der reinen Prozentzahl
+ * @param {number} [wertAnteil] - 0..1 für die Ansage, falls er von
+ *        der gezeichneten Breite abweicht
+ */
+function fortschrittsSpur(anteil, art, name, text, wertAnteil = anteil) {
+    const spur = el('div', 'balken-spur');
+    const breite = Math.min(100, Math.max(0, Math.round(anteil * 100)));
+    const prozent = Math.min(100, Math.max(0, Math.round(wertAnteil * 100)));
+
+    spur.setAttribute('role', 'progressbar');
+    spur.setAttribute('aria-valuenow', String(prozent));
+    spur.setAttribute('aria-valuemin', '0');
+    spur.setAttribute('aria-valuemax', '100');
+    spur.setAttribute('aria-label', name);
+    if (text) spur.setAttribute('aria-valuetext', text);
+
+    const fuellung = el('div', `balken-fuellung balken-${art}`);
+    fuellung.style.width = `${breite}%`;
+    spur.append(fuellung);
+
+    return spur;
+}
+
+function qualitaetsKarte({ durchschnitt, anzahl }, notenschluessel) {
     const karte = el('div', 'qualitaet');
 
     const name = el('span', 'qualitaet-name');
-    name.append(document.createTextNode('Qualität'));
+    name.append(document.createTextNode('Bewertungsschnitt'));
     name.append(hilfe(
         'Der Durchschnitt aller Bewertungen, die du bisher bekommen hast. ' +
         'Jede bewertete Aufgabe zählt gleich viel, unabhängig von ihrem Umfang. ' +
         'Dieser Wert ist vom Fortschritt getrennt: Eine gute Bewertung bringt ' +
-        'dich zeitlich nicht weiter, und eine schlechte wirft dich nicht zurück.'
+        'dich zeitlich nicht weiter, und eine schlechte wirft dich nicht zurück.',
+        'Bewertungsschnitt'
     ));
 
     const wert = el('span', 'qualitaet-wert');
@@ -335,8 +433,31 @@ function kursKachel(kurs) {
     }
 
     const zahlen = el('div', 'kachel-zahlen');
+
+    // Unterrichtsstunden zuerst: das ist die Zeit, die in diesem
+    // Halbjahr überhaupt zur Verfügung steht. Ohne Freischaltdaten
+    // ist sie nicht zu ermitteln — dann entfällt die Kennzahl.
+    if (kurs.stundenUnterricht !== null) {
+        zahlen.append(kennzahl(
+            `${formatStunden(kurs.stundenUnterricht)} h`,
+            'Unterricht',
+            'So viele Unterrichtsstunden sind in diesem Halbjahr vorgesehen — '
+            + 'die Summe der Blockwochen, die in den Zeitraum fallen. Ein Teil '
+            + 'davon geht für Pflichtaufgaben drauf, der Rest bleibt für '
+            + 'Erklärungen, Übungen und Nachfragen.'
+        ));
+    }
+
     zahlen.append(
-        kennzahl(`${formatStunden(kurs.stundenGeplant)} h`, 'geplant'),
+        // "Pflichtaufgaben", nicht "geplant": in der Kopfzeile steht
+        // "vorgesehen" für den Zeitverlauf. Dasselbe Wort für zwei
+        // verschiedene Größen wäre die häufigste Verwechslung hier.
+        kennzahl(
+            `${formatStunden(kurs.stundenGeplant)} h`,
+            'Pflichtaufgaben',
+            'So viel Zeit ist für die Pflichtaufgaben dieses Halbjahrs '
+            + 'veranschlagt. Nur diese Stunden zählen für deinen Fortschritt.'
+        ),
         kennzahl(
             kurs.gesperrt ? '–' : `${formatStunden(kurs.stundenAbgegeben)} h`,
             'abgegeben'
@@ -349,22 +470,26 @@ function kursKachel(kurs) {
     karte.append(zahlen);
 
     if (!kurs.gesperrt) {
-        const spur = el('div', 'balken-spur');
-        const fuellung = el('div', 'balken-fuellung balken-ist');
-        fuellung.style.width = `${Math.min(100, kurs.anteil * 100)}%`;
-        spur.append(fuellung);
-        karte.append(spur);
+        karte.append(fortschrittsSpur(
+            kurs.anteil,
+            'ist',
+            `Abgegeben in ${kurs.titel}`,
+            `${formatStunden(kurs.stundenAbgegeben)} von `
+            + `${formatStunden(kurs.stundenGeplant)} Stunden abgegeben`
+        ));
     }
 
     return karte;
 }
 
-function kennzahl(wert, beschriftung) {
+function kennzahl(wert, beschriftung, erklaerung) {
     const block = el('div', 'kennzahl');
-    block.append(
-        el('span', 'kennzahl-wert', wert),
-        el('span', 'kennzahl-name', beschriftung)
-    );
+
+    const name = el('span', 'kennzahl-name');
+    name.append(document.createTextNode(beschriftung));
+    if (erklaerung) name.append(hilfe(erklaerung, beschriftung));
+
+    block.append(el('span', 'kennzahl-wert', wert), name);
     return block;
 }
 
@@ -386,7 +511,16 @@ const ZUSTAND_RANG = {
     [ZUSTAND.BEWERTET]: 4
 };
 
-function aufgabenListe(kurse) {
+// Spalten der Aufgabentabelle. Auf Modulebene, weil auch die
+// Sortieransage die Beschriftungen braucht.
+const SPALTEN = [
+    { schluessel: 'titel', text: 'Titel' },
+    { schluessel: 'lektion', text: 'Lektion' },
+    { schluessel: 'status', text: 'Status' },
+    { schluessel: 'bewertung', text: 'Bewertung', rechts: true }
+];
+
+function aufgabenListe(kurse, notenschluessel) {
     const abschnitt = el('section', 'aufgaben');
     abschnitt.append(el('h2', 'abschnitt-titel', 'Pflichtaufgaben'));
 
@@ -396,14 +530,40 @@ function aufgabenListe(kurse) {
 
     const behaelter = el('div', 'tabelle-rahmen');
 
+    // Scrollbereich: die Tabelle ist breiter als ein Handydisplay.
+    // Ohne tabindex ließe sie sich nur mit der Maus verschieben.
+    behaelter.tabIndex = 0;
+    behaelter.setAttribute('role', 'region');
+    behaelter.setAttribute('aria-label', 'Pflichtaufgaben, seitlich scrollbar');
+
+    // Ansage für Screenreader nach dem Sortieren. Der Bereich steht
+    // außerhalb der Tabelle, damit ihn das Neuzeichnen nicht mitnimmt.
+    const ansage = el('p', 'nur-vorlesen');
+    ansage.setAttribute('role', 'status');
+    ansage.setAttribute('aria-live', 'polite');
+
     // Nach einem Klick auf die Überschrift wird nur die Tabelle neu
     // gezeichnet — die Daten bleiben, nur die Reihenfolge ändert sich.
-    const zeichneTabelle = () => {
-        behaelter.replaceChildren(aufgabenTabelle(mitAufgaben, zeichneTabelle));
+    // Der geklickte Knopf wird dabei ersetzt; ohne das Zurücksetzen
+    // des Fokus landet er auf <body> und die Tastaturbedienung reißt ab.
+    const zeichneTabelle = (fokusSpalte = null) => {
+        behaelter.replaceChildren(
+            aufgabenTabelle(mitAufgaben, zeichneTabelle, notenschluessel)
+        );
+
+        if (!fokusSpalte) return;
+
+        behaelter
+            .querySelector(`.sortknopf[data-spalte="${fokusSpalte}"]`)
+            ?.focus();
+
+        const spaltenName = SPALTEN.find(s => s.schluessel === fokusSpalte)?.text ?? '';
+        ansage.textContent = `Nach ${spaltenName} `
+            + (sortierung.absteigend ? 'absteigend' : 'aufsteigend') + ' sortiert';
     };
     zeichneTabelle();
 
-    abschnitt.append(behaelter);
+    abschnitt.append(ansage, behaelter);
     return abschnitt;
 }
 
@@ -416,15 +576,10 @@ function aufgabenListe(kurse) {
  * Ein noch gesperrtes Halbjahr soll sich nicht zwischen die
  * Aufgaben des laufenden mischen.
  */
-function aufgabenTabelle(kurse, neuZeichnen) {
+function aufgabenTabelle(kurse, neuZeichnen, notenschluessel) {
     const tabelle = el('table', 'aufgaben-tabelle');
 
-    const spalten = [
-        { schluessel: 'titel', text: 'Titel' },
-        { schluessel: 'lektion', text: 'Lektion' },
-        { schluessel: 'status', text: 'Status' },
-        { schluessel: 'bewertung', text: 'Bewertung', rechts: true }
-    ];
+    const spalten = SPALTEN;
 
     const kopf = el('thead');
     const kopfzeile = el('tr');
@@ -436,17 +591,23 @@ function aufgabenTabelle(kurse, neuZeichnen) {
         const knopf = document.createElement('button');
         knopf.type = 'button';
         knopf.className = 'sortknopf';
+        knopf.dataset.spalte = spalte.schluessel;
         knopf.append(document.createTextNode(spalte.text));
 
         const aktiv = sortierung.spalte === spalte.schluessel;
-        knopf.append(el('span', 'sortpfeil', aktiv ? (sortierung.absteigend ? '▾' : '▴') : '⇅'));
+        const pfeil = el('span', 'sortpfeil', aktiv ? (sortierung.absteigend ? '▾' : '▴') : '⇅');
+        pfeil.setAttribute('aria-hidden', 'true');
+        knopf.append(pfeil);
 
         if (aktiv) {
             zelle.setAttribute('aria-sort', sortierung.absteigend ? 'descending' : 'ascending');
         }
+
+        // Der sichtbare Text steht vorn im Namen — sonst greift eine
+        // Sprachsteuerung ("Klick Titel") ins Leere (WCAG 2.5.3).
         knopf.setAttribute(
             'aria-label',
-            `Nach ${spalte.text} sortieren${aktiv ? ' (Richtung umkehren)' : ''}`
+            `${spalte.text} — sortieren${aktiv ? ', Richtung umkehren' : ''}`
         );
 
         knopf.addEventListener('click', () => {
@@ -455,7 +616,7 @@ function aufgabenTabelle(kurse, neuZeichnen) {
             } else {
                 sortierung = { spalte: spalte.schluessel, absteigend: false };
             }
-            neuZeichnen();
+            neuZeichnen(spalte.schluessel);
         });
 
         zelle.append(knopf);
@@ -468,7 +629,9 @@ function aufgabenTabelle(kurse, neuZeichnen) {
     kurse.forEach(kurs => {
         const koerper = el('tbody', kurs.gesperrt ? 'gruppe-gesperrt' : '');
         koerper.append(kursZwischenzeile(kurs, spalten.length));
-        sortiere(kurs.aufgaben).forEach(aufgabe => koerper.append(aufgabenZeile(aufgabe)));
+        sortiere(kurs.aufgaben).forEach(
+            aufgabe => koerper.append(aufgabenZeile(aufgabe, notenschluessel))
+        );
         tabelle.append(koerper);
     });
 
@@ -551,7 +714,7 @@ function sortiere(aufgaben) {
     });
 }
 
-function aufgabenZeile(aufgabe) {
+function aufgabenZeile(aufgabe, notenschluessel) {
     const zeile = el('tr', aufgabe.kursGesperrt ? 'zeile-gesperrt' : '');
 
     // Titel als Link auf die Aufgabe in der Lernplattform
@@ -562,7 +725,10 @@ function aufgabenZeile(aufgabe) {
     link.target = '_blank';
     link.rel = 'noopener';
     link.textContent = aufgabe.titel;
-    link.title = 'In der Lernplattform öffnen';
+    link.setAttribute(
+        'aria-label',
+        `${aufgabe.titel} — in der Lernplattform öffnen, neuer Tab`
+    );
     titelZelle.append(link, el('span', 'aufgabe-stunden', `${formatStunden(aufgabe.stunden)} h`));
 
     // Abschnitt über der Lerneinheit — die Lerneinheit ist die
@@ -584,7 +750,11 @@ function aufgabenZeile(aufgabe) {
     const noteZelle = el('td', 'rechts');
     noteZelle.append(
         aufgabe.bewertung !== null
-            ? bewertungMitNote(aufgabe.bewertung, aufgabe.skala ? aufgabe.bewertungText : null)
+            ? bewertungMitNote(
+                aufgabe.bewertung,
+                aufgabe.skala ? aufgabe.bewertungText : null,
+                notenschluessel
+              )
             : el('span', 'ohne-wert', '–')
     );
 
@@ -601,7 +771,7 @@ function aufgabenZeile(aufgabe) {
  * @param {number} wert - Prozentwert
  * @returns {HTMLElement}
  */
-function bewertungMitNote(wert, skalenText) {
+function bewertungMitNote(wert, skalenText, notenschluessel) {
     const behaelter = el('span', 'bewertung-paar');
 
     // Bei Skalenbewertungen sagt die Stufenbezeichnung mehr als der
@@ -637,7 +807,16 @@ function formatBewertung(wert) {
 
 function zustandsChip(zustand) {
     const chip = el('span', `chip chip-${zustand}`);
-    chip.append(el('span', 'chip-marke'), document.createTextNode(ZUSTAND_TEXT[zustand]));
+
+    const marke = el('span', 'chip-marke');
+    marke.setAttribute('aria-hidden', 'true');
+    chip.append(marke, document.createTextNode(ZUSTAND_TEXT[zustand]));
+
+    // Zustände, die den nächsten Schritt offen lassen, bekommen ihn
+    // dazu — "Status unbekannt" allein hilft niemandem weiter.
+    const hinweis = ZUSTAND_HINWEIS[zustand];
+    if (hinweis) chip.append(hilfe(hinweis, ZUSTAND_TEXT[zustand]));
+
     return chip;
 }
 

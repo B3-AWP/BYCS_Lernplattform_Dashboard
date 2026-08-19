@@ -21,7 +21,18 @@ export const ZUSTAND_TEXT = {
     [ZUSTAND.ENTWURF]: 'Entwurf',
     [ZUSTAND.ABGEGEBEN]: 'Abgegeben',
     [ZUSTAND.BEWERTET]: 'Bewertet',
-    [ZUSTAND.UNBEKANNT]: 'Unklar'
+    [ZUSTAND.UNBEKANNT]: 'Status unbekannt'
+};
+
+/**
+ * Zusatzerklärung für Zustände, die aus sich heraus nicht sagen,
+ * was zu tun ist.
+ */
+export const ZUSTAND_HINWEIS = {
+    [ZUSTAND.UNBEKANNT]:
+        'Die Lernplattform meldet für diese Aufgabe einen Wert, den das '
+        + 'Dashboard nicht einordnen kann. Sieh bitte in der Lernplattform '
+        + 'nach, ob deine Abgabe angekommen ist.'
 };
 
 /**
