@@ -68,19 +68,121 @@ export function istImBlock(schulwochen, woche, heute = new Date()) {
  *
  *   Soll(w) = Σ Stunden Schulwoche 1..w / Σ Stunden gesamt
  *
+ * Mit Raster und Stichtag zählt die laufende Blockwoche nur anteilig:
+ * am Dienstag einer Blockwoche sind eben noch nicht alle 14 Stunden
+ * gehalten. Ohne Raster bleibt es beim alten Verhalten — die
+ * angebrochene Woche zählt ganz.
+ *
  * @param {Object[]} schulwochen
  * @param {number} woche
+ * @param {Object} [raster] - {mo,di,mi,do,fr} Stunden je Wochentag
+ * @param {Date} [heute]
  * @returns {number} Anteil zwischen 0 und 1
  */
-export function sollAnteil(schulwochen, woche) {
+export function sollAnteil(schulwochen, woche, raster = null, heute = null) {
     const gesamt = schulwochen.reduce((summe, w) => summe + w.stunden, 0);
     if (gesamt <= 0) return 0;
 
     const bisher = schulwochen
-        .filter(w => w.woche <= woche)
+        .filter(w => w.woche < woche)
         .reduce((summe, w) => summe + w.stunden, 0);
 
-    return bisher / gesamt;
+    const laufende = schulwochen.find(w => w.woche === woche);
+    if (!laufende) return bisher / gesamt;
+
+    return (bisher + anteilLaufendeWoche(laufende, raster, heute)) / gesamt;
+}
+
+/**
+ * Stunden der laufenden Blockwoche, die bis zum Stichtag gehalten sind.
+ *
+ * Das Raster gibt die Form der Verteilung, die Wochensumme aus dem Plan
+ * die Höhe: gerechnet wird anteilig, damit eine verkürzte erste Woche
+ * (10 statt 14 Stunden) nicht mehr ausweist als sie hat. Tage außerhalb
+ * von start–ende zählen nicht mit — so fällt der fehlende Montag einer
+ * am Dienstag beginnenden Woche von selbst heraus.
+ *
+ * @param {Object} woche
+ * @param {Object|null} raster
+ * @param {Date|null} heute
+ * @returns {number} Stunden
+ */
+function anteilLaufendeWoche(woche, raster, heute) {
+    const stunden = woche.stunden || 0;
+
+    // Ohne Raster oder Stichtag bleibt es beim alten Verhalten.
+    if (!raster || !heute) return stunden;
+
+    const beginn = datumOhneZeit(new Date(woche.start));
+    const ende = woche.ende ? datumOhneZeit(new Date(woche.ende)) : null;
+    const stichtag = datumOhneZeit(heute);
+
+    if (Number.isNaN(beginn.getTime())) return stunden;
+    if (stichtag < beginn) return 0;
+    if (ende && stichtag >= ende) return stunden;
+
+    let summeWoche = 0;
+    let summeBisHeute = 0;
+
+    for (const tag of tageDerWoche(beginn, ende)) {
+        const wert = raster[WOCHENTAG_SCHLUESSEL[tag.getDay()]] || 0;
+        summeWoche += wert;
+        if (tag <= stichtag) summeBisHeute += wert;
+    }
+
+    // Ein Raster, das für diese Woche nichts hergibt, darf das Soll
+    // nicht auf null ziehen — dann lieber die volle Wochensumme.
+    if (summeWoche <= 0) return stunden;
+
+    return (summeBisHeute / summeWoche) * stunden;
+}
+
+/**
+ * Alle Kalendertage von start bis ende (einschließlich).
+ * Ohne Endedatum gilt die Woche als Mo–Fr ab Beginn.
+ */
+function tageDerWoche(beginn, ende) {
+    const tage = [];
+    const letzter = ende && !Number.isNaN(ende.getTime())
+        ? ende
+        : new Date(beginn.getFullYear(), beginn.getMonth(), beginn.getDate() + 4);
+
+    const lauf = new Date(beginn);
+    // Schutz gegen ein verdrehtes ende: nie mehr als eine Woche.
+    let schutz = 0;
+    while (lauf <= letzter && schutz < 7) {
+        tage.push(new Date(lauf));
+        lauf.setDate(lauf.getDate() + 1);
+        schutz++;
+    }
+    return tage;
+}
+
+// Date.getDay(): 0 = Sonntag. Wochenenden tragen kein Raster.
+const WOCHENTAG_SCHLUESSEL = {
+    0: 'so', 1: 'mo', 2: 'di', 3: 'mi', 4: 'do', 5: 'fr', 6: 'sa'
+};
+
+/**
+ * Das Stundenraster einer Klasse, oder null.
+ *
+ * Mehrere Klassen mit verschiedenen Rastern lassen sich nicht auflösen;
+ * dann gilt kein Raster statt eines geratenen.
+ *
+ * @param {Object} plan
+ * @param {string[]} klassen
+ * @returns {Object|null}
+ */
+export function rasterFuerKlassen(plan, klassen) {
+    if (!plan?.stundenraster || !Array.isArray(klassen) || klassen.length === 0) {
+        return null;
+    }
+
+    const namen = [...new Set(
+        klassen.map(klasse => plan.klassenZuRaster?.[klasse]).filter(Boolean)
+    )];
+
+    return namen.length === 1 ? plan.stundenraster[namen[0]] ?? null : null;
 }
 
 /**
@@ -90,10 +192,12 @@ export function sollAnteil(schulwochen, woche) {
  * @param {Object[]} aufgaben - ausgewertete Aufgaben aus status.verbinde
  * @param {string} schienenName - Schiene der lernenden Person
  * @param {Date} [heute]
+ * @param {string[]} [klassen] - erkannte Klassen, für das Stundenraster
  * @returns {Object} Bilanz mit Soll, Ist, Delta, Qualität und Kursaufstellung
  * @throws {Error} wenn die Schiene im Plan nicht existiert
  */
-export function berechneBilanz(plan, aufgaben, schienenName, heute = new Date()) {
+export function berechneBilanz(plan, aufgaben, schienenName, heute = new Date(),
+                               klassen = []) {
     const schiene = plan.schienen[schienenName];
     if (!schiene) {
         throw new Error(`Schiene "${schienenName}" ist im Plan nicht definiert.`);
@@ -106,8 +210,11 @@ export function berechneBilanz(plan, aufgaben, schienenName, heute = new Date())
     );
 
     const woche = aktuelleWoche(wochen, heute);
-    const soll = sollAnteil(wochen, woche);
     const imBlock = istImBlock(wochen, woche, heute);
+    const raster = rasterFuerKlassen(plan, klassen);
+    // Nur eine laufende Woche wird tagesgenau geteilt; liegt der Block
+    // hinter uns, zählt er ohnehin ganz.
+    const soll = sollAnteil(wochen, woche, imBlock ? raster : null, heute);
 
     const stundenGesamt = plan.stundenGesamt;
     const stundenAbgegeben = aufgaben
@@ -141,6 +248,8 @@ export function berechneBilanz(plan, aufgaben, schienenName, heute = new Date())
         notenschluessel: plan.notenschluessel,
         woche,
         wochenGesamt: wochen.length,
+        // Für die Anzeige „Woche 2, Tag 2/5" statt eines stillen Sprungs.
+        rasterAktiv: Boolean(imBlock && raster),
         nurTeilzeitraum,
         zeitraumTitel,
         imBlock,

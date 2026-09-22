@@ -13,7 +13,7 @@ import { verbinde } from './status.js';
 import { berechneBilanz } from './bilanz.js';
 import {
     zeichne, zeigeLaden, zeigeFehler, zeigeWarnung,
-    zeigeSchienenAuswahl, zeichneTestleiste, zeigeZeitraum
+    zeigeKlassenAuswahl, zeichneTestleiste, zeigeZeitraum
 } from './view.js';
 import {
     istTestmodus, testDatum, testSchiene, testDaten, testAlleKurse,
@@ -25,10 +25,14 @@ const testleiste = document.getElementById('testleiste');
 const aktualisierenKnopf = document.getElementById('aktualisieren');
 const zeitraum = document.getElementById('zeitraum');
 
-// Plan und Schiene ändern sich während einer Sitzung nicht und
-// werden gehalten; der Status wird bei jeder Aktualisierung neu geholt.
+// Plan, Schiene und Klasse ändern sich während einer Sitzung nicht
+// und werden gehalten; der Status wird bei jeder Aktualisierung neu
+// geholt. Die Klasse ist nur bekannt, wenn sie erkannt oder gewählt
+// wurde — sie bestimmt das Stundenraster, für die Blockwochen selbst
+// zählt allein die Schiene.
 let plan = null;
 let schiene = null;
+let klasse = null;
 let laueft = false;
 
 /**
@@ -51,7 +55,9 @@ async function starte() {
             // Ohne Schiene lässt sich kein Soll berechnen — hier wird
             // gefragt statt geraten.
             if (!schiene) {
-                zeigeSchienenAuswahl(wurzel, plan.schienen, waehleSchiene);
+                zeigeKlassenAuswahl(
+                    wurzel, plan.klassenZuSchiene, plan.schienen, waehleKlasse
+                );
                 return;
             }
         }
@@ -64,7 +70,11 @@ async function starte() {
         const { status, fehler } = await holeStatus(sicht);
 
         const aufgaben = verbinde(sicht, status);
-        const bilanz = berechneBilanz(sicht, aufgaben, schiene, stichtag());
+        // Die Klasse reist als Liste, weil das Raster auch bei mehreren
+        // erkannten Klassen eindeutig bleiben muss.
+        const bilanz = berechneBilanz(
+            sicht, aufgaben, schiene, stichtag(), klasse ? [klasse] : []
+        );
 
         zeichne(wurzel, bilanz);
         zeigeZeitraum(zeitraum, bilanz);
@@ -102,7 +112,13 @@ async function starte() {
 }
 
 /**
- * Ermittelt die Schiene. Im Testmodus hat eine dort gewählte Vorrang.
+ * Ermittelt die Schiene und setzt nebenbei die erkannte Klasse,
+ * aus der sich das Stundenraster ergibt.
+ *
+ * Im Testmodus hat eine dort gewählte Schiene Vorrang; eine Klasse
+ * wird dann nicht erkannt, die laufende Blockwoche zählt also ganz.
+ *
+ * @returns {Promise<string|null>} Name der Schiene
  */
 async function bestimmeSchiene() {
     if (istTestmodus()) {
@@ -114,6 +130,14 @@ async function bestimmeSchiene() {
 
     zeigeLaden(wurzel, 'Ermittle deine Klasse …');
     const ergebnis = await ermittleSchiene(plan);
+
+    // Nur bei einer einzigen Klasse ist die Zuordnung eindeutig;
+    // bei mehreren bliebe offen, welche die eigene ist.
+    if (ergebnis.schiene && ergebnis.klassen.length === 1) {
+        klasse = ergebnis.klassen[0];
+        merkeSchiene(ergebnis.schiene, klasse);
+    }
+
     return ergebnis.schiene;
 }
 
@@ -166,11 +190,13 @@ function zeichneTestleisteFallsNoetig() {
 }
 
 /**
- * Übernimmt die manuell gewählte Schiene und lädt weiter.
+ * Übernimmt die manuell gewählte Klasse und lädt weiter.
+ * Die Schiene ergibt sich aus der Zuordnung im Plan.
  */
-function waehleSchiene(gewaehlt) {
-    schiene = gewaehlt;
-    merkeSchiene(gewaehlt);
+function waehleKlasse(gewaehlt) {
+    klasse = gewaehlt;
+    schiene = plan.klassenZuSchiene[gewaehlt];
+    merkeSchiene(schiene, klasse);
     starte();
 }
 

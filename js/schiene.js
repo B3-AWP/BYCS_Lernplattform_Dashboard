@@ -34,8 +34,12 @@ const SPEICHER_SCHLUESSEL = 'stundenbilanz.schiene';
  */
 export async function ermittleSchiene(plan) {
     const gemerkt = leseGemerkteSchiene();
-    if (gemerkt && gemerkt in plan.schienen) {
-        return { schiene: gemerkt, klassen: [], quelle: 'auswahl' };
+    if (gemerkt && gemerkt.schiene in plan.schienen) {
+        return {
+            schiene: gemerkt.schiene,
+            klassen: gemerkt.klasse ? [gemerkt.klasse] : [],
+            quelle: 'auswahl'
+        };
     }
 
     return erkenneAusProfil(plan.klassenZuSchiene, waehleKurs(plan.kurse));
@@ -177,22 +181,56 @@ function maskiere(text) {
 }
 
 /**
- * Merkt die gewählte Schiene für die Dauer der Sitzung.
+ * Merkt Schiene und Klasse für die Dauer der Sitzung.
  * Bewusst sessionStorage: kein Zustand über die Sitzung hinaus.
+ *
+ * Die Klasse wird mitgeschrieben, damit sie beim nächsten Laden
+ * benannt werden kann, ohne das Profil erneut zu lesen. Sie ist
+ * optional: Bleibt sie offen, wird nur die Schiene gemerkt.
+ *
+ * @param {string} schiene - Schlüssel der Schiene
+ * @param {string|null} [klasse] - erkannte oder gewählte Klasse
  */
-export function merkeSchiene(schiene) {
+export function merkeSchiene(schiene, klasse = null) {
     try {
-        sessionStorage.setItem(SPEICHER_SCHLUESSEL, schiene);
+        sessionStorage.setItem(
+            SPEICHER_SCHLUESSEL,
+            JSON.stringify({ schiene, klasse })
+        );
     } catch {
         // Ohne sessionStorage funktioniert alles weiter, die Wahl
         // muss dann nur bei jedem Laden erneut getroffen werden.
     }
 }
 
+/**
+ * Liest das Gemerkte zurück.
+ *
+ * Ältere Sitzungen haben die Schiene als blanken String abgelegt.
+ * Solche Werte werden weiter akzeptiert, dann eben ohne Klasse —
+ * sonst stünde die Person nach einem Update grundlos wieder vor
+ * der Auswahl.
+ *
+ * @returns {{schiene: string, klasse: string|null}|null}
+ */
 function leseGemerkteSchiene() {
+    let roh;
     try {
-        return sessionStorage.getItem(SPEICHER_SCHLUESSEL);
+        roh = sessionStorage.getItem(SPEICHER_SCHLUESSEL);
     } catch {
         return null;
     }
+
+    if (!roh) return null;
+
+    try {
+        const wert = JSON.parse(roh);
+        if (typeof wert?.schiene === 'string') {
+            return { schiene: wert.schiene, klasse: wert.klasse ?? null };
+        }
+    } catch {
+        // Kein JSON — das alte Format, siehe oben.
+    }
+
+    return typeof roh === 'string' ? { schiene: roh, klasse: null } : null;
 }

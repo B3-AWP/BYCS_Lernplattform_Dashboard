@@ -6,7 +6,7 @@
 // und ruft Moodle nicht auf.
 // ============================================================
 
-const SCHEMA_VERSION = 3;
+const SCHEMA_VERSION = 4;
 const AUFGABEN_TYPEN = ['assign', 'quiz'];
 
 /**
@@ -74,6 +74,10 @@ export function pruefePlan(rohdaten) {
     const klassenZuSchiene = pruefeKlassenzuordnung(
         rohdaten.klassenZuSchiene, schienen, fehler
     );
+    const stundenraster = pruefeStundenraster(rohdaten.stundenraster, fehler);
+    const klassenZuRaster = pruefeRasterzuordnung(
+        rohdaten.klassenZuRaster, stundenraster, fehler
+    );
     const kurse = pruefeKurse(rohdaten.kurse, skalen, fehler);
 
     if (fehler.length > 0) {
@@ -94,6 +98,8 @@ export function pruefePlan(rohdaten) {
         skalen,
         schienen,
         klassenZuSchiene,
+        stundenraster,
+        klassenZuRaster,
         kurse,
         stundenGesamt,
         aufgaben: kurse.flatMap(kurs => kurs.aufgaben)
@@ -349,6 +355,81 @@ function pruefeKlassenzuordnung(zuordnung, schienen, fehler) {
             fehler.push(
                 `klassenZuSchiene.${klasse} verweist auf "${schiene}", ` +
                 `was unter schienen nicht definiert ist.`
+            );
+        }
+    });
+
+    return { ...zuordnung };
+}
+
+// Wochentage, die ein Raster tragen darf. Blockwochen laufen Mo–Fr.
+const RASTER_TAGE = ['mo', 'di', 'mi', 'do', 'fr'];
+
+/**
+ * Prüft die Stundenraster — Verteilung der Wochenstunden auf Mo–Fr.
+ *
+ * Das Raster gibt nur die Form der Verteilung; die Höhe bleibt die
+ * Wochensumme aus der Schiene. Es ist optional: ohne Raster zählt
+ * eine angebrochene Blockwoche wie bisher ganz.
+ */
+function pruefeStundenraster(raster, fehler) {
+    if (raster === undefined || raster === null) return {};
+
+    if (typeof raster !== 'object' || Array.isArray(raster)) {
+        fehler.push('stundenraster ist kein Objekt.');
+        return {};
+    }
+
+    const geprueft = {};
+
+    Object.entries(raster).forEach(([name, tage]) => {
+        if (!tage || typeof tage !== 'object' || Array.isArray(tage)) {
+            fehler.push(`stundenraster.${name} ist kein Objekt.`);
+            return;
+        }
+
+        const eintrag = {};
+        let summe = 0;
+
+        RASTER_TAGE.forEach(tag => {
+            const wert = tage[tag] ?? 0;
+            if (typeof wert !== 'number' || !Number.isFinite(wert) || wert < 0) {
+                fehler.push(`stundenraster.${name}.${tag} ist keine Stundenzahl ≥ 0.`);
+                return;
+            }
+            eintrag[tag] = wert;
+            summe += wert;
+        });
+
+        // Ein Raster ohne Stunden könnte das Soll auf null ziehen.
+        if (summe <= 0) {
+            fehler.push(`stundenraster.${name} hat in Summe 0 Stunden.`);
+            return;
+        }
+
+        geprueft[name] = eintrag;
+    });
+
+    return geprueft;
+}
+
+/**
+ * Prüft die Zuordnung Klasse → Stundenraster.
+ * Jedes genannte Raster muss auch definiert sein.
+ */
+function pruefeRasterzuordnung(zuordnung, stundenraster, fehler) {
+    if (zuordnung === undefined || zuordnung === null) return {};
+
+    if (typeof zuordnung !== 'object' || Array.isArray(zuordnung)) {
+        fehler.push('klassenZuRaster ist kein Objekt.');
+        return {};
+    }
+
+    Object.entries(zuordnung).forEach(([klasse, name]) => {
+        if (typeof name !== 'string' || !(name in stundenraster)) {
+            fehler.push(
+                `klassenZuRaster.${klasse} verweist auf "${name}", ` +
+                `was unter stundenraster nicht definiert ist.`
             );
         }
     });

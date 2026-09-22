@@ -162,35 +162,43 @@ function alsIsoDatum(datum) {
 }
 
 /**
- * Fragt die Schiene ab, wenn sie sich nicht aus der Klasse ergibt.
+ * Fragt die Klasse ab, wenn sie sich nicht aus dem Profil ergibt.
+ *
+ * Gefragt wird nach der Klasse, nicht nach der Schiene: Die eigene
+ * Klasse ist bekannt, die Schiene dahinter oft nicht. Welche Schiene
+ * gemeint ist, steht als Erläuterung am Knopf.
  *
  * @param {HTMLElement} wurzel - Zielelement
+ * @param {Object} klassenZuSchiene - Zuordnung aus dem Plan
  * @param {Object} schienen - Schienen aus dem Plan
- * @param {(schiene: string) => void} beiAuswahl
+ * @param {(klasse: string) => void} beiAuswahl
  */
-export function zeigeSchienenAuswahl(wurzel, schienen, beiAuswahl) {
+export function zeigeKlassenAuswahl(wurzel, klassenZuSchiene, schienen, beiAuswahl) {
     const block = el('section', 'auswahl');
 
     block.append(
-        el('h2', 'auswahl-titel', 'Welche Schiene besuchst du?'),
+        el('h2', 'auswahl-titel', 'Welche Klasse besuchst du?'),
         el('p', 'auswahl-text',
-            'Deine Klasse konnte nicht automatisch erkannt werden. Die Schiene ' +
+            'Deine Klasse konnte nicht automatisch erkannt werden. Sie ' +
             'bestimmt, welche Blockwochen für deinen Zeitplan gelten.'
         )
     );
 
     const knoepfe = el('div', 'auswahl-knoepfe');
 
-    Object.values(schienen).forEach(schiene => {
+    Object.keys(klassenZuSchiene).sort().forEach(klasse => {
+        const schiene = schienen[klassenZuSchiene[klasse]];
+
         const knopf = document.createElement('button');
         knopf.type = 'button';
         knopf.className = 'knopf knopf-auswahl';
-        knopf.addEventListener('click', () => beiAuswahl(schiene.name));
+        knopf.addEventListener('click', () => beiAuswahl(klasse));
 
         knopf.append(
-            el('span', 'auswahl-name', schiene.titel),
+            el('span', 'auswahl-name', klasse),
             el('span', 'auswahl-wochen',
-                `${schiene.wochenGesamt} Blockwochen · ab ${formatDatum(schiene.schulwochen[0]?.start)}`)
+                `${schiene.titel} · ${schiene.wochenGesamt} Blockwochen · ` +
+                `ab ${formatDatum(schiene.schulwochen[0]?.start)}`)
         );
 
         knoepfe.append(knopf);

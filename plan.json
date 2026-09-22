@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 3,
+  "schemaVersion": 4,
   "schuljahr": "2026/27",
   "stand": "2026-08-18",
 
@@ -60,6 +60,16 @@
         { "woche": 9, "start": "2027-03-08", "ende": "2027-03-12", "stunden": 14 }
       ]
     }
+  },
+
+  "stundenraster": {
+    "RasterAB": { "mo": 2, "di": 5, "mi": 2, "do": 3, "fr": 2 },
+    "RasterCD": { "mo": 2, "di": 3, "mi": 2, "do": 5, "fr": 2 }
+  },
+
+  "klassenZuRaster": {
+    "IFA12A": "RasterAB", "IFA12B": "RasterAB",
+    "IFA12C": "RasterCD", "IFA12D": "RasterCD"
   },
 
   "kurse": [
