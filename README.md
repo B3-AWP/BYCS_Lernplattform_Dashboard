@@ -106,8 +106,12 @@ Delta    = (Ist − Soll) × Σ Stunden gesamt        → in Stunden
 ```
 
 Das Soll bezieht sich auf den Kalender der eigenen Schiene, das Ist auf die
-Pflichtaufgaben. Zwischen zwei Blöcken bleibt das Soll konstant — es steigt
-nur, wenn eine Blockwoche beginnt.
+Pflichtaufgaben. Die laufende Blockwoche zählt tagesgenau anteilig nach dem
+Stundenraster der Klasse (Mo–Fr); zwischen zwei Blöcken bleibt das Soll
+konstant.
+
+Beide Balken sind auf den ganzen Zeitraum skaliert: Die Breite entspricht dem
+Prozentwert daneben.
 
 **Bezugsgröße ist der angezeigte Zeitraum.** Wird nur das 1. Halbjahr gezeigt,
 zählen dessen Pflichtaufgaben im Nenner, und das Soll speist sich nur aus den
@@ -323,7 +327,7 @@ Aufgabe auf eine nicht definierte Skala, meldet die Validierung das beim Laden.
 
 ## Probelauf
 
-Das Dashboard hängt am Datum: Soll steigt nur, wenn eine Blockwoche beginnt.
+Das Dashboard hängt am Datum: Soll steigt an jedem Schultag einer Blockwoche.
 Um das zu prüfen, ohne die Systemuhr zu stellen oder auf den nächsten Block
 zu warten, hängt man `?test` an die Adresse. Es erscheint eine auffällige
 Leiste mit Datum, Schiene, Datenquelle und Kursauswahl.

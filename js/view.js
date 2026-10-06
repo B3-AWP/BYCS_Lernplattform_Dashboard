@@ -217,9 +217,6 @@ function kopfzeile(bilanz) {
     const vorsprung = bilanz.deltaStunden >= 0;
     const betrag = Math.abs(bilanz.deltaStunden);
 
-    // Balken auf gemeinsamer Skala: der größere Wert bestimmt die Breite.
-    const skala = Math.max(bilanz.soll, bilanz.ist, 0.01);
-
     abschnitt.append(
         el('p', 'bilanz-woche', wochenText(bilanz)),
 
@@ -227,15 +224,15 @@ function kopfzeile(bilanz) {
 
         balken(
             'Bis jetzt vorgesehen', bilanz.soll, bilanz.stundenSoll,
-            bilanz.stundenGesamt, skala, 'soll',
-            'So viele Unterrichtsstunden sind bisher vergangen — gemessen an ' +
-            'den Blockwochen deiner Schiene in diesem Zeitraum. Dieser Wert ' +
-            'steigt nur, wenn eine neue Blockwoche beginnt, und sagt nichts ' +
-            'darüber aus, was du getan hast.'
+            bilanz.stundenGesamt, 'soll',
+            'So viele Unterrichtsstunden sind laut Stundenplan bis heute ' +
+            'vergangen — gemessen an den Blockwochen deiner Schiene. In einer ' +
+            'Blockwoche wächst der Wert mit jedem Schultag, zwischen zwei ' +
+            'Blockwochen steht er still. Was du tust, ändert ihn nicht.'
         ),
         balken(
             'Von dir abgegeben', bilanz.ist, bilanz.stundenAbgegeben,
-            bilanz.stundenGesamt, skala, 'ist',
+            bilanz.stundenGesamt, 'ist',
             'So viele Stunden entfallen auf Pflichtaufgaben, die du bereits ' +
             'abgegeben hast. Gezählt wird die für eine Aufgabe vorgesehene Zeit, ' +
             'nicht die, die du wirklich gebraucht hast. Ob eine Abgabe schon ' +
@@ -313,9 +310,9 @@ function hilfe(text, thema, zusatz) {
  * falscher Bezug wäre schlimmer als gar keiner.
  */
 function hinweisText(bilanz) {
-    const gemeinsam = 'Beide Balken messen denselben Zeitraum: oben, wie weit der '
-        + 'Unterricht ist, unten, wie weit du bist. Der eine Wert ist kein Teil '
-        + 'des anderen.';
+    const gemeinsam = 'Ein voller Balken ist der ganze Zeitraum. Oben steht, wie '
+        + 'weit der Unterricht ist, unten, wie weit du bist. Ist der untere '
+        + 'länger, hast du Vorsprung.';
 
     if (bilanz.nurTeilzeitraum) {
         return `${gemeinsam} Gezählt wird ${bilanz.zeitraumTitel ?? 'der laufende Abschnitt'} `
@@ -375,7 +372,7 @@ function wochenText(bilanz) {
         : `${bilanz.schienenTitel} · nach ${stand}`;
 }
 
-function balken(beschriftung, anteil, stunden, gesamt, skala, art, erklaerung) {
+function balken(beschriftung, anteil, stunden, gesamt, art, erklaerung) {
     const zeile = el('div', 'balken-zeile');
 
     const name = el('span', 'balken-name');
@@ -389,15 +386,15 @@ function balken(beschriftung, anteil, stunden, gesamt, skala, art, erklaerung) {
             `${formatStunden(stunden)} h · ${formatProzent(anteil)}`)
     );
 
-    // Die Breite folgt der gemeinsamen Skala beider Balken, der
-    // angesagte Wert dem angezeigten Prozentsatz — sonst meldete der
-    // Screenreader "100 %", wo "11 %" steht.
+    // Beide Balken laufen über das ganze angezeigte Halbjahr: die volle
+    // Breite ist 100 %, die Breite also genau der Prozentwert daneben.
+    // Eine Skala auf den größeren Wert ließ den längeren Balken voll
+    // wirken — wie "fertig", wo 44 % stand.
     const spur = fortschrittsSpur(
-        anteil / skala,
+        anteil,
         art,
         beschriftung,
-        `${formatStunden(stunden)} von ${formatStunden(gesamt)} Stunden`,
-        anteil
+        `${formatStunden(stunden)} von ${formatStunden(gesamt)} Stunden`
     );
 
     zeile.append(kopf, spur);
